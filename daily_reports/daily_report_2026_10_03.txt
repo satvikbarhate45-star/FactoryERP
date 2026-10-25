@@ -1,0 +1,41 @@
+==================================================
+DAILY SYSTEM REPORT - 2026-10-03
+==================================================
+
+--- PRODUCTION ---
+Total Output (User-entered): 5946.66 kg
+Total Output (ML-generated): 0.00 kg
+Material Used (User-entered): 5975.40 kg
+Material Used (ML-generated): 0.00 kg
+
+--- PER EMPLOYEE PRODUCTION ---
+Employee [employee_4]: User-entered = 256.46 kg | ML-generated = 0.00 kg
+Employee [employee_13]: User-entered = 494.24 kg | ML-generated = 0.00 kg
+Employee [employee_1]: User-entered = 1030.89 kg | ML-generated = 0.00 kg
+Employee [employee_8]: User-entered = 477.95 kg | ML-generated = 0.00 kg
+Employee [employee_12]: User-entered = 493.04 kg | ML-generated = 0.00 kg
+Employee [employee_25]: User-entered = 242.93 kg | ML-generated = 0.00 kg
+Employee [employee_23]: User-entered = 237.55 kg | ML-generated = 0.00 kg
+Employee [employee_10]: User-entered = 758.04 kg | ML-generated = 0.00 kg
+Employee [employee_3]: User-entered = 481.72 kg | ML-generated = 0.00 kg
+Employee [employee_14]: User-entered = 261.93 kg | ML-generated = 0.00 kg
+Employee [employee_7]: User-entered = 239.67 kg | ML-generated = 0.00 kg
+Employee [employee_27]: User-entered = 239.10 kg | ML-generated = 0.00 kg
+Employee [employee_6]: User-entered = 237.81 kg | ML-generated = 0.00 kg
+Employee [employee_17]: User-entered = 233.95 kg | ML-generated = 0.00 kg
+Employee [employee_16]: User-entered = 261.38 kg | ML-generated = 0.00 kg
+
+
+--- MAINTENANCE ---
+Machine Sensor Logs (User-entered): 24 logs
+Machine Sensor Logs (ML-generated): 0 logs
+Tickets Opened by Users: 7
+Tickets Opened by ML (Anomaly Detection): 0
+
+--- LOGISTICS ---
+Dispatches (User-entered): 8
+Dispatches (ML-generated): 0
+
+==================================================
+END OF REPORT
+==================================================

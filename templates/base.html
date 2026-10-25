@@ -1,0 +1,1133 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <title>FactoryTrack | Universal ERP</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'default' });
+    </script>
+    <script>
+        // Check local storage for dark mode preference
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+        
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { inter: ["Inter", "sans-serif"] },
+                }
+            }
+        };
+
+        // Global Chart.js Responsive Configuration
+        if (window.Chart) {
+            Chart.defaults.responsive = true;
+            Chart.defaults.maintainAspectRatio = false;
+            Chart.defaults.font.family = "'Inter', sans-serif";
+        }
+    </script>
+    <style>
+        :root {
+            --sidebar-collapsed-width: 60px;   /* 60px - Ultra-compact mobile floating icon strip */
+            --sidebar-expanded-width: 16rem;   /* 256px - Desktop/Tablet full navigation menu */
+            --header-height-mobile: 3.5rem;    /* 56px */
+            --header-height-desktop: 5rem;     /* 80px */
+            --transition-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #f8fafc; 
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            max-width: 100vw;
+            overflow-x: hidden;
+        }
+
+        /* --------------------------------------------------------------------------
+           Transparent Sidebar & Floating Icon Navigation Architecture
+           -------------------------------------------------------------------------- */
+        .sidebar { 
+            background: transparent !important; 
+            backdrop-filter: blur(16px); 
+            -webkit-backdrop-filter: blur(16px);
+            border-right: 1px solid rgba(226, 232, 240, 0.6) !important; 
+            box-shadow: none !important;
+            transition: width 0.3s var(--transition-smooth), transform 0.3s var(--transition-smooth);
+            display: flex;
+            flex-direction: column;
+            z-index: 40;
+        }
+
+        .dark .sidebar {
+            background: rgba(15, 23, 42, 0.4) !important;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-right: 1px solid rgba(51, 65, 85, 0.4) !important;
+        }
+
+        /* Floating Navigation Icons - No Heavy Solid Block Backgrounds */
+        .sidebar-link { 
+            display: flex; 
+            align-items: center; 
+            background: transparent !important;
+            color: #475569; 
+            border: 1px solid transparent;
+            font-weight: 500; 
+            transition: all 0.2s var(--transition-smooth); 
+            text-decoration: none;
+            position: relative;
+            user-select: none;
+        }
+
+        .dark .sidebar-link {
+            color: #94a3b8;
+        }
+
+        /* Translucent Hover Pill */
+        .sidebar-link:hover { 
+            background: rgba(79, 70, 229, 0.08) !important; 
+            color: #4338ca !important; 
+            border-color: rgba(79, 70, 229, 0.15) !important;
+            transform: translateY(-1px); 
+        }
+
+        .dark .sidebar-link:hover { 
+            background: rgba(255, 255, 255, 0.06) !important; 
+            color: #f8fafc !important; 
+            border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        /* Floating Active State */
+        .sidebar-link.active { 
+            background: #4f46e5 !important; 
+            color: #ffffff !important; 
+            box-shadow: 0 4px 12px -2px rgba(79, 70, 229, 0.45) !important; 
+            border-color: transparent !important;
+        }
+
+        /* Special AI Link */
+        .sidebar-link.sidebar-link-ai {
+            color: #6366f1;
+            border-color: rgba(99, 102, 241, 0.2);
+        }
+        .sidebar-link.sidebar-link-ai:hover {
+            background: rgba(99, 102, 241, 0.15) !important;
+            color: #4f46e5 !important;
+        }
+        .sidebar-link.sidebar-link-ai.active {
+            background: linear-gradient(135deg, #6366f1, #4f46e5) !important;
+            color: #ffffff !important;
+            box-shadow: 0 4px 14px -2px rgba(99, 102, 241, 0.5) !important;
+        }
+
+        /* Desktop Viewport Rules (>= 769px) */
+        @media (min-width: 769px) {
+            .sidebar { 
+                position: relative !important;
+                width: var(--sidebar-expanded-width) !important; 
+                min-width: var(--sidebar-expanded-width) !important; 
+                flex-shrink: 0 !important;
+            }
+
+            .main-content-wrapper {
+                margin-left: 0 !important;
+                width: calc(100% - var(--sidebar-expanded-width)) !important;
+                max-width: calc(100% - var(--sidebar-expanded-width)) !important;
+                flex: 1 1 0% !important;
+            }
+
+            .sidebar .sidebar-text,
+            .sidebar .sidebar-brand-text,
+            .sidebar .sidebar-user-text,
+            .sidebar .sidebar-heading {
+                display: block !important;
+            }
+
+            .sidebar-link { 
+                justify-content: flex-start !important;
+                padding: 0.65rem 0.85rem !important; 
+                margin-bottom: 0.25rem !important;
+                border-radius: 0.625rem !important;
+            }
+
+            .sidebar-link:hover { 
+                transform: translateX(4px); 
+            }
+
+            .sidebar-link .sidebar-icon {
+                font-size: 1.15rem !important;
+                width: 1.75rem !important;
+                height: 1.75rem !important;
+                margin-right: 0.75rem !important;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+            }
+
+            .logo-icon {
+                width: 38px !important;
+                height: 38px !important;
+                border-radius: 10px !important;
+                font-size: 1rem !important;
+            }
+        }
+
+        /* Ultra-Compact Mobile Sidebar & Icon Sizing (<= 768px) */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed !important;
+                left: 0 !important;
+                top: 0 !important;
+                bottom: 0 !important;
+                width: var(--sidebar-collapsed-width) !important;
+                min-width: var(--sidebar-collapsed-width) !important;
+                max-width: var(--sidebar-collapsed-width) !important;
+                z-index: 40 !important;
+                padding: 0 !important;
+                background: rgba(255, 255, 255, 0.88) !important;
+                backdrop-filter: blur(20px) !important;
+                -webkit-backdrop-filter: blur(20px) !important;
+                border-right: 1px solid rgba(226, 232, 240, 0.8) !important;
+                box-shadow: 2px 0 12px rgba(0, 0, 0, 0.03) !important;
+            }
+
+            .dark .sidebar {
+                background: rgba(15, 23, 42, 0.88) !important;
+                border-right: 1px solid rgba(51, 65, 85, 0.5) !important;
+                box-shadow: 2px 0 16px rgba(0, 0, 0, 0.3) !important;
+            }
+
+            /* Main Container Dynamic Left Margin Offset (60px) - Guaranteed Zero Overlap */
+            .main-content-wrapper {
+                margin-left: var(--sidebar-collapsed-width) !important;
+                width: calc(100% - var(--sidebar-collapsed-width)) !important;
+                max-width: calc(100% - var(--sidebar-collapsed-width)) !important;
+                min-width: 0 !important;
+                overflow-x: hidden !important;
+            }
+
+            .sidebar .sidebar-text,
+            .sidebar .sidebar-heading,
+            .sidebar .sidebar-brand-text,
+            .sidebar .sidebar-user-text {
+                display: none !important;
+            }
+
+            .sidebar nav {
+                padding: 0.5rem 0 !important;
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: center !important;
+            }
+
+            .sidebar-link {
+                width: 40px !important;
+                height: 40px !important;
+                min-height: 40px !important;
+                margin: 0 auto 0.25rem auto !important;
+                padding: 0 !important;
+                border-radius: 10px !important;
+                justify-content: center !important;
+                align-items: center !important;
+            }
+
+            .sidebar-link .sidebar-icon {
+                font-size: 1rem !important;
+                width: 100% !important;
+                height: 100% !important;
+                margin: 0 !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+            }
+
+            .sidebar-link[data-title]:hover::after {
+                content: attr(data-title);
+                position: absolute;
+                left: calc(100% + 10px);
+                top: 50%;
+                transform: translateY(-50%);
+                background: #0f172a;
+                color: #f8fafc;
+                font-size: 0.725rem;
+                font-weight: 600;
+                padding: 0.35rem 0.65rem;
+                border-radius: 0.375rem;
+                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+                border: 1px solid #334155;
+                white-space: nowrap;
+                pointer-events: none;
+                z-index: 99999;
+            }
+
+            .sidebar-brand-header {
+                height: var(--header-height-mobile) !important;
+                padding: 0 !important;
+                justify-content: center !important;
+                display: flex !important;
+                align-items: center !important;
+            }
+
+            .logo-icon {
+                width: 32px !important;
+                height: 32px !important;
+                font-size: 0.85rem !important;
+                margin: 0 auto !important;
+            }
+
+            .sidebar-user-footer {
+                padding: 0.5rem 0 !important;
+                display: flex !important;
+                justify-content: center !important;
+            }
+
+            .sidebar-user-box {
+                padding: 0 !important;
+                background: transparent !important;
+                border: none !important;
+                justify-content: center !important;
+            }
+
+            .sidebar-user-avatar {
+                width: 32px !important;
+                height: 32px !important;
+                font-size: 0.8rem !important;
+                margin: 0 auto !important;
+            }
+        }
+
+        .logo-icon { 
+            background: linear-gradient(135deg, #4f46e5, #3730a3); 
+            color: #ffffff; 
+            width: 32px; 
+            height: 32px; 
+            border-radius: 8px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-weight: 800; 
+            font-size: 0.85rem; 
+            flex-shrink: 0;
+            box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);
+            transition: transform 0.2s ease;
+        }
+        
+        /* Glassmorphism Header */
+        .glass-header { 
+            background: rgba(255, 255, 255, 0.85); 
+            backdrop-filter: blur(12px); 
+            border-bottom: 1px solid rgba(226, 232, 240, 0.8); 
+            height: clamp(3.25rem, 5vw, 4.5rem);
+            padding-left: clamp(0.5rem, 2vw, 1.5rem);
+            padding-right: clamp(0.5rem, 2vw, 1.5rem);
+        }
+        
+        /* Fluid Premium Cards & Dedicated Mobile Spacing */
+        .premium-card { 
+            background: white; 
+            border-radius: clamp(10px, 1.5vw + 4px, 16px); 
+            border: 1px solid #e2e8f0; 
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -2px rgba(0,0,0,0.05); 
+            transition: all 0.25s var(--transition-smooth); 
+            max-width: 100%;
+            padding: clamp(0.75rem, 2vw + 0.5rem, 1.5rem);
+        }
+        .premium-card:hover { 
+            transform: translateY(-2px); 
+            box-shadow: 0 14px 20px -4px rgba(0,0,0,0.08); 
+            border-color: #cbd5e1; 
+        }
+        .dark .premium-card:hover { 
+            border-color: #6366f1 !important; 
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3); 
+        }
+
+        @media (max-width: 768px) {
+            .premium-card,
+            .premium-card.p-4,
+            .premium-card.p-5,
+            .premium-card.p-6 {
+                padding: 10px 12px !important;
+                border-radius: 12px !important;
+            }
+
+            main {
+                padding: 10px 12px !important;
+            }
+
+            /* Compact mobile typography */
+            h1, .text-3xl {
+                font-size: clamp(1.2rem, 4vw, 1.45rem) !important;
+                line-height: 1.3 !important;
+            }
+            h2, .text-2xl {
+                font-size: clamp(1.05rem, 3vw, 1.25rem) !important;
+                line-height: 1.35 !important;
+            }
+            h3, .text-xl {
+                font-size: clamp(0.9rem, 2.5vw, 1.05rem) !important;
+                line-height: 1.4 !important;
+            }
+        }
+
+        /* Three-Dots Toggle Button */
+        .three-dots-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 0.625rem;
+            background: rgba(241, 245, 249, 0.8);
+            color: #334155;
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+
+        .three-dots-btn:hover {
+            background: #e2e8f0;
+            color: #0f172a;
+            transform: scale(1.05);
+        }
+
+        .dark .three-dots-btn {
+            background: rgba(30, 41, 59, 0.8);
+            color: #cbd5e1;
+            border-color: #334155;
+        }
+
+        .dark .three-dots-btn:hover {
+            background: #334155;
+            color: #ffffff;
+        }
+
+        /* Drawer Links */
+        .drawer-link {
+            display: flex;
+            align-items: center;
+            padding: 0.85rem 1rem;
+            border-radius: 0.625rem;
+            color: #cbd5e1;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            text-decoration: none;
+        }
+
+        .drawer-link:hover {
+            background: #1e293b;
+            color: #ffffff;
+            transform: translateX(4px);
+        }
+
+        .drawer-link.active {
+            background: #2563eb;
+            color: #ffffff;
+            box-shadow: 0 4px 10px rgba(37, 99, 235, 0.4);
+        }
+
+        /* Universal Table Responsive Wrapper */
+        .table-responsive {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            border-radius: 0.75rem;
+        }
+        
+        /* Animations */
+        .fade-in { animation: fadeIn 0.4s ease forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Hide Google Translate Top Banner, Tooltips & Gadget */
+        .goog-te-banner-frame { display: none !important; }
+        body { top: 0 !important; position: static !important; }
+        #goog-gt-tt, .goog-te-balloon-frame { display: none !important; }
+        .goog-text-highlight { background-color: transparent !important; box-shadow: none !important; }
+        .goog-te-gadget { display: none !important; height: 0 !important; width: 0 !important; overflow: hidden !important; }
+        #google_translate_element { display: none !important; }
+        
+        /* Global Dark Mode Overrides */
+        .dark body, .dark .bg-\[\#f8fafc\], .dark main { background-color: #0f172a !important; color: #f8fafc !important; }
+        .dark .bg-white, .dark .premium-card, .dark table, .dark th, .dark td, .dark tr { background-color: #1e293b !important; border-color: #334155 !important; color: #f8fafc !important; }
+        .dark .bg-slate-50, .dark .bg-gray-50 { background-color: #1e293b !important; }
+        .dark .text-slate-800, .dark .text-gray-800, .dark .text-gray-900 { color: #f8fafc !important; }
+        .dark .text-slate-600, .dark .text-gray-600, .dark .text-gray-500 { color: #cbd5e1 !important; }
+        .dark .text-slate-700, .dark .text-gray-700 { color: #e2e8f0 !important; }
+        .dark .glass-header { background: rgba(30, 41, 59, 0.95) !important; border-bottom-color: #334155 !important; }
+        .dark .border-slate-100, .dark .border-slate-200, .dark .border-gray-100, .dark .border-gray-200, .dark .border-b { border-color: #334155 !important; }
+        .dark input, .dark select, .dark textarea { background-color: #0f172a !important; border-color: #334155 !important; color: #f8fafc !important; }
+        
+        .dark .hover\:text-slate-800:hover,
+        .dark .hover\:text-gray-800:hover,
+        .dark .hover\:text-indigo-700:hover,
+        .dark .hover\:text-blue-700:hover,
+        .dark .hover\:text-blue-600:hover,
+        .dark .hover\:text-emerald-700:hover,
+        .dark .hover\:text-amber-700:hover,
+        .dark .hover\:text-rose-600:hover {
+            color: #f8fafc !important;
+        }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden text-slate-800 bg-[#f8fafc] dark:bg-slate-900 font-inter">
+
+    <!-- Adaptive Sidebar: Minimalist Floating Icon Strip on Mobile (<= 768px), Full on Desktop/Tablet -->
+    <aside id="app-sidebar" class="sidebar flex flex-col shrink-0">
+        <!-- Sidebar Brand Header -->
+        <div class="sidebar-brand-header h-14 md:h-20 flex items-center justify-center md:justify-start px-1 md:px-6 border-b border-slate-200/60 dark:border-slate-800/60 gap-3 shrink-0">
+            <a href="/" class="logo-icon hover:scale-105 transition-transform" title="FactoryTrack Core ERP">FT</a>
+            <div class="sidebar-brand-text overflow-hidden">
+                <div class="sidebar-brand-title font-bold text-lg tracking-tight leading-tight text-slate-900 dark:text-white">FactoryTrack</div>
+                <div class="sidebar-brand-subtitle text-xs text-slate-500 dark:text-slate-400 font-medium">Core ERP</div>
+            </div>
+        </div>
+
+        <!-- Navigation Strip -->
+        <nav class="flex-1 px-1 md:px-3 py-2.5 md:py-6 overflow-y-auto overflow-x-hidden">
+            <div class="sidebar-heading text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2 px-2">Main Menu</div>
+            
+            <!-- Dashboard -->
+            <a href="/" class="sidebar-link {% if request.path == '/' %}active{% endif %}" title="Dashboard" data-title="Dashboard">
+                <i class="fa-solid fa-chart-pie sidebar-icon"></i>
+                <span class="sidebar-text font-medium text-sm">Dashboard</span>
+            </a>
+            
+            <!-- Production Overview (Admin) -->
+            {% if user.role == 'AD' %}
+            <a href="{% url 'production_dashboard' %}" class="sidebar-link {% if '/production/' in request.path and 'supervisor' not in request.path and 'manager' not in request.path %}active{% endif %}" title="Production Overview" data-title="Production Overview">
+                <i class="fa-solid fa-industry sidebar-icon"></i>
+                <span class="sidebar-text font-medium text-sm">Production Overview</span>
+            </a>
+            {% endif %}
+            
+            <!-- Production Dashboard (Manager) -->
+            {% if user.role in 'PM,EM' %}
+            <a href="{% url 'production_manager_dashboard' %}" class="sidebar-link {% if 'manager' in request.path %}active{% endif %}" title="Production Dashboard" data-title="Production Dashboard">
+                <i class="fa-solid fa-chart-line sidebar-icon"></i>
+                <span class="sidebar-text font-medium text-sm">Production Dashboard</span>
+            </a>
+            {% endif %}
+            
+            <!-- Floor Approvals (Supervisor) -->
+            {% if user.role in 'AD,SU,PM' %}
+            <a href="{% url 'supervisor_portal' %}" class="sidebar-link {% if 'supervisor_erp' in request.path %}active{% endif %}" title="Floor Approvals" data-title="Floor Approvals">
+                <i class="fa-solid fa-clipboard-check sidebar-icon"></i>
+                <span class="sidebar-text font-medium text-sm">Floor Approvals</span>
+            </a>
+            {% endif %}
+            
+            <!-- Maintenance & Equipment -->
+            {% if user.role in 'AD,MA,SU' %}
+            <a href="/maintenance/equipment/" class="sidebar-link {% if 'equipment' in request.path %}active{% endif %}" title="Equipment Fleet" data-title="Equipment Fleet">
+                <i class="fa-solid fa-gears sidebar-icon"></i>
+                <span class="sidebar-text font-medium text-sm">Equipment</span>
+            </a>
+            <a href="/maintenance/work-orders/" class="sidebar-link {% if 'work-orders' in request.path %}active{% endif %}" title="Work Orders" data-title="Work Orders">
+                <i class="fa-solid fa-wrench sidebar-icon"></i>
+                <span class="sidebar-text font-medium text-sm">Work Orders</span>
+            </a>
+            {% endif %}
+            
+            <!-- Logistics / Inventory -->
+            {% if user.role in 'AD,LO,PM' %}
+            <a href="/inventory/" class="sidebar-link {% if '/inventory/' in request.path %}active{% endif %}" title="Logistics & Stock" data-title="Logistics">
+                <i class="fa-solid fa-boxes-stacked sidebar-icon"></i>
+                <span class="sidebar-text font-medium text-sm">Logistics</span>
+            </a>
+            {% endif %}
+            
+            <!-- System Sub-Header -->
+            <div class="sidebar-heading mt-6 mb-2 px-2 border-t border-slate-200/60 dark:border-slate-800/60 pt-5 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">System</div>
+            
+            <!-- AI Assistant -->
+            {% if user.role in 'AD,PM' %}
+            <a href="/ai/" class="sidebar-link sidebar-link-ai {% if '/ai/' in request.path %}active{% endif %}" title="AI Assistant" data-title="AI Assistant">
+                <i class="fa-solid fa-robot sidebar-icon"></i>
+                <span class="sidebar-text font-medium text-sm">AI Assistant</span>
+            </a>
+            {% endif %}
+            
+            <!-- Users & Reports -->
+            {% if user.role == 'AD' %}
+            <a href="/users/" class="sidebar-link {% if '/users/' in request.path %}active{% endif %}" title="Manage Users" data-title="Manage Users">
+                <i class="fa-solid fa-users-gear sidebar-icon"></i>
+                <span class="sidebar-text font-medium text-sm">Manage Users</span>
+            </a>
+            <a href="/reports/" class="sidebar-link {% if '/reports/' in request.path %}active{% endif %}" title="ML Reports" data-title="ML Reports">
+                <i class="fa-solid fa-file-waveform sidebar-icon"></i>
+                <span class="sidebar-text font-medium text-sm">ML Reports</span>
+            </a>
+            {% endif %}
+        </nav>
+        
+        <!-- Sidebar User Footer -->
+        <div class="sidebar-user-footer p-1 md:p-3 border-t border-slate-200/60 dark:border-slate-800/60 shrink-0">
+            <div class="sidebar-user-box flex items-center justify-center md:justify-start gap-3 bg-slate-100/80 dark:bg-slate-800/50 border border-slate-200/50 dark:border-slate-700/50 p-1.5 md:p-2.5 rounded-xl" title="{{ user.first_name|default:user.username }} ({{ user.get_role_display|default:'Role' }})">
+                <div class="sidebar-user-avatar w-8 h-8 md:w-9 md:h-9 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-800/60 flex items-center justify-center font-bold shrink-0 text-xs">
+                    {{ user.username|make_list|first|upper }}
+                </div>
+                <div class="sidebar-user-text flex-1 overflow-hidden">
+                    <div class="sidebar-user-name font-semibold text-sm truncate text-slate-800 dark:text-white">{{ user.first_name|default:user.username }}</div>
+                    <div class="sidebar-user-role text-xs text-slate-500 dark:text-slate-400 truncate">{{ user.get_role_display|default:"Role" }}</div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div id="main-content-wrapper" class="main-content-wrapper flex-1 flex flex-col min-w-0 overflow-y-auto overflow-x-hidden bg-[#f8fafc] dark:bg-slate-900 relative">
+        <header class="glass-header h-14 md:h-20 flex items-center justify-between px-2 sm:px-6 md:px-8 sticky top-0 z-30 transition-all">
+            <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+                <!-- Interactive Three-Dots (⋮) Toggle Menu Button -->
+                <button type="button" id="header-menu-toggle" onclick="toggleNavOverlay()" class="three-dots-btn shrink-0" aria-label="Toggle Full Navigation Menu" title="Open Navigation Menu">
+                    <i class="fa-solid fa-ellipsis-vertical text-base sm:text-lg"></i>
+                </button>
+                <div class="min-w-0">
+                    <h2 class="text-sm sm:text-base md:text-xl font-bold text-slate-800 dark:text-white truncate">
+                        <span class="hidden sm:inline">Welcome back, </span>{{ user.first_name|default:user.username }}
+                    </h2>
+                    <p class="text-[11px] text-slate-400 font-medium hidden md:block">FactoryTrack Core Manufacturing Platform</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-1.5 sm:space-x-3 shrink-0">
+                <!-- Dark Mode Toggle -->
+                <button onclick="toggleDarkMode()" class="p-1.5 sm:p-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors" title="Toggle Theme" aria-label="Toggle Theme">
+                    <i class="fa-solid fa-moon hidden dark:block text-xs sm:text-sm"></i>
+                    <i class="fa-solid fa-sun block dark:hidden text-xs sm:text-sm"></i>
+                </button>
+                
+                <!-- Language Selector -->
+                <div class="relative">
+                    <select id="lang-selector" onchange="changeLanguage(this.value)" class="bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-[11px] sm:text-xs font-semibold text-slate-600 dark:text-slate-300 cursor-pointer outline-none focus:ring-2 focus:ring-indigo-500 appearance-none pr-5 sm:pr-8">
+                        <option value="en">🌐 ENG</option>
+                        <option value="mr">🌐 MAR</option>
+                        <option value="hi">🌐 HIN</option>
+                    </select>
+                    <i class="fa-solid fa-chevron-down absolute right-1.5 sm:right-3 top-1/2 transform -translate-y-1/2 text-[9px] sm:text-[10px] text-slate-400 pointer-events-none"></i>
+                </div>
+                
+                <div id="google_translate_element" class="hidden"></div>
+
+                <div class="h-5 sm:h-8 w-px bg-slate-200 dark:bg-slate-700 mx-1 sm:mx-2"></div>
+                <a href="/logout/" class="text-xs sm:text-sm font-semibold text-rose-600 hover:text-rose-800 hover:bg-rose-50 dark:hover:bg-rose-950/40 px-2 sm:px-3.5 py-1 sm:py-2 rounded-lg transition-colors flex items-center gap-1 sm:gap-2 shrink-0">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                    <span class="hidden sm:inline">Log out</span>
+                </a>
+            </div>
+        </header>
+
+        <!-- Main Viewport Content -->
+        <main id="main-content-view" class="flex-1 p-2 sm:p-4 md:p-6 lg:p-8 erp-page-enter max-w-full">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <!-- Interactive Three-Dots (⋮) Full Navigation Drawer / Overlay -->
+    <div id="nav-overlay" class="fixed inset-0 z-[9999] pointer-events-none transition-all duration-300" aria-hidden="true">
+        <!-- Backdrop Blur -->
+        <div id="nav-backdrop" onclick="toggleNavOverlay(false)" class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm opacity-0 transition-opacity duration-300 pointer-events-none"></div>
+
+        <!-- Sliding Drawer Panel -->
+        <div id="nav-drawer" class="absolute top-0 left-0 bottom-0 w-72 sm:w-80 max-w-[85vw] bg-slate-950 text-white shadow-2xl flex flex-col transform -translate-x-full transition-transform duration-300 ease-in-out pointer-events-none border-r border-slate-800">
+            <!-- Header -->
+            <div class="h-16 md:h-20 flex items-center justify-between px-6 border-b border-slate-800 shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="logo-icon bg-indigo-600 text-white shadow-md shadow-indigo-500/30">FT</div>
+                    <div>
+                        <div class="font-bold text-lg tracking-tight leading-tight text-white">FactoryTrack</div>
+                        <div class="text-xs text-indigo-400 font-semibold tracking-wide">Enterprise ERP</div>
+                    </div>
+                </div>
+                <button onclick="toggleNavOverlay(false)" class="w-9 h-9 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors focus:outline-none" aria-label="Close Navigation Menu">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Links -->
+            <nav class="flex-1 px-4 py-6 overflow-y-auto space-y-1">
+                <div class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 px-3">Main Navigation</div>
+
+                <a href="/" onclick="toggleNavOverlay(false)" class="drawer-link {% if request.path == '/' %}active{% endif %}">
+                    <i class="fa-solid fa-chart-pie mr-3 text-lg text-indigo-400"></i>
+                    <span class="font-medium text-sm">Dashboard</span>
+                </a>
+
+                {% if user.role == 'AD' %}
+                <a href="{% url 'production_dashboard' %}" onclick="toggleNavOverlay(false)" class="drawer-link {% if '/production/' in request.path and 'supervisor' not in request.path and 'manager' not in request.path %}active{% endif %}">
+                    <i class="fa-solid fa-industry mr-3 text-lg text-emerald-400"></i>
+                    <span class="font-medium text-sm">Production Overview</span>
+                </a>
+                {% endif %}
+
+                {% if user.role in 'PM,EM' %}
+                <a href="{% url 'production_manager_dashboard' %}" onclick="toggleNavOverlay(false)" class="drawer-link {% if 'manager' in request.path %}active{% endif %}">
+                    <i class="fa-solid fa-chart-line mr-3 text-lg text-emerald-400"></i>
+                    <span class="font-medium text-sm">Production Dashboard</span>
+                </a>
+                {% endif %}
+
+                {% if user.role in 'AD,SU,PM' %}
+                <a href="{% url 'supervisor_portal' %}" onclick="toggleNavOverlay(false)" class="drawer-link {% if 'supervisor_erp' in request.path %}active{% endif %}">
+                    <i class="fa-solid fa-clipboard-check mr-3 text-lg text-amber-400"></i>
+                    <span class="font-medium text-sm">Floor Approvals</span>
+                </a>
+                {% endif %}
+
+                {% if user.role in 'AD,MA,SU' %}
+                <a href="/maintenance/equipment/" onclick="toggleNavOverlay(false)" class="drawer-link {% if 'equipment' in request.path %}active{% endif %}">
+                    <i class="fa-solid fa-gears mr-3 text-lg text-sky-400"></i>
+                    <span class="font-medium text-sm">Equipment Fleet</span>
+                </a>
+                <a href="/maintenance/work-orders/" onclick="toggleNavOverlay(false)" class="drawer-link {% if 'work-orders' in request.path %}active{% endif %}">
+                    <i class="fa-solid fa-wrench mr-3 text-lg text-amber-400"></i>
+                    <span class="font-medium text-sm">Work Orders</span>
+                </a>
+                {% endif %}
+
+                {% if user.role in 'AD,LO,PM' %}
+                <a href="/inventory/" onclick="toggleNavOverlay(false)" class="drawer-link {% if '/inventory/' in request.path %}active{% endif %}">
+                    <i class="fa-solid fa-boxes-stacked mr-3 text-lg text-purple-400"></i>
+                    <span class="font-medium text-sm">Logistics & Stock</span>
+                </a>
+                {% endif %}
+
+                <div class="mt-6 mb-2 px-3 border-t border-slate-800 pt-5 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Intelligence & System</div>
+
+                {% if user.role in 'AD,PM' %}
+                <a href="/ai/" onclick="toggleNavOverlay(false)" class="drawer-link !bg-indigo-600/90 hover:!bg-indigo-600 !text-white shadow-md shadow-indigo-900/50">
+                    <i class="fa-solid fa-robot mr-3 text-lg text-white"></i>
+                    <span class="font-semibold text-sm">AI Assistant</span>
+                </a>
+                {% endif %}
+
+                {% if user.role == 'AD' %}
+                <a href="/users/" onclick="toggleNavOverlay(false)" class="drawer-link {% if '/users/' in request.path %}active{% endif %}">
+                    <i class="fa-solid fa-users-gear mr-3 text-lg text-slate-400"></i>
+                    <span class="font-medium text-sm">Manage Users</span>
+                </a>
+                <a href="/reports/" onclick="toggleNavOverlay(false)" class="drawer-link {% if '/reports/' in request.path %}active{% endif %}">
+                    <i class="fa-solid fa-file-waveform mr-3 text-lg text-slate-400"></i>
+                    <span class="font-medium text-sm">ML Reports</span>
+                </a>
+                {% endif %}
+            </nav>
+
+            <!-- User Footer in Drawer -->
+            <div class="p-4 border-t border-slate-800 bg-slate-900/80">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center font-bold text-white shadow-md">
+                        {{ user.username|make_list|first|upper }}
+                    </div>
+                    <div class="flex-1 overflow-hidden">
+                        <div class="font-semibold text-sm truncate text-white">{{ user.first_name|default:user.username }}</div>
+                        <div class="text-xs text-indigo-300 truncate">{{ user.get_role_display|default:"Role" }}</div>
+                    </div>
+                </div>
+                <a href="/logout/" class="w-full py-2 px-3 rounded-lg text-xs font-bold text-rose-400 hover:text-white hover:bg-rose-600/80 transition-colors flex items-center justify-center gap-2 border border-rose-500/30">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                    <span>Sign Out</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Global AI Assistant Floating Widget (Fluid & Responsive for all mobile screens) -->
+    <div class="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40 flex flex-col items-end">
+        
+        <!-- Chat Window (Fluid width & adaptive height) -->
+        <div id="ai-chat-window" class="hidden mb-4 w-[calc(100vw-2rem)] sm:w-[400px] md:w-[450px] max-w-[95vw] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-indigo-100 dark:border-slate-700 overflow-hidden transform transition-all origin-bottom-right">
+            {% csrf_token %}
+            <div class="bg-gradient-to-r from-indigo-600 to-blue-500 p-3 sm:p-4 flex justify-between items-center text-white">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-robot text-lg sm:text-xl"></i>
+                    <span class="font-bold text-sm sm:text-base">Gemini Assistant</span>
+                </div>
+                <div class="flex items-center gap-2 sm:gap-3">
+                    <select id="ai-model-select" class="bg-white/20 border border-white/30 text-white text-xs rounded px-2 py-1 outline-none focus:ring-2 focus:ring-white/50 cursor-pointer appearance-none">
+                        <option value="gemini-3.5-flash" class="text-slate-800">⚡ Ultra Fast</option>
+                        <option value="gemini-pro-latest" class="text-slate-800">🧠 Pro (Smart)</option>
+                    </select>
+                    <button onclick="toggleAiChatWindow()" class="text-indigo-100 hover:text-white font-bold text-xl px-1 leading-none">&times;</button>
+                </div>
+            </div>
+            <div id="ai-chat-messages" class="h-[50vh] sm:h-[450px] md:h-[500px] max-h-[70vh] p-3 sm:p-4 bg-slate-50 dark:bg-slate-950 overflow-y-auto flex flex-col gap-3 text-sm scroll-smooth">
+                <div class="bg-indigo-100 dark:bg-indigo-950/80 text-indigo-900 dark:text-indigo-200 p-3 rounded-lg rounded-tl-none self-start max-w-[88%] shadow-sm text-xs sm:text-sm">
+                    Hi {{ user.first_name|default:user.username }}! How can I help you analyze the workflow today?
+                </div>
+            </div>
+            <div class="p-2.5 sm:p-3 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex gap-2 items-center">
+                <!-- Attach file -->
+                <input type="file" id="ai-file-upload" class="hidden" onchange="handleAiFileUpload(event)" accept="image/*,.pdf,.doc,.docx,.txt">
+                <button onclick="document.getElementById('ai-file-upload').click()" class="text-slate-400 hover:text-indigo-600 transition-colors w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-full shrink-0" title="Attach Document/Image">
+                    <i class="fa-solid fa-plus text-base sm:text-lg"></i>
+                </button>
+                
+                <!-- Voice toggle -->
+                <button id="voice-toggle-btn" onclick="toggleVoice()" class="text-indigo-600 hover:text-indigo-800 transition-colors w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-full shrink-0" title="Mute/Unmute AI Voice">
+                    <i class="fa-solid fa-volume-high text-base sm:text-lg"></i>
+                </button>
+                
+                <!-- Mic input -->
+                <button id="mic-btn" onclick="startSpeechRecognition()" class="text-slate-400 hover:text-rose-500 transition-colors w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-full shrink-0" title="Speak Prompt">
+                    <i class="fa-solid fa-microphone text-base sm:text-lg"></i>
+                </button>
+                
+                <div class="flex-1 flex items-center bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full px-2.5 sm:px-3 py-1 sm:py-1.5 focus-within:ring-2 focus-within:ring-indigo-500 transition-all min-w-0">
+                    <input type="text" id="ai-chat-input" placeholder="Ask Gemini..." class="bg-transparent border-none focus:ring-0 text-xs sm:text-sm flex-1 p-1 text-slate-700 dark:text-slate-200 placeholder-slate-400 outline-none min-w-0" onkeypress="if(event.key === 'Enter') sendAiMessage()">
+                    <button onclick="sendAiMessage()" class="text-indigo-600 hover:text-indigo-800 p-1 rounded-full flex items-center justify-center bg-indigo-50 dark:bg-indigo-950 hover:bg-indigo-100 transition-colors shrink-0">
+                        <i class="fa-solid fa-paper-plane text-xs sm:text-sm"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Floating Action Button with Blinking Light -->
+        <button onclick="toggleAiChatWindow()" class="relative flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-lg shadow-indigo-300 dark:shadow-indigo-900/50 transition-transform transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-indigo-300" aria-label="Open AI Assistant">
+            <i class="fa-solid fa-robot text-xl sm:text-2xl"></i>
+            <!-- Blinking Light -->
+            <span class="absolute top-0 right-0 flex h-3 w-3">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500 border-2 border-indigo-600"></span>
+            </span>
+        </button>
+    </div>
+
+    <script>
+        // AI Voice Text-to-Speech logic
+        let voiceEnabled = true;
+        let currentAudio = null;
+
+        function fallbackBrowserTTS(text) {
+            if (!('speechSynthesis' in window)) return;
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = 0.95;
+            utterance.pitch = 1.05;
+            utterance.lang = 'en-US';
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function toggleVoice() {
+            voiceEnabled = !voiceEnabled;
+            const btn = document.getElementById('voice-toggle-btn');
+            if (voiceEnabled) {
+                btn.innerHTML = '<i class="fa-solid fa-volume-high text-base sm:text-lg"></i>';
+                btn.className = 'text-indigo-600 hover:text-indigo-800 transition-colors w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-full shrink-0';
+            } else {
+                btn.innerHTML = '<i class="fa-solid fa-volume-xmark text-base sm:text-lg"></i>';
+                btn.className = 'text-slate-400 hover:text-rose-500 transition-colors w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-full shrink-0';
+                window.speechSynthesis.cancel();
+                if (currentAudio) {
+                    currentAudio.pause();
+                    currentAudio = null;
+                }
+            }
+        }
+
+        async function speakText(text) {
+            if (!voiceEnabled) return;
+            
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio = null;
+            }
+            window.speechSynthesis.cancel();
+            
+            try {
+                const formData = new FormData();
+                formData.append('text', text);
+                const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+                
+                const response = await fetch('/ai/api/tts/', {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': csrfToken },
+                    body: formData
+                });
+                
+                const data = await response.json();
+                if (data.audio_base64) {
+                    currentAudio = new Audio('data:audio/wav;base64,' + data.audio_base64);
+                    currentAudio.play();
+                } else {
+                    fallbackBrowserTTS(text);
+                }
+            } catch (e) {
+                console.error("Backend TTS Error, falling back to browser:", e);
+                fallbackBrowserTTS(text);
+            }
+        }
+
+        // Handle File Attachments
+        function handleAiFileUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const inputField = document.getElementById('ai-chat-input');
+                inputField.value = `[Attached File: ${file.name}] ` + inputField.value;
+                inputField.focus();
+            }
+        }
+
+        // Voice to Prompt (Speech Recognition)
+        function startSpeechRecognition() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                alert("Your browser does not support Speech Recognition.");
+                return;
+            }
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'en-US';
+            const micBtn = document.getElementById('mic-btn');
+            const inputField = document.getElementById('ai-chat-input');
+            
+            recognition.onstart = function() {
+                micBtn.classList.remove('text-slate-400');
+                micBtn.classList.add('text-rose-600', 'animate-pulse');
+                inputField.placeholder = "Listening... Speak now";
+            };
+            
+            recognition.onresult = function(event) {
+                const transcript = event.results[0][0].transcript;
+                inputField.value = transcript;
+                sendAiMessage();
+            };
+            
+            recognition.onend = function() {
+                micBtn.classList.remove('text-rose-600', 'animate-pulse');
+                micBtn.classList.add('text-slate-400');
+                inputField.placeholder = "Ask about factory workflow...";
+            };
+            
+            recognition.start();
+        }
+
+        async function sendAiMessage() {
+            const input = document.getElementById('ai-chat-input');
+            const message = input.value.trim();
+            if (!message) return;
+            
+            const chatBox = document.getElementById('ai-chat-messages');
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            
+            // Append User Message
+            const userDiv = document.createElement('div');
+            userDiv.className = 'bg-slate-800 text-white p-3 rounded-lg rounded-tr-none self-end max-w-[85%] shadow-sm text-xs sm:text-sm';
+            userDiv.innerText = message;
+            chatBox.appendChild(userDiv);
+            
+            input.value = '';
+            chatBox.scrollTop = chatBox.scrollHeight;
+            
+            // Show loading state
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'bg-indigo-100 dark:bg-indigo-950 text-indigo-900 dark:text-indigo-200 p-3 rounded-lg rounded-tl-none self-start max-w-[85%] shadow-sm border border-indigo-200 dark:border-indigo-800 animate-pulse text-xs sm:text-sm';
+            loadingDiv.innerText = 'Analyzing factory data...';
+            chatBox.appendChild(loadingDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+            
+            try {
+                const formData = new FormData();
+                formData.append('prompt', message);
+                formData.append('model', document.getElementById('ai-model-select').value);
+                formData.append('voice_enabled', voiceEnabled ? 'true' : 'false');
+                
+                const response = await fetch('/ai/api/', {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': csrfToken },
+                    body: formData
+                });
+                
+                const data = await response.json();
+                chatBox.removeChild(loadingDiv);
+                
+                const aiDiv = document.createElement('div');
+                aiDiv.className = 'bg-indigo-100 dark:bg-indigo-950/70 text-indigo-900 dark:text-indigo-100 p-4 rounded-lg rounded-tl-none self-start max-w-[90%] shadow-sm border border-indigo-200 dark:border-indigo-800 prose prose-sm dark:prose-invert';
+                
+                if (response.ok) {
+                    let renderedHTML = data.response.replace(/<pre><code class="language-mermaid">([\s\S]*?)<\/code><\/pre>/g, '<div class="mermaid">$1</div>');
+                    aiDiv.innerHTML = renderedHTML;
+                    
+                    setTimeout(() => {
+                        try {
+                            mermaid.init(undefined, document.querySelectorAll('.mermaid'));
+                        } catch (e) {
+                            console.error("Mermaid parsing error:", e);
+                        }
+                    }, 100);
+                    
+                    if (data.audio_base64 && voiceEnabled) {
+                        if (currentAudio) currentAudio.pause();
+                        window.speechSynthesis.cancel();
+                        currentAudio = new Audio('data:audio/wav;base64,' + data.audio_base64);
+                        currentAudio.play();
+                    } else {
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = renderedHTML;
+                        let spokenText = tempDiv.innerText.trim();
+                        speakText(spokenText);
+                    }
+                } else {
+                    aiDiv.innerHTML = `<span class="text-rose-600 font-bold">Error:</span> ${data.error || 'Failed to get response.'}`;
+                    speakText("Sorry, I encountered an error communicating with the server.");
+                }
+                
+                chatBox.appendChild(aiDiv);
+                chatBox.scrollTop = chatBox.scrollHeight;
+            } catch (error) {
+                if (loadingDiv.parentElement) chatBox.removeChild(loadingDiv);
+                const errDiv = document.createElement('div');
+                errDiv.className = 'bg-rose-100 text-rose-900 p-3 rounded-lg rounded-tl-none self-start max-w-[85%] shadow-sm text-xs sm:text-sm';
+                errDiv.innerText = 'Network error communicating with AI server.';
+                chatBox.appendChild(errDiv);
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
+        }
+        
+        // Dark Mode Logic
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+            const isDark = document.documentElement.classList.contains('dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        }
+
+        // Translation Logic
+        function googleTranslateElementInit() {
+            new google.translate.TranslateElement({pageLanguage: 'en', includedLanguages: 'en,mr,hi', autoDisplay: false}, 'google_translate_element');
+        }
+        function changeLanguage(lang) {
+            if (lang === 'en') {
+                document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+                document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; domain=' + document.domain + '; path=/;';
+            } else {
+                document.cookie = `googtrans=/en/${lang}; path=/`;
+                document.cookie = `googtrans=/en/${lang}; domain=${document.domain}; path=/`;
+            }
+            window.location.reload();
+        }
+        
+        // Interactive Three-Dots (⋮) Toggle Navigation Function
+        function toggleNavOverlay(forceState) {
+            const overlay = document.getElementById('nav-overlay');
+            const backdrop = document.getElementById('nav-backdrop');
+            const drawer = document.getElementById('nav-drawer');
+            const toggleBtn = document.getElementById('header-menu-toggle');
+            if (!overlay || !backdrop || !drawer) return;
+
+            const isOpen = (typeof forceState === 'boolean') 
+                ? forceState 
+                : drawer.classList.contains('-translate-x-full');
+
+            if (isOpen) {
+                overlay.classList.remove('pointer-events-none');
+                backdrop.classList.remove('pointer-events-none', 'opacity-0');
+                backdrop.classList.add('opacity-100');
+                drawer.classList.remove('-translate-x-full', 'pointer-events-none');
+                drawer.classList.add('translate-x-0');
+                overlay.setAttribute('aria-hidden', 'false');
+                if (toggleBtn) toggleBtn.setAttribute('aria-expanded', 'true');
+                document.body.classList.add('overflow-hidden');
+            } else {
+                backdrop.classList.remove('opacity-100');
+                backdrop.classList.add('opacity-0', 'pointer-events-none');
+                drawer.classList.remove('translate-x-0');
+                drawer.classList.add('-translate-x-full', 'pointer-events-none');
+                overlay.setAttribute('aria-hidden', 'true');
+                if (toggleBtn) toggleBtn.setAttribute('aria-expanded', 'false');
+                document.body.classList.remove('overflow-hidden');
+                setTimeout(() => {
+                    if (drawer.classList.contains('-translate-x-full')) {
+                        overlay.classList.add('pointer-events-none');
+                    }
+                }, 300);
+            }
+        }
+
+        // Close overlay on ESC key or desktop resize
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') toggleNavOverlay(false);
+        });
+
+        window.addEventListener('resize', () => {
+            if (window.innerWidth >= 768) {
+                toggleNavOverlay(false);
+            }
+            // Trigger auto-resize across all active Chart instances
+            if (window.Chart && Chart.instances) {
+                Object.values(Chart.instances).forEach(chart => {
+                    try { chart.resize(); } catch(err) {}
+                });
+            }
+        });
+
+        // Set dropdown to active language cookie & initialize listeners
+        window.addEventListener('DOMContentLoaded', () => {
+            const match = document.cookie.match(/googtrans=\/en\/(mr|hi)/);
+            if (match && match[1]) {
+                document.getElementById('lang-selector').value = match[1];
+            }
+            
+            // --- AI Chat State Persistence ---
+            const chatBox = document.getElementById('ai-chat-messages');
+            const chatWindow = document.getElementById('ai-chat-window');
+            const savedHtml = sessionStorage.getItem('pharma_ai_chat_history');
+            if (savedHtml) { chatBox.innerHTML = savedHtml; chatBox.scrollTop = chatBox.scrollHeight; }
+            if (sessionStorage.getItem('pharma_ai_chat_open') === 'true') { chatWindow.classList.remove('hidden'); }
+            const observer = new MutationObserver(() => { sessionStorage.setItem('pharma_ai_chat_history', chatBox.innerHTML); });
+            observer.observe(chatBox, { childList: true, subtree: true, characterData: true });
+
+            // Auto-wrap any unwrapped data tables for smooth responsive scrolling on mobile
+            document.querySelectorAll('table').forEach(table => {
+                const parent = table.parentElement;
+                if (!parent.classList.contains('overflow-x-auto') && !parent.classList.contains('table-responsive')) {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'table-responsive overflow-x-auto';
+                    parent.insertBefore(wrapper, table);
+                    wrapper.appendChild(table);
+                }
+            });
+
+            // -----------------------------------------------------------------
+            // Global Fluid UI Page-to-Page Sliding & Scaling Transition Engine
+            // -----------------------------------------------------------------
+            // Smooth page enter transition
+            const mainView = document.getElementById('main-content-view');
+            if (mainView) {
+                mainView.classList.add('erp-page-enter');
+            }
+
+        });
+
+        // Global loader completely disabled for instant responsiveness
+        function showGlobalLoader() {}
+        function hideGlobalLoader() {}
+
+        function toggleAiChatWindow() {
+            const win = document.getElementById('ai-chat-window');
+            win.classList.toggle('hidden');
+            sessionStorage.setItem('pharma_ai_chat_open', !win.classList.contains('hidden'));
+        }
+    </script>
+    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+    
+    {% block modals %}{% endblock %}
+</body>
+</html>

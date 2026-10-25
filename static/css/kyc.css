@@ -1,0 +1,1308 @@
+/* ==========================================================================
+   PharmaERP / FactoryTrack Universal Authentication & KYC Design System
+   ABSOLUTE TOP-BOTTOM VERTICAL STACKING FOR ALL VIEWPORTS < 768px
+   Zero-Overlap, Fluid Containers, Scaled Mobile Typography & Touch Controls
+   ========================================================================== */
+
+/* 1. Global Box-Sizing & Reset for Auth Views */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #0f172a;
+    color: #1e293b;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Background video and atmospheric overlays */
+.video-background {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    object-fit: cover;
+    z-index: -3;
+    pointer-events: none;
+}
+
+.video-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.65);
+    z-index: -2;
+    pointer-events: none;
+}
+
+.blue-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: linear-gradient(135deg, rgba(30, 58, 138, 0.75) 0%, rgba(15, 23, 42, 0.92) 100%);
+    z-index: -1;
+    pointer-events: none;
+}
+
+/* 2. Main Wrapper & Card Container (Desktop Base) */
+.main-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 2.5rem 1.5rem;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.main-card,
+.auth-card {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    max-width: 1160px;
+    background: #ffffff;
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.6), 0 0 1px 1px rgba(255, 255, 255, 0.1);
+    min-height: 680px;
+    box-sizing: border-box;
+    position: relative;
+    z-index: 10;
+}
+
+/* 3. Left Information / Branding Panel (Desktop Base) */
+.left-panel,
+.auth-top-panel {
+    width: 42%;
+    background: linear-gradient(160deg, #1e3a8a 0%, #172554 100%);
+    color: #ffffff;
+    padding: 3.5rem 3rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+    box-sizing: border-box;
+}
+
+.left-content {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.logo-box {
+    display: flex;
+    align-items: center;
+    margin-bottom: 2.5rem;
+    gap: 1rem;
+}
+
+.logo-icon {
+    background: #ffffff;
+    color: #1e3a8a;
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 1.25rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    flex-shrink: 0;
+}
+
+.logo-title {
+    font-weight: 800;
+    font-size: 1.4rem;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+}
+
+.logo-subtitle {
+    font-size: 0.8rem;
+    opacity: 0.8;
+    color: #cbd5e1;
+}
+
+.left-heading {
+    font-size: 2.25rem;
+    font-weight: 800;
+    line-height: 1.2;
+    margin: 0 0 1.25rem 0;
+    letter-spacing: -0.02em;
+}
+
+.left-heading span {
+    color: #60a5fa;
+    display: inline-block;
+}
+
+.left-description {
+    font-size: 1rem;
+    opacity: 0.9;
+    margin-bottom: 2rem;
+    line-height: 1.6;
+    color: #e2e8f0;
+}
+
+.security-box {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: auto;
+}
+
+.security-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.security-icon {
+    width: 38px;
+    height: 38px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+.security-text strong {
+    display: block;
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 0.2rem;
+    color: #ffffff;
+}
+
+.security-text span {
+    font-size: 0.825rem;
+    opacity: 0.8;
+    line-height: 1.4;
+    color: #cbd5e1;
+}
+
+/* Status Legend (Signup) */
+.status-legend {
+    margin-top: 1.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.legend-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #93c5fd;
+}
+
+.legend-row {
+    display: flex;
+    gap: 1.25rem;
+    font-size: 0.85rem;
+    margin-top: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #e2e8f0;
+}
+
+.legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.legend-dot.red { background: #ef4444; box-shadow: 0 0 8px rgba(239, 68, 68, 0.6); }
+.legend-dot.yellow { background: #f59e0b; box-shadow: 0 0 8px rgba(245, 158, 11, 0.6); }
+.legend-dot.green { background: #10b981; box-shadow: 0 0 8px rgba(16, 185, 129, 0.6); }
+
+/* 4. Right Form Panel (Desktop Base) */
+.right-panel,
+.auth-bottom-panel {
+    width: 58%;
+    padding: 3.5rem 3.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    box-sizing: border-box;
+    background: #ffffff;
+}
+
+.top-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+    gap: 1rem;
+}
+
+.page-title {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+}
+
+.page-subtitle {
+    color: #64748b;
+    margin-top: 0.4rem;
+    font-size: 0.925rem;
+    line-height: 1.5;
+}
+
+.review-tag {
+    display: inline-flex;
+    align-items: center;
+    background: #fffbeb;
+    color: #b45309;
+    border: 1px solid #fef3c7;
+    padding: 0.4rem 0.85rem;
+    border-radius: 9999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.review-dot {
+    width: 7px;
+    height: 7px;
+    background: #f59e0b;
+    border-radius: 50%;
+    margin-right: 0.45rem;
+    box-shadow: 0 0 6px rgba(245, 158, 11, 0.6);
+}
+
+/* 5. Progress Indicator (Multi-Step KYC) */
+.progress-container {
+    margin-bottom: 2.5rem;
+    position: relative;
+    width: 100%;
+}
+
+.progress-line {
+    height: 3px;
+    background: #e2e8f0;
+    border-radius: 2px;
+    position: absolute;
+    top: 18px;
+    left: 20px;
+    right: 20px;
+    z-index: 1;
+}
+
+.progress-fill {
+    height: 100%;
+    background: #2563eb;
+    width: 0%;
+    transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.progress-steps {
+    display: flex;
+    justify-content: space-between;
+    position: relative;
+    z-index: 2;
+    width: 100%;
+}
+
+.progress-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: default;
+}
+
+.step-circle {
+    width: 38px;
+    height: 38px;
+    background: #ffffff;
+    border: 2px solid #e2e8f0;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #94a3b8;
+    transition: all 0.25s ease;
+}
+
+.step-name {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #94a3b8;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.progress-step.active .step-circle {
+    border-color: #2563eb;
+    color: #2563eb;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
+}
+
+.progress-step.active .step-name {
+    color: #2563eb;
+    font-weight: 700;
+}
+
+.progress-step.completed .step-circle {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: #ffffff;
+}
+
+.progress-step.completed .step-name {
+    color: #334155;
+}
+
+/* 6. Forms & Inputs */
+.form-area {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.form-step {
+    display: none;
+    animation: authFadeIn 0.35s ease;
+    width: 100%;
+}
+
+.form-step.active {
+    display: block;
+}
+
+@keyframes authFadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.step-heading {
+    margin-bottom: 2rem;
+}
+
+.step-number {
+    color: #2563eb;
+    font-weight: 700;
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 0.35rem;
+}
+
+.step-title {
+    font-size: 1.45rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0 0 0.35rem 0;
+    letter-spacing: -0.01em;
+}
+
+.step-description {
+    color: #64748b;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    width: 100%;
+    margin-bottom: 1.25rem;
+    box-sizing: border-box;
+}
+
+.field.full-width {
+    grid-column: 1 / -1;
+}
+
+.field label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #334155;
+    letter-spacing: -0.01em;
+}
+
+.required {
+    color: #ef4444;
+}
+
+.input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.input-icon {
+    position: absolute;
+    left: 1rem;
+    color: #94a3b8;
+    font-size: 1rem;
+    pointer-events: none;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.input-field {
+    width: 100% !important;
+    padding: 0.75rem 1rem 0.75rem 2.75rem;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 0.95rem;
+    color: #0f172a;
+    background-color: #ffffff;
+    outline: none;
+    transition: all 0.2s ease;
+    box-sizing: border-box !important;
+}
+
+.input-field:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.error-message {
+    display: none;
+    color: #ef4444;
+    font-size: 0.8rem;
+    font-weight: 500;
+    margin-top: 0.25rem;
+}
+
+/* 7. Roles Selection Grid */
+.role-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.role-card {
+    border: 2px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 1.25rem;
+    cursor: pointer;
+    transition: transform 0.22s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.22s ease, border-color 0.2s ease, background 0.2s ease;
+    will-change: transform, box-shadow;
+    position: relative;
+    background: #ffffff;
+    box-sizing: border-box;
+}
+
+.role-card:hover {
+    border-color: #2563eb;
+    background: #f8fafc;
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 16px 28px -6px rgba(37, 99, 235, 0.2);
+}
+
+.role-card:active {
+    transform: translateY(0) scale(0.95) !important;
+    box-shadow: 0 4px 10px -2px rgba(0, 0, 0, 0.12) !important;
+    transition: transform 0.08s ease-out !important;
+}
+
+.role-card.selected {
+    border-color: #2563eb;
+    background: #eff6ff;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18), 0 10px 20px -5px rgba(37, 99, 235, 0.2);
+    transform: translateY(-2px);
+}
+
+.role-icon {
+    font-size: 1.85rem;
+    margin-bottom: 0.65rem;
+}
+
+.role-name {
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 0.35rem;
+    font-size: 0.95rem;
+}
+
+.role-description {
+    font-size: 0.8rem;
+    color: #64748b;
+    line-height: 1.45;
+}
+
+/* 8. Navigation & Action Buttons */
+.navigation {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e2e8f0;
+    width: 100%;
+    gap: 1rem;
+    box-sizing: border-box;
+}
+
+.login-navigation {
+    border-top: none;
+    padding-top: 0;
+    margin-top: 1.5rem;
+}
+
+.btn {
+    padding: 0.8rem 1.75rem;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    font-family: inherit;
+    cursor: pointer;
+    transition: transform 0.18s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.18s ease, background 0.18s ease;
+    will-change: transform;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    box-sizing: border-box;
+}
+
+.btn:hover {
+    transform: translateY(-2.5px) scale(1.025);
+    box-shadow: 0 8px 18px -4px rgba(37, 99, 235, 0.3);
+}
+
+.btn:active {
+    transform: translateY(1px) scale(0.94) !important;
+    transition: transform 0.08s ease-out !important;
+}
+
+.btn-primary {
+    background: #2563eb;
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+}
+
+.btn-primary:hover {
+    background: #1d4ed8;
+    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
+}
+
+.btn-secondary {
+    background: #f1f5f9;
+    color: #334155 !important;
+    border: 1px solid #e2e8f0;
+}
+
+.btn-secondary:hover {
+    background: #e2e8f0;
+    color: #0f172a !important;
+}
+
+.btn-success {
+    background: #10b981;
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+}
+
+.btn-success:hover {
+    background: #059669;
+    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.35);
+}
+
+/* Upload & Summary Components */
+.photo-upload {
+    border: 2px dashed #cbd5e1;
+    border-radius: 12px;
+    padding: 1.25rem;
+    display: flex;
+    gap: 1.25rem;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: #f8fafc;
+    box-sizing: border-box;
+}
+
+.photo-upload:hover {
+    border-color: #2563eb;
+    background: #f1f5f9;
+}
+
+.photo-preview {
+    width: 60px;
+    height: 60px;
+    background: #e2e8f0;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.photo-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.upload-title {
+    font-weight: 600;
+    color: #1e293b;
+    font-size: 0.95rem;
+}
+
+.upload-subtitle {
+    font-size: 0.8rem;
+    color: #64748b;
+    margin-top: 0.25rem;
+}
+
+.summary-box {
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+    background: #ffffff;
+    box-sizing: border-box;
+}
+
+.summary-section {
+    padding: 1.25rem;
+    border-bottom: 1px solid #e2e8f0;
+    box-sizing: border-box;
+}
+
+.summary-section:last-child {
+    border-bottom: none;
+}
+
+.summary-header {
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.95rem;
+}
+
+.summary-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    box-sizing: border-box;
+}
+
+.summary-item span {
+    display: block;
+    font-size: 0.8rem;
+    color: #64748b;
+    margin-bottom: 0.2rem;
+}
+
+.summary-item strong {
+    display: block;
+    font-size: 0.925rem;
+    color: #1e293b;
+    word-break: break-word;
+}
+
+.pending-card {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 14px;
+    padding: 1.25rem;
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    box-sizing: border-box;
+}
+
+.pending-icon {
+    font-size: 1.5rem;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.pending-title {
+    font-weight: 700;
+    color: #92400e;
+    margin-bottom: 0.35rem;
+    font-size: 0.95rem;
+}
+
+.pending-description {
+    font-size: 0.85rem;
+    color: #b45309;
+    line-height: 1.5;
+}
+
+/* ==========================================================================
+   TABLET MEDIA QUERY (769px - 1024px)
+   ========================================================================== */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .main-wrapper {
+        padding: 1.5rem 1rem;
+    }
+
+    .main-card,
+    .auth-card {
+        max-width: 960px;
+        min-height: 600px;
+        border-radius: 20px;
+    }
+
+    .left-panel,
+    .auth-top-panel {
+        padding: 2.5rem 2rem;
+        width: 40%;
+    }
+
+    .right-panel,
+    .auth-bottom-panel {
+        padding: 2.5rem 2rem;
+        width: 60%;
+    }
+
+    .left-heading {
+        font-size: 1.85rem;
+    }
+
+    .page-title {
+        font-size: 1.5rem;
+    }
+}
+
+/* ==========================================================================
+   CRITICAL OVERHAUL: ABSOLUTE TOP-BOTTOM VERTICAL STACKING (< 768px)
+   Enforces Strict Top Section (Header) and Bottom Section (Form) Hierarchy
+   Eliminates all side-by-side / overlapping collisions completely
+   ========================================================================== */
+@media screen and (max-width: 767.98px) {
+    /* 1. Main Parent Container - Single Column Vertical Flex */
+    html, body {
+        width: 100% !important;
+        max-width: 100vw !important;
+        overflow-x: hidden !important;
+    }
+
+    .main-wrapper {
+        display: flex !important;
+        flex-direction: column !important;
+        width: 100% !important;
+        max-width: 100vw !important;
+        min-height: 100vh !important;
+        height: auto !important;
+        padding: 12px 10px 32px 10px !important;
+        margin: 0 !important;
+        justify-content: flex-start !important;
+        align-items: stretch !important;
+        overflow-x: hidden !important;
+        box-sizing: border-box !important;
+    }
+
+    .main-card,
+    .auth-card {
+        display: flex !important;
+        flex-direction: column !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-height: auto !important;
+        height: auto !important;
+        border-radius: 18px !important;
+        margin: 0 auto !important;
+        overflow: hidden !important;
+        box-shadow: 0 12px 30px -8px rgba(0, 0, 0, 0.5) !important;
+        box-sizing: border-box !important;
+        float: none !important;
+        position: relative !important;
+    }
+
+    /* 2. TOP SECTION: Branding / Welcome Header - Strictly at the Top */
+    .left-panel,
+    .auth-top-panel {
+        display: flex !important;
+        flex-direction: column !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 100% !important;
+        order: 1 !important; /* Strict top placement */
+        position: relative !important;
+        float: none !important;
+        top: auto !important;
+        left: auto !important;
+        right: auto !important;
+        bottom: auto !important;
+        padding: 20px 18px !important; /* Clean 15px-20px responsive padding */
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+        border-radius: 18px 18px 0 0 !important;
+        box-sizing: border-box !important;
+        min-height: auto !important;
+        height: auto !important;
+        justify-content: flex-start !important;
+    }
+
+    .left-content {
+        display: flex !important;
+        flex-direction: column !important;
+        width: 100% !important;
+    }
+
+    .logo-box {
+        display: flex !important;
+        align-items: center !important;
+        gap: 10px !important;
+        margin-bottom: 12px !important;
+    }
+
+    .logo-icon {
+        width: 36px !important;
+        height: 36px !important;
+        font-size: 1rem !important;
+        border-radius: 8px !important;
+        flex-shrink: 0 !important;
+    }
+
+    .logo-title {
+        font-size: 1.15rem !important;
+        font-weight: 800 !important;
+        line-height: 1.2 !important;
+    }
+
+    .logo-subtitle {
+        font-size: 0.72rem !important;
+    }
+
+    /* Scaled Mobile Typography */
+    .left-heading {
+        font-size: 1.35rem !important;
+        font-weight: 800 !important;
+        line-height: 1.25 !important;
+        margin: 0 0 6px 0 !important;
+        letter-spacing: -0.01em !important;
+    }
+
+    .left-heading span {
+        display: inline !important;
+    }
+
+    .left-description {
+        font-size: 0.85rem !important;
+        line-height: 1.4 !important;
+        margin: 0 0 10px 0 !important;
+        opacity: 0.9 !important;
+        color: #e2e8f0 !important;
+    }
+
+    .security-box {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 8px !important;
+        margin-top: 4px !important;
+    }
+
+    .security-item {
+        display: flex !important;
+        align-items: center !important;
+        gap: 8px !important;
+        margin: 0 !important;
+    }
+
+    .security-icon {
+        width: 28px !important;
+        height: 28px !important;
+        min-width: 28px !important;
+        font-size: 0.85rem !important;
+        border-radius: 6px !important;
+    }
+
+    .security-text strong {
+        font-size: 0.82rem !important;
+        display: inline !important;
+        margin-right: 4px !important;
+    }
+
+    .security-text span {
+        font-size: 0.75rem !important;
+        display: inline !important;
+        opacity: 0.8 !important;
+    }
+
+    .status-legend {
+        display: flex !important;
+        align-items: center !important;
+        gap: 10px !important;
+        margin-top: 10px !important;
+        padding-top: 10px !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
+        flex-wrap: wrap !important;
+    }
+
+    .legend-title {
+        font-size: 0.75rem !important;
+        margin-bottom: 0 !important;
+    }
+
+    .legend-row {
+        display: flex !important;
+        gap: 12px !important;
+        margin-top: 0 !important;
+        font-size: 0.75rem !important;
+    }
+
+    /* 3. BOTTOM SECTION: Auth / KYC Form Container - Strictly Underneath Header */
+    .right-panel,
+    .auth-bottom-panel {
+        display: flex !important;
+        flex-direction: column !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 100% !important;
+        order: 2 !important; /* Strict bottom placement right underneath header */
+        position: relative !important;
+        float: none !important;
+        top: auto !important;
+        left: auto !important;
+        right: auto !important;
+        bottom: auto !important;
+        padding: 20px 18px !important; /* 15px-20px responsive padding */
+        margin: 0 !important;
+        border-radius: 0 0 18px 18px !important;
+        background: #ffffff !important;
+        box-sizing: border-box !important;
+        min-height: auto !important;
+        height: auto !important;
+    }
+
+    .top-header {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 6px !important;
+        margin-bottom: 18px !important;
+        width: 100% !important;
+    }
+
+    .page-title {
+        font-size: 1.35rem !important;
+        font-weight: 800 !important;
+        line-height: 1.25 !important;
+    }
+
+    .page-subtitle {
+        font-size: 0.825rem !important;
+        margin-top: 2px !important;
+    }
+
+    .review-tag {
+        font-size: 0.725rem !important;
+        padding: 4px 10px !important;
+        align-self: flex-start !important;
+    }
+
+    /* Progress Stepper on Mobile */
+    .progress-container {
+        margin-bottom: 20px !important;
+        width: 100% !important;
+    }
+
+    .progress-line {
+        top: 15px !important;
+        left: 15px !important;
+        right: 15px !important;
+    }
+
+    .progress-steps {
+        width: 100% !important;
+        display: flex !important;
+        justify-content: space-between !important;
+    }
+
+    .progress-step {
+        min-width: 36px !important;
+        width: auto !important;
+        gap: 4px !important;
+    }
+
+    .step-circle {
+        width: 30px !important;
+        height: 30px !important;
+        font-size: 0.8rem !important;
+    }
+
+    .step-name {
+        font-size: 0.65rem !important;
+    }
+
+    /* 4. Fluid Form Controls & Zero Overflow */
+    .form-area,
+    .form-area form,
+    #kycForm {
+        display: flex !important;
+        flex-direction: column !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .step-heading {
+        margin-bottom: 16px !important;
+    }
+
+    .step-number {
+        font-size: 0.75rem !important;
+        margin-bottom: 3px !important;
+    }
+
+    .step-title {
+        font-size: 1.15rem !important;
+        margin-bottom: 3px !important;
+    }
+
+    .step-description {
+        font-size: 0.825rem !important;
+    }
+
+    /* Force all multi-column layouts into single-column vertical stack */
+    .form-grid {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 12px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .role-grid {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 10px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .role-card {
+        width: 100% !important;
+        padding: 14px !important;
+        box-sizing: border-box !important;
+    }
+
+    .role-icon {
+        font-size: 1.5rem !important;
+        margin-bottom: 6px !important;
+    }
+
+    .role-name {
+        font-size: 0.925rem !important;
+    }
+
+    .role-description {
+        font-size: 0.775rem !important;
+    }
+
+    .summary-grid {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 10px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .summary-section {
+        padding: 14px !important;
+    }
+
+    .pending-card {
+        flex-direction: column !important;
+        padding: 14px !important;
+        gap: 8px !important;
+    }
+
+    .photo-upload {
+        flex-direction: column !important;
+        align-items: center !important;
+        text-align: center !important;
+        gap: 10px !important;
+        padding: 14px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Single Form Field Styling */
+    .field {
+        margin-bottom: 12px !important;
+        width: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 5px !important;
+        box-sizing: border-box !important;
+    }
+
+    .field label {
+        font-size: 0.85rem !important;
+        font-weight: 600 !important;
+        display: block !important;
+        width: 100% !important;
+    }
+
+    .input-wrapper {
+        width: 100% !important;
+        position: relative !important;
+        display: flex !important;
+        align-items: center !important;
+        box-sizing: border-box !important;
+    }
+
+    .input-field {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        font-size: 16px !important; /* Prevents auto-zoom on mobile iOS */
+        padding: 11px 12px 11px 42px !important;
+        border-radius: 10px !important;
+    }
+
+    .input-icon {
+        position: absolute !important;
+        left: 14px !important;
+        font-size: 16px !important;
+    }
+
+    /* 5. Navigation Buttons - Strict Vertical Thumb Stack */
+    .navigation,
+    .login-navigation {
+        display: flex !important;
+        flex-direction: column !important;
+        width: 100% !important;
+        gap: 10px !important;
+        margin-top: 20px !important;
+        padding-top: 14px !important;
+        border-top: 1px solid #e2e8f0 !important;
+        box-sizing: border-box !important;
+    }
+
+    .login-navigation {
+        border-top: none !important;
+        padding-top: 0 !important;
+    }
+
+    .navigation .btn,
+    .navigation a.btn,
+    .navigation button.btn,
+    .login-navigation .btn,
+    .login-navigation a.btn,
+    .login-navigation button.btn {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-height: 46px !important;
+        padding: 12px 16px !important;
+        font-size: 0.95rem !important;
+        border-radius: 10px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Thumb Ordering */
+    .login-navigation .btn-primary {
+        order: 1 !important;
+    }
+    .login-navigation .btn-secondary {
+        order: 2 !important;
+    }
+
+    #navigation #nextButton {
+        order: 1 !important;
+    }
+    #navigation #backButton {
+        order: 2 !important;
+    }
+}
+
+/* ==========================================================================
+   ULTRA-COMPACT SCREENS (< 480px)
+   ========================================================================== */
+@media screen and (max-width: 480px) {
+    .main-wrapper {
+        padding: 8px 6px 24px 6px !important;
+    }
+
+    .left-panel,
+    .auth-top-panel {
+        padding: 16px 14px !important;
+    }
+
+    .right-panel,
+    .auth-bottom-panel {
+        padding: 16px 14px !important;
+    }
+
+    .left-heading {
+        font-size: 1.25rem !important;
+    }
+
+    .left-description {
+        font-size: 0.8rem !important;
+        margin-bottom: 6px !important;
+    }
+
+    .page-title {
+        font-size: 1.25rem !important;
+    }
+
+    /* Hide step text labels on very narrow screens to prevent overlap */
+    .step-name {
+        display: none !important;
+    }
+
+    .progress-step {
+        min-width: 28px !important;
+    }
+
+    .security-box {
+        display: none !important; /* Hide secondary security info on ultra small viewports */
+    }
+}

@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="mb-6 md:mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
+    <div>
+        <a href="{% url 'equipment' %}" class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 font-bold flex items-center gap-1 mb-2 transition text-xs sm:text-sm">
+            ← Back to Equipment
+        </a>
+        <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">History: {{ machine.code }}</h1>
+        <p class="text-slate-500 dark:text-slate-400 mt-1 font-medium text-xs sm:text-sm">{{ machine.name }} • Weekly Production Output</p>
+    </div>
+    <div class="flex items-center space-x-4 w-full sm:w-auto">
+        <!-- Week Pagination Controls -->
+        <div class="flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm overflow-hidden w-full sm:w-auto justify-between sm:justify-start">
+            <a href="?week_offset={{ week_offset|add:'-1' }}" class="px-3 sm:px-4 py-2 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 border-r border-slate-200 dark:border-slate-700 transition" title="Previous Week">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+            </a>
+            <div class="px-3 sm:px-5 py-2 text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 bg-slate-50/50 dark:bg-slate-800 text-center flex-1 sm:flex-initial">
+                {{ start_of_week|date:"M d" }} - {{ end_of_week|date:"M d, Y" }}
+            </div>
+            <a href="?week_offset={{ week_offset|add:'1' }}" class="px-3 sm:px-4 py-2 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 border-l border-slate-200 dark:border-slate-700 transition" title="Next Week">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="premium-card p-6 mb-8 h-[26rem]">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2"><span>📈</span> Production Trend (Weekly)</h2>
+    </div>
+    <div class="relative h-72 w-full">
+        <canvas id="machineHistoryChart"></canvas>
+    </div>
+</div>
+
+<div class="premium-card overflow-hidden">
+    <div class="px-6 py-5 border-b border-slate-100 bg-slate-50/50">
+        <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2"><span>📋</span> Daily Logs</h3>
+    </div>
+    <div class="overflow-x-auto max-h-96">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider font-bold sticky top-0">
+                    <th class="px-6 py-4 border-b border-slate-100">Date</th>
+                    <th class="px-6 py-4 border-b border-slate-100">Operator</th>
+                    <th class="px-6 py-4 border-b border-slate-100 text-right">Raw Material (kg)</th>
+                    <th class="px-6 py-4 border-b border-slate-100 text-right">Output (kg)</th>
+                </tr>
+            </thead>
+            <tbody class="text-sm">
+                {% for log in logs %}
+                <tr class="hover:bg-slate-50/80 transition-colors border-b border-slate-50 last:border-0">
+                    <td class="px-6 py-4 font-bold text-slate-700">{{ log.date|date:"M d, Y" }}</td>
+                    <td class="px-6 py-4 font-semibold text-slate-600">{{ log.employee.username }}</td>
+                    <td class="px-6 py-4 text-slate-500 text-right">{{ log.material_used }}</td>
+                    <td class="px-6 py-4 font-bold text-emerald-600 text-right">{{ log.output_kg }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="px-6 py-12 text-center text-slate-500 bg-slate-50/50">
+                        <span class="text-3xl block mb-2">📭</span>
+                        <p class="font-bold">No production logs found for this week.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    Chart.defaults.font.family = "'Inter', sans-serif";
+    Chart.defaults.color = '#64748b';
+    Chart.defaults.scale.grid.color = '#f1f5f9';
+
+    const chartDates = JSON.parse('{{ chart_dates_json|safe }}');
+    const chartOutputs = JSON.parse('{{ chart_outputs_json|safe }}');
+
+    const ctx = document.getElementById('machineHistoryChart').getContext('2d');
+    
+    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+    gradient.addColorStop(0, 'rgba(16, 185, 129, 0.2)');
+    gradient.addColorStop(1, 'rgba(16, 185, 129, 0)');
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: chartDates,
+            datasets: [{
+                label: 'Output (kg)',
+                data: chartOutputs,
+                borderColor: '#10b981', 
+                backgroundColor: gradient,
+                borderWidth: 3,
+                fill: true,
+                tension: 0.3,
+                pointBackgroundColor: '#ffffff',
+                pointBorderColor: '#10b981',
+                pointBorderWidth: 2,
+                pointRadius: 3,
+                pointHoverRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: '#1e293b',
+                    padding: 12,
+                    titleFont: { size: 13, weight: 'bold' },
+                    bodyFont: { size: 14, weight: 'bold' },
+                    callbacks: { label: function(context) { return context.parsed.y + ' kg'; } }
+                }
+            },
+            scales: {
+                y: { min: 0, border: { display: false } },
+                x: { border: { display: false }, grid: { display: false } }
+            }
+        }
+    });
+</script>
+{% endblock %}

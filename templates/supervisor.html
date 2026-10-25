@@ -1,0 +1,2016 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<!-- Chart.js 4.4 Engine for Theme-Matched Analytical Diagrams -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+<style>
+    /* ==========================================================================
+       SUPERVISOR ERP: SMOOTH SLIDING TRANSITIONS & MODULAR DRAWER ANIMATIONS
+       ========================================================================== */
+
+    .tabs-slider-viewport {
+        position: relative;
+        overflow: hidden;
+        min-height: 520px;
+        width: 100%;
+    }
+
+    .tab-pane {
+        display: none;
+        width: 100%;
+        transition: opacity 0.32s cubic-bezier(0.4, 0, 0.2, 1), transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .tab-pane.active {
+        display: block;
+    }
+
+    /* Keyframe Slide-Left / Slide-Right Animations */
+    @keyframes slideInFromRight {
+        0% { opacity: 0; transform: translate3d(60px, 0, 0) scale(0.97); }
+        100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+    }
+
+    @keyframes slideInFromLeft {
+        0% { opacity: 0; transform: translate3d(-60px, 0, 0) scale(0.97); }
+        100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+    }
+
+    @keyframes slideOutToLeft {
+        0% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+        100% { opacity: 0; transform: translate3d(-50px, 0, 0) scale(0.97); }
+    }
+
+    @keyframes slideOutToRight {
+        0% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+        100% { opacity: 0; transform: translate3d(50px, 0, 0) scale(0.97); }
+    }
+
+    .slide-in-right {
+        animation: slideInFromRight 0.38s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    }
+
+    .slide-in-left {
+        animation: slideInFromLeft 0.38s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    }
+
+    .slide-out-left {
+        animation: slideOutToLeft 0.26s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    }
+
+    .slide-out-right {
+        animation: slideOutToRight 0.26s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    }
+
+    /* Granular Day-by-Day Fade-Slide Animation */
+    @keyframes daySlideIn {
+        0% { opacity: 0; transform: translate3d(0, 24px, 0) scale(0.96); }
+        100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+    }
+
+    .day-slide-in {
+        animation: daySlideIn 0.35s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    }
+
+    /* Modular Drawer Expansion Transitions */
+    .drawer-collapsible {
+        transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s ease, padding 0.35s ease;
+        overflow: hidden;
+    }
+
+    .drawer-collapsible.closed {
+        max-height: 0 !important;
+        opacity: 0;
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+        border-color: transparent !important;
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+        pointer-events: none;
+    }
+
+    .drawer-collapsible.open {
+        max-height: 1200px !important;
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    /* Deep-Dive Modal Backdrop & Content Transitions */
+    .supervisor-modal {
+        transition: opacity 0.25s ease;
+    }
+
+    .supervisor-modal .modal-card {
+        transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+    }
+
+    .supervisor-modal.hidden {
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .supervisor-modal:not(.hidden) {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .supervisor-modal.hidden .modal-card {
+        transform: scale(0.95) translateY(10px);
+        opacity: 0;
+    }
+
+    .supervisor-modal:not(.hidden) .modal-card {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+    }
+</style>
+
+<div class="space-y-8">
+
+    <!-- =========================================================================
+         1. TOP EXECUTIVE HEADER & SUPERVISOR LIVE STATUS BAR
+         ========================================================================= -->
+    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-6">
+        <div>
+            <div class="flex items-center gap-3">
+                <h1 class="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+                    Autonomous Supervisor Workflow Engine
+                </h1>
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 animate-pulse">
+                    <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+                    Autonomous Supervisor Online
+                </span>
+            </div>
+            <p class="text-slate-500 dark:text-slate-400 mt-1 font-medium text-sm">
+                Automated daily task assignments, intelligent merit tracking, AI payroll imputation ledger, and autonomous floor decision-making.
+            </p>
+        </div>
+
+        <!-- Quick Action Controls -->
+        <div class="flex flex-wrap items-center gap-3">
+            <button type="button" onclick="toggleDrawer('inline-supervisor-drawer')" class="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold px-4 py-2.5 rounded-xl transition text-sm flex items-center gap-2 border border-slate-200 dark:border-slate-700">
+                <i class="fa-solid fa-layer-group text-indigo-500"></i>
+                <span id="drawer-toggle-text">Floor Pulse Drawer</span>
+            </button>
+
+            <button type="button" onclick="switchTabSlide('tab-reassign')" class="bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 text-indigo-700 dark:text-indigo-300 px-4 py-2.5 rounded-xl shadow-sm font-bold text-sm transition-colors flex items-center gap-2">
+                <i class="fa-solid fa-users-gear text-indigo-600 dark:text-indigo-400"></i>
+                <span>Reassign Station Form</span>
+            </button>
+
+            <form method="POST" class="inline">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="auto_approve_eligible">
+                <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl shadow-md shadow-emerald-200 dark:shadow-none transition-all flex items-center gap-2 text-sm">
+                    <i class="fa-solid fa-wand-magic-sparkles text-amber-300"></i>
+                    <span>Autonomous Batch Approval</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- =========================================================================
+         2. MODULAR COLLAPSIBLE INLINE DRAWER (Floor Pulse Overview)
+         ========================================================================= -->
+    <div id="inline-supervisor-drawer" class="drawer-collapsible closed bg-gradient-to-r from-indigo-50/70 via-slate-50/90 to-purple-50/70 dark:from-slate-900/90 dark:via-slate-800/80 dark:to-slate-900/90 border-2 border-indigo-200 dark:border-indigo-900 rounded-2xl p-6 shadow-sm">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 pb-3 border-b border-indigo-100 dark:border-slate-700">
+            <div>
+                <h3 class="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                    <i class="fa-solid fa-gauge-high text-indigo-600"></i>
+                    <span>Real-Time Supervisor Floor Telemetry & Guardrails</span>
+                </h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Autonomous floor supervision pulse: staffing health, line coverage balance, merit qualification, and AI imputation buffer.
+                </p>
+            </div>
+            <button type="button" onclick="toggleDrawer('inline-supervisor-drawer')" class="text-xs font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm">
+                <i class="fa-solid fa-xmark"></i> Close Drawer
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+            <div class="p-4 rounded-xl bg-white dark:bg-slate-800/80 border border-indigo-100 dark:border-slate-700">
+                <div class="text-xs font-bold text-slate-400 uppercase">Staff Coverage</div>
+                <div class="text-xl font-extrabold text-slate-900 dark:text-white mt-1">100% Floor Buffer</div>
+                <p class="text-xs text-emerald-600 dark:text-emerald-400 mt-1 font-semibold">Zero unattended machine lines</p>
+            </div>
+            <div class="p-4 rounded-xl bg-white dark:bg-slate-800/80 border border-indigo-100 dark:border-slate-700">
+                <div class="text-xs font-bold text-slate-400 uppercase">Shift Target Quota</div>
+                <div class="text-xl font-extrabold text-slate-900 dark:text-white mt-1">{{ avg_completion }}% Avg Yield</div>
+                <p class="text-xs text-indigo-600 dark:text-indigo-400 mt-1 font-semibold">{{ completed_tasks_count }} / {{ total_tasks_count }} Tasks Done</p>
+            </div>
+            <div class="p-4 rounded-xl bg-white dark:bg-slate-800/80 border border-indigo-100 dark:border-slate-700">
+                <div class="text-xs font-bold text-slate-400 uppercase">Autonomous Imputation</div>
+                <div class="text-xl font-extrabold text-amber-600 dark:text-amber-400 mt-1">{{ auto_predicted_payrolls_count }} AI Records</div>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 font-semibold">Self-healing zero-lag ledger</p>
+            </div>
+            <div class="p-4 rounded-xl bg-white dark:bg-slate-800/80 border border-indigo-100 dark:border-slate-700">
+                <div class="text-xs font-bold text-slate-400 uppercase">Floor Governance</div>
+                <div class="text-xl font-extrabold text-purple-600 dark:text-purple-400 mt-1">Active AI Guard</div>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 font-semibold">{{ autonomous_decision_logs|length }} Rules Executed Today</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================================================
+         3. CLICKABLE INTERACTIVE SUMMARY CARDS (Deep-Dive Triggers)
+         ========================================================================= -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+
+        <!-- Card 1: Allocated Workforce & Daily Tasks -->
+        <div class="premium-card erp-card-interactive supervisor-interactive-card p-6 border-l-4 border-l-indigo-500 flex flex-col justify-between hover:shadow-xl transition-all duration-300 cursor-pointer group focus:outline-none focus:ring-2 focus:ring-indigo-500" 
+             role="button" tabindex="0" data-card-modal="modal-tasks-deepdive" aria-label="Open Daily Tasks Drilldown Modal">
+            <div>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Allocated Workforce</span>
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-[10px] font-bold text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors flex items-center gap-1">
+                            <i class="fa-solid fa-arrow-up-right-from-square text-[9px] transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform"></i>
+                            <span>Drilldown</span>
+                        </span>
+                        <span class="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-sm shadow-sm group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-users"></i>
+                        </span>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <div class="flex items-baseline gap-2">
+                        <span class="text-3xl font-extrabold text-slate-800 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{{ allocated_workers_count }}</span>
+                        <span class="text-sm font-bold text-slate-400">Active Operators</span>
+                    </div>
+                    <div class="flex items-center justify-between mt-3 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                        <span>Tasks: {{ total_tasks_count }}</span>
+                        <span class="text-emerald-600 dark:text-emerald-400 font-bold">{{ completed_tasks_count }} Completed</span>
+                    </div>
+                    <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2 mt-2 overflow-hidden">
+                        <div class="bg-indigo-600 h-2 rounded-full transition-all duration-1000" style="width: {% if total_tasks_count > 0 %}{% widthratio completed_tasks_count total_tasks_count 100 %}{% else %}0{% endif %}%"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-5 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <button type="button" onclick="event.stopPropagation(); openSupervisorModal('modal-tasks-deepdive')" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 flex items-center gap-1.5 transition">
+                    <span>Drilldown Tasks</span>
+                    <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                </button>
+                <button type="button" onclick="event.stopPropagation(); switchTabSlide('tab-reassign')" class="text-xs font-bold text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
+                    Reassign Line
+                </button>
+            </div>
+        </div>
+
+        <!-- Card 2: Workforce Quality Tiers -->
+        <div class="premium-card erp-card-interactive supervisor-interactive-card p-6 border-l-4 border-l-emerald-500 flex flex-col justify-between hover:shadow-xl transition-all duration-300 cursor-pointer group focus:outline-none focus:ring-2 focus:ring-emerald-500" 
+             role="button" tabindex="0" data-card-modal="modal-performance-deepdive" aria-label="Open Merit Tiers Deep-Dive Modal">
+            <div>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Quality Merit Tiers</span>
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-[10px] font-bold text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors flex items-center gap-1">
+                            <i class="fa-solid fa-arrow-up-right-from-square text-[9px] transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform"></i>
+                            <span>Drilldown</span>
+                        </span>
+                        <span class="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-sm shadow-sm group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-award"></i>
+                        </span>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <div class="flex items-baseline gap-2">
+                        <span class="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 group-hover:scale-105 transition-transform inline-block origin-left">{{ top_performer_count }}</span>
+                        <span class="text-sm font-bold text-slate-400">Top Performers</span>
+                    </div>
+                    <div class="flex items-center gap-2 mt-3 text-xs font-semibold">
+                        <span class="px-2 py-0.5 rounded font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+                            {{ on_track_count }} On Track
+                        </span>
+                        <span class="px-2 py-0.5 rounded font-bold bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+                            {{ attention_count }} Under Review
+                        </span>
+                    </div>
+                    <div class="text-xs text-slate-400 mt-2">
+                        Autonomous merit & bonus qualification
+                    </div>
+                </div>
+            </div>
+            <div class="mt-5 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <button type="button" onclick="event.stopPropagation(); openSupervisorModal('modal-performance-deepdive')" class="text-xs font-bold text-emerald-600 hover:text-emerald-800 dark:text-emerald-400 flex items-center gap-1.5 transition">
+                    <span>View Merit Tiers</span>
+                    <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                </button>
+                <button type="button" onclick="event.stopPropagation(); switchTabSlide('tab-analytics')" class="text-xs font-bold text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
+                    Tier Diagram
+                </button>
+            </div>
+        </div>
+
+        <!-- Card 3: Distributed Shift Payroll -->
+        <div class="premium-card erp-card-interactive supervisor-interactive-card p-6 border-l-4 border-l-amber-500 flex flex-col justify-between hover:shadow-xl transition-all duration-300 cursor-pointer group focus:outline-none focus:ring-2 focus:ring-amber-500" 
+             role="button" tabindex="0" data-card-modal="modal-payroll-deepdive" aria-label="Open Distributed Shift Payroll Modal">
+            <div>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Distributed Payroll</span>
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-[10px] font-bold text-slate-400 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors flex items-center gap-1">
+                            <i class="fa-solid fa-arrow-up-right-from-square text-[9px] transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform"></i>
+                            <span>Drilldown</span>
+                        </span>
+                        <span class="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center text-sm shadow-sm group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-money-bill-wave"></i>
+                        </span>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <div class="flex items-baseline gap-1">
+                        <span class="text-2xl font-extrabold text-slate-800 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">₹{{ total_payroll_distributed|floatformat:0 }}</span>
+                        <span class="text-xs font-bold text-slate-400">Total</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 mt-3 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
+                        <div>
+                            <div class="text-slate-400">Avg Quota</div>
+                            <div class="font-extrabold text-slate-700 dark:text-slate-300">{{ avg_completion }}%</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-slate-400">Auto Imputed</div>
+                            <div class="font-extrabold text-amber-600 dark:text-amber-400">{{ auto_predicted_payrolls_count }} Records</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-5 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <button type="button" onclick="event.stopPropagation(); openSupervisorModal('modal-payroll-deepdive')" class="text-xs font-bold text-amber-600 hover:text-amber-800 dark:text-amber-400 flex items-center gap-1.5 transition">
+                    <span>Audit Payroll Ledger</span>
+                    <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                </button>
+                <button type="button" onclick="event.stopPropagation(); switchTabSlide('tab-analytics')" class="text-xs font-bold text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
+                    Payroll Trend
+                </button>
+            </div>
+        </div>
+
+        <!-- Card 4: Floor Approvals & Autonomous Guard -->
+        <div class="premium-card erp-card-interactive supervisor-interactive-card p-6 border-l-4 border-l-rose-500 flex flex-col justify-between hover:shadow-xl transition-all duration-300 cursor-pointer group focus:outline-none focus:ring-2 focus:ring-rose-500" 
+             role="button" tabindex="0" data-card-modal="modal-approvals-deepdive" aria-label="Open Floor Approvals Deep-Dive Modal">
+            <div>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Floor Approvals & AI Guard</span>
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-[10px] font-bold text-slate-400 group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors flex items-center gap-1">
+                            <i class="fa-solid fa-arrow-up-right-from-square text-[9px] transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform"></i>
+                            <span>Drilldown</span>
+                        </span>
+                        <span class="w-9 h-9 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center text-sm shadow-sm group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-clipboard-check"></i>
+                        </span>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <div class="flex items-baseline gap-2">
+                        <span class="text-3xl font-extrabold text-slate-800 dark:text-white group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors">{{ pending_leaves|length|add:open_complaints|length }}</span>
+                        <span class="text-sm font-bold text-slate-400">Pending Actions</span>
+                    </div>
+                    <div class="flex items-center justify-between mt-3 text-xs font-semibold">
+                        <span class="text-amber-600 dark:text-amber-400">{{ pending_leaves|length }} Leaves Pending</span>
+                        <span class="text-rose-600 dark:text-rose-400">{{ open_complaints|length }} Issues Open</span>
+                    </div>
+                    <div class="text-xs text-slate-400 mt-2 flex items-center gap-1">
+                        <i class="fa-solid fa-shield text-indigo-500"></i>
+                        <span>Floor coverage buffer: Optimal</span>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-5 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <button type="button" onclick="event.stopPropagation(); openSupervisorModal('modal-approvals-deepdive')" class="text-xs font-bold text-rose-600 hover:text-rose-800 dark:text-rose-400 flex items-center gap-1.5 transition">
+                    <span>Process Approvals</span>
+                    <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                </button>
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="event.stopPropagation(); switchTabSlide('tab-approvals')" class="text-xs font-bold text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
+                        Console
+                    </button>
+                    <button type="button" onclick="event.stopPropagation(); openSupervisorModal('modal-decisions-deepdive')" class="text-xs font-bold text-purple-600 hover:text-purple-800 dark:text-purple-400">
+                        AI Log
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- =========================================================================
+         4. SLIDING TABS NAVIGATION BAR (Fluid Slide-Left / Slide-Right Navigation)
+         ========================================================================= -->
+    <div class="border-b border-slate-200 dark:border-slate-800">
+        <nav class="flex flex-wrap gap-2 sm:gap-6" aria-label="Supervisor Tabs">
+            <button type="button" id="tab-btn-timeline" onclick="switchTabSlide('tab-timeline')" class="tab-btn active py-4 px-3 border-b-2 font-bold text-sm flex items-center gap-2 border-indigo-600 text-indigo-600 dark:text-indigo-400 transition-colors">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+                <span>Granular Workflow Timeline</span>
+                <span class="px-2 py-0.5 rounded-full text-[11px] font-extrabold bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+                    Startup-to-Date
+                </span>
+            </button>
+
+            <button type="button" id="tab-btn-analytics" onclick="switchTabSlide('tab-analytics')" class="tab-btn py-4 px-3 border-b-2 font-bold text-sm flex items-center gap-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 transition-colors">
+                <i class="fa-solid fa-chart-pie"></i>
+                <span>Supervisory Analytics & Diagrams</span>
+                <span class="px-2 py-0.5 rounded-full text-[11px] font-extrabold bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                    Theme-Matched
+                </span>
+            </button>
+
+            <button type="button" id="tab-btn-approvals" onclick="switchTabSlide('tab-approvals')" class="tab-btn py-4 px-3 border-b-2 font-bold text-sm flex items-center gap-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 transition-colors">
+                <i class="fa-solid fa-clipboard-check"></i>
+                <span>Floor Approvals & Resolution</span>
+                {% if pending_leaves|length or open_complaints|length %}
+                <span class="px-2 py-0.5 rounded-full text-[11px] font-extrabold bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300">
+                    {{ pending_leaves|length|add:open_complaints|length }} Action(s)
+                </span>
+                {% endif %}
+            </button>
+
+            <button type="button" id="tab-btn-reassign" onclick="switchTabSlide('tab-reassign')" class="tab-btn py-4 px-3 border-b-2 font-bold text-sm flex items-center gap-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 transition-colors">
+                <i class="fa-solid fa-users-gear"></i>
+                <span>Operator Station Reassignment</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- =========================================================================
+         5. SLIDING VIEWPORT CONTAINER (Wrapped in Smooth CSS Transitions)
+         ========================================================================= -->
+    <div class="tabs-slider-viewport">
+
+        <!-- =====================================================================
+             TAB PANE 0: GRANULAR DAY-BY-DAY & WEEKLY HISTORICAL TIMELINE
+             ===================================================================== -->
+        <div id="tab-timeline" class="tab-pane active space-y-6" data-tab-index="0">
+
+            <!-- Timeline Controls Bar: Multi-Week historical navigation -->
+            <div class="premium-card p-5 bg-gradient-to-r from-slate-50 via-white to-indigo-50/40 dark:from-slate-800/80 dark:via-slate-800/50 dark:to-indigo-950/20">
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-sm shadow-sm">
+                                <i class="fa-solid fa-calendar-week"></i>
+                            </span>
+                            <h2 class="text-lg font-extrabold text-slate-900 dark:text-white">
+                                Multi-Week Historical Workflow Timeline & Daily Shift Logs
+                            </h2>
+                        </div>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                            Switch seamlessly from multi-week historical supervisor logs down to exact individual day-by-day operator metrics spanning system startup (Aug 25, 2026) to present.
+                        </p>
+                    </div>
+
+                    <!-- Week Selector Dropdown & Quick Steppers -->
+                    <div class="flex flex-wrap items-center gap-2">
+                        <select id="timeline-week-select" onchange="onWeekDropdownChange(this.value)" class="border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 bg-white dark:bg-slate-900 text-xs font-bold text-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm max-w-xs">
+                            {% for w in timeline_weeks_select %}
+                            <option value="{{ w.index }}">{{ w.label }}</option>
+                            {% endfor %}
+                        </select>
+
+                        <div class="flex items-center gap-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-1 shadow-sm">
+                            <button type="button" onclick="navigateWeek(1)" title="Older Week" class="p-1.5 px-2.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                                <i class="fa-solid fa-chevron-left mr-1"></i> Older
+                            </button>
+                            <span class="text-slate-300 dark:text-slate-700">|</span>
+                            <button type="button" onclick="navigateWeek(-1)" title="Newer Week" class="p-1.5 px-2.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                                Newer <i class="fa-solid fa-chevron-right ml-1"></i>
+                            </button>
+                        </div>
+
+                        <button type="button" onclick="goToWeek(0)" class="px-3 py-2 rounded-xl text-xs font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 transition shadow-sm">
+                            Current Week
+                        </button>
+                        <button type="button" onclick="goToStartupWeek()" class="px-3 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-200 transition shadow-sm">
+                            Startup
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Selected Week Aggregate Stats Strip -->
+                <div id="timeline-week-stats-banner" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 text-xs">
+                    <div>
+                        <span class="text-slate-400">Week Period:</span>
+                        <div id="stat-week-range" class="font-extrabold text-slate-800 dark:text-white text-sm">--</div>
+                    </div>
+                    <div>
+                        <span class="text-slate-400">Total Tasks:</span>
+                        <div id="stat-week-tasks" class="font-extrabold text-indigo-600 dark:text-indigo-400 text-sm">--</div>
+                    </div>
+                    <div>
+                        <span class="text-slate-400">Completion Rate:</span>
+                        <div id="stat-week-completion" class="font-extrabold text-emerald-600 dark:text-emerald-400 text-sm">--</div>
+                    </div>
+                    <div>
+                        <span class="text-slate-400">Payroll Disbursed:</span>
+                        <div id="stat-week-payroll" class="font-extrabold text-slate-800 dark:text-white text-sm">--</div>
+                    </div>
+                    <div>
+                        <span class="text-slate-400">AI Imputations:</span>
+                        <div id="stat-week-imputations" class="font-extrabold text-amber-600 dark:text-amber-400 text-sm">--</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Day Selector Pills Container: Granular 7-Day Drilldown Strip -->
+            <div>
+                <div class="flex items-center justify-between mb-3 px-1">
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                        <i class="fa-solid fa-calendar-days text-indigo-500"></i>
+                        <span>Select Individual Day For Operator Shift Drilldown</span>
+                    </span>
+                    <span id="active-day-label" class="text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950 px-2.5 py-1 rounded-md">
+                        Today
+                    </span>
+                </div>
+
+                <div id="timeline-day-pills" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3">
+                    <!-- Dynamically populated by JS renderDayPills() -->
+                </div>
+            </div>
+
+            <!-- Selected Individual Day Detail Container (Smooth Slide-Fade-In) -->
+            <div id="active-day-view" class="day-slide-in space-y-6">
+
+                <!-- Day Executive Banner & Autonomous Decision Highlight -->
+                <div class="premium-card p-6 bg-gradient-to-r from-indigo-900 to-purple-900 text-white shadow-xl relative overflow-hidden">
+                    <div class="absolute -right-10 -bottom-10 w-48 h-48 bg-white/5 rounded-full blur-2xl pointer-events-none"></div>
+
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-4">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="px-2.5 py-1 rounded-lg bg-white/20 text-xs font-black tracking-wide uppercase" id="day-badge-weekday">MONDAY</span>
+                                <span class="text-lg font-bold text-indigo-200" id="day-badge-date">Oct 24, 2026</span>
+                            </div>
+                            <h3 class="text-2xl font-black mt-1" id="day-banner-title">Floor Supervisory Audit & Operator Telemetry</h3>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span id="day-shift-status-badge" class="px-3 py-1.5 rounded-full text-xs font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5">
+                                <i class="fa-solid fa-stamp"></i> Shift Sign-Off Completed
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Autonomous Supervisor Decision Quote Banner -->
+                    <div class="mt-4 bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/15">
+                        <div class="flex items-center gap-2 text-amber-300 text-xs font-black uppercase tracking-wider mb-1">
+                            <i class="fa-solid fa-brain"></i>
+                            <span>Autonomous Supervisor Decision Log (AI)</span>
+                        </div>
+                        <p id="day-autonomous-decision-text" class="text-sm font-medium text-slate-100 italic">
+                            "Floor staff balanced across Morning & Evening shifts. Coverage maintained at 100%. Autonomous payroll adjustments logged."
+                        </p>
+                    </div>
+
+                    <!-- Day KPI Summary Pills -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4 pt-4 border-t border-white/10 text-xs">
+                        <div>
+                            <div class="text-indigo-200">Active Operators</div>
+                            <div id="day-kpi-operators" class="text-lg font-extrabold text-white mt-0.5">--</div>
+                        </div>
+                        <div>
+                            <div class="text-indigo-200">Daily Tasks Handled</div>
+                            <div id="day-kpi-tasks" class="text-lg font-extrabold text-white mt-0.5">--</div>
+                        </div>
+                        <div>
+                            <div class="text-indigo-200">Overall Quota Yield</div>
+                            <div id="day-kpi-completion" class="text-lg font-extrabold text-emerald-300 mt-0.5">--</div>
+                        </div>
+                        <div>
+                            <div class="text-indigo-200">Daily Shift Payroll</div>
+                            <div id="day-kpi-payroll" class="text-lg font-extrabold text-amber-300 font-mono mt-0.5">--</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Collapsible / Filterable Day Operator Records Table -->
+                <div class="premium-card overflow-hidden">
+                    <div class="px-6 py-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div>
+                            <h3 class="text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                                <i class="fa-solid fa-users text-indigo-500"></i>
+                                <span>Day-by-Day Operator Station & Output Metrics</span>
+                            </h3>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                Granular records for each operator on this date: assigned shift, line station, target quota, achieved output, yield, and merit tier.
+                            </p>
+                        </div>
+
+                        <!-- Search & Quick Reassign Trigger -->
+                        <div class="flex flex-wrap items-center gap-2">
+                            <div class="relative">
+                                <i class="fa-solid fa-search absolute left-3 top-2.5 text-xs text-slate-400"></i>
+                                <input type="text" id="day-operator-search" oninput="filterDayOperators()" placeholder="Filter operator name..." class="pl-8 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm w-44">
+                            </div>
+                            <button type="button" onclick="toggleSection('day-operator-table-wrap')" class="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-bold text-xs hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                                <i class="fa-solid fa-compress mr-1"></i> Hide/Show
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="day-operator-table-wrap" class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider font-bold">
+                                    <th class="px-6 py-4 border-b border-slate-100 dark:border-slate-800">Operator</th>
+                                    <th class="px-6 py-4 border-b border-slate-100 dark:border-slate-800">Assigned Shift</th>
+                                    <th class="px-6 py-4 border-b border-slate-100 dark:border-slate-800">Equipment Line</th>
+                                    <th class="px-6 py-4 border-b border-slate-100 dark:border-slate-800">Target (kg)</th>
+                                    <th class="px-6 py-4 border-b border-slate-100 dark:border-slate-800">Achieved (kg)</th>
+                                    <th class="px-6 py-4 border-b border-slate-100 dark:border-slate-800">Quota %</th>
+                                    <th class="px-6 py-4 border-b border-slate-100 dark:border-slate-800">Merit Tier</th>
+                                    <th class="px-6 py-4 border-b border-slate-100 dark:border-slate-800">Status</th>
+                                    <th class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 text-right">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="day-operators-tbody" class="text-sm divide-y divide-slate-100 dark:divide-slate-800">
+                                <!-- Populated dynamically by JS renderDayOperators() -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- =====================================================================
+             TAB PANE 1: SUPERVISORY ANALYTICS & THEME-MATCHED DIAGRAMS
+             ===================================================================== -->
+        <div id="tab-analytics" class="tab-pane space-y-6" data-tab-index="1">
+
+            <!-- Chart Header Banner -->
+            <div class="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-slate-800 dark:to-slate-900 p-5 rounded-2xl border border-indigo-100 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h3 class="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                        <i class="fa-solid fa-chart-line text-indigo-600"></i>
+                        <span>Executive Supervisory Analytics & Visual Diagrams</span>
+                    </h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                        Theme-matched analytical diagrams: workforce merit distribution, weekly quota vs actual throughput, and historical payroll trend.
+                    </p>
+                </div>
+                <div class="flex items-center gap-2 text-xs font-bold">
+                    <span class="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-slate-700 shadow-sm flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Auto-Resizing Dynamic Palettes
+                    </span>
+                </div>
+            </div>
+
+            <!-- Charts Grid (3 Theme-Matched Charts) -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                <!-- Chart 1: Workforce Quality Tiers Polar/Doughnut -->
+                <div class="premium-card p-6 flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-100 dark:border-slate-800">
+                            <div>
+                                <h4 class="font-extrabold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                                    <i class="fa-solid fa-pie-chart text-emerald-500"></i>
+                                    <span>Workforce Quality Tiers</span>
+                                </h4>
+                                <p class="text-[11px] text-slate-400">Merit & bonus proportion</p>
+                            </div>
+                            <span class="text-xs font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                                {{ top_performer_count }} Stars
+                            </span>
+                        </div>
+                        <div class="relative h-64 flex items-center justify-center">
+                            <canvas id="supervisorMeritChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 text-center text-xs">
+                        <div>
+                            <div class="text-slate-400 font-medium">Top</div>
+                            <div class="font-extrabold text-emerald-600 dark:text-emerald-400">{{ top_performer_count }}</div>
+                        </div>
+                        <div>
+                            <div class="text-slate-400 font-medium">On Track</div>
+                            <div class="font-extrabold text-indigo-600 dark:text-indigo-400">{{ on_track_count }}</div>
+                        </div>
+                        <div>
+                            <div class="text-slate-400 font-medium">Review</div>
+                            <div class="font-extrabold text-amber-600 dark:text-amber-400">{{ attention_count }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chart 2: Weekly Shift Task Completion & Output Yield (Bar + Line) -->
+                <div class="premium-card p-6 lg:col-span-2 flex flex-col justify-between">
+                    <div>
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 pb-2 border-b border-slate-100 dark:border-slate-800">
+                            <div>
+                                <h4 class="font-extrabold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                                    <i class="fa-solid fa-chart-column text-indigo-500"></i>
+                                    <span>Weekly Quota Target vs Achieved Output (kg)</span>
+                                </h4>
+                                <p class="text-[11px] text-slate-400">Daily throughput comparison with yield percentage trajectory</p>
+                            </div>
+                            <span id="chart-week-badge" class="text-xs font-bold px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+                                Current Week
+                            </span>
+                        </div>
+                        <div class="relative h-64">
+                            <canvas id="supervisorTaskYieldChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between text-xs text-slate-400 mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 font-medium">
+                        <span class="flex items-center gap-1.5">
+                            <span class="w-3 h-3 rounded-sm bg-indigo-500"></span> Target (kg)
+                        </span>
+                        <span class="flex items-center gap-1.5">
+                            <span class="w-3 h-3 rounded-sm bg-emerald-500"></span> Achieved (kg)
+                        </span>
+                        <span class="flex items-center gap-1.5">
+                            <span class="w-3 h-1 bg-amber-500 rounded"></span> Yield Rate (%)
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Chart 3: Historical Payroll & Incentive Pool Trend (9 Weeks) -->
+                <div class="premium-card p-6 lg:col-span-3">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 pb-2 border-b border-slate-100 dark:border-slate-800">
+                        <div>
+                            <h4 class="font-extrabold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                                <i class="fa-solid fa-money-bill-trend-up text-amber-500"></i>
+                                <span>Multi-Week Historical Payroll Disbursement & AI Imputation Ledger</span>
+                            </h4>
+                            <p class="text-[11px] text-slate-400">Tracking base salary vs performance adjusted payouts from system startup to current week</p>
+                        </div>
+                        <span class="text-xs font-bold px-3 py-1 rounded-full bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+                            Startup to Present (9 Weeks)
+                        </span>
+                    </div>
+                    <div class="relative h-72">
+                        <canvas id="supervisorPayrollTrendChart"></canvas>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- =====================================================================
+             TAB PANE 2: FLOOR APPROVALS & OPERATIONAL RESOLUTION
+             ===================================================================== -->
+        <div id="tab-approvals" class="tab-pane space-y-6" data-tab-index="2">
+
+            <!-- Header Banner -->
+            <div class="bg-gradient-to-r from-amber-50 to-rose-50 dark:from-slate-800 dark:to-slate-900 p-5 rounded-2xl border border-amber-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h3 class="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                        <i class="fa-solid fa-clipboard-check text-rose-500"></i>
+                        <span>Floor Approvals Queue & Operational Incident Resolution</span>
+                    </h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                        Manage pending employee leave applications and resolve active equipment or machine floor complaints.
+                    </p>
+                </div>
+                <form method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="auto_approve_eligible">
+                    <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-xl text-xs transition shadow-sm flex items-center gap-1.5">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        <span>Autonomous Batch Approve All</span>
+                    </button>
+                </form>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                <!-- Pending Leave Requests -->
+                <div class="premium-card p-6">
+                    <div class="flex justify-between items-center mb-5 pb-3 border-b border-slate-100 dark:border-slate-800">
+                        <h4 class="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                            <i class="fa-solid fa-calendar-check text-amber-500"></i>
+                            <span>Pending Leave Requests</span>
+                        </h4>
+                        <span class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                            {{ pending_leaves|length }} Pending
+                        </span>
+                    </div>
+
+                    <div class="space-y-4">
+                        {% for leave in pending_leaves %}
+                        <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+                            <div class="flex justify-between items-start mb-2">
+                                <div>
+                                    <span class="font-extrabold text-slate-900 dark:text-white text-base">{{ leave.employee.username }}</span>
+                                    <span class="text-xs text-slate-500 dark:text-slate-400 ml-2 font-medium">({{ leave.start_date }} to {{ leave.end_date }})</span>
+                                </div>
+                                <span class="text-xs font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300">Pending Review</span>
+                            </div>
+                            <p class="text-xs text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900/80 p-3 rounded-lg border border-slate-100 dark:border-slate-800 mb-3">
+                                {{ leave.reason }}
+                            </p>
+                            <form method="POST" class="flex gap-2">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="leave_action">
+                                <input type="hidden" name="leave_id" value="{{ leave.id }}">
+                                <button type="submit" name="status" value="A" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 rounded-xl text-xs transition shadow-sm">
+                                    Approve Request
+                                </button>
+                                <button type="submit" name="status" value="R" class="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-bold py-2 rounded-xl text-xs transition shadow-sm">
+                                    Reject Request
+                                </button>
+                            </form>
+                        </div>
+                        {% empty %}
+                        <div class="py-12 text-center text-slate-400">
+                            <i class="fa-solid fa-umbrella-beach text-3xl mb-2 text-slate-300"></i>
+                            <p class="text-sm font-semibold">No pending employee leave requests.</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Open Complaints & Machine Issues -->
+                <div class="premium-card p-6">
+                    <div class="flex justify-between items-center mb-5 pb-3 border-b border-slate-100 dark:border-slate-800">
+                        <h4 class="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                            <i class="fa-solid fa-triangle-exclamation text-rose-500"></i>
+                            <span>Floor Complaints & Machine Issues</span>
+                        </h4>
+                        <span class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300">
+                            {{ open_complaints|length }} Open
+                        </span>
+                    </div>
+
+                    <div class="space-y-4">
+                        {% for comp in open_complaints %}
+                        <div class="p-4 rounded-xl bg-rose-50/40 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900">
+                            <div class="flex justify-between items-start mb-2">
+                                <div>
+                                    <span class="font-extrabold text-slate-900 dark:text-white text-base">
+                                        {{ comp.machine.code|default:"General Station" }}
+                                    </span>
+                                    <span class="text-xs text-slate-500 dark:text-slate-400 ml-2">Reported by: {{ comp.employee.username }}</span>
+                                </div>
+                                <span class="text-xs font-bold px-2 py-0.5 rounded bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300">Open</span>
+                            </div>
+                            <p class="text-xs text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900/80 p-3 rounded-lg border border-rose-100 dark:border-rose-950 mb-3">
+                                {{ comp.description }}
+                            </p>
+                            <form method="POST">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="complaint_action">
+                                <input type="hidden" name="complaint_id" value="{{ comp.id }}">
+                                <button type="submit" class="w-full bg-slate-800 hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600 text-white font-bold py-2 rounded-xl text-xs transition shadow-sm">
+                                    Mark Resolved & Close Issue
+                                </button>
+                            </form>
+                        </div>
+                        {% empty %}
+                        <div class="py-12 text-center text-slate-400">
+                            <i class="fa-solid fa-circle-check text-3xl mb-2 text-emerald-400"></i>
+                            <p class="text-sm font-semibold">Zero open machine or floor complaints.</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- =====================================================================
+             TAB PANE 3: OPERATOR SHIFT & STATION REASSIGNMENT CONSOLE
+             ===================================================================== -->
+        <div id="tab-reassign" class="tab-pane space-y-6" data-tab-index="3">
+
+            <div id="reassign-station-panel" class="premium-card p-6 border-2 border-indigo-500 bg-gradient-to-r from-indigo-50/50 to-white dark:from-slate-900 dark:to-slate-800 shadow-lg">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-5 pb-3 border-b border-indigo-100 dark:border-slate-700">
+                    <div>
+                        <h2 class="text-xl font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                            <i class="fa-solid fa-users-gear text-indigo-600"></i>
+                            <span>Operator Shift & Equipment Station Reassignment Console</span>
+                        </h2>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                            Supervisor direct allocation: override operator station, modify active shifts, or re-route floor workload.
+                        </p>
+                    </div>
+                    <span class="text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-950 px-3 py-1 rounded-full">
+                        Interactive Station Allocation
+                    </span>
+                </div>
+
+                <form method="POST" class="space-y-4">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="reassign_employee">
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Select Operator</label>
+                            <select id="reassign-employee-select" name="employee_id" required class="w-full border border-slate-300 dark:border-slate-600 rounded-xl p-3 bg-white dark:bg-slate-900 text-sm font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm">
+                                <option value="">Choose an employee to reassign...</option>
+                                {% for task in daily_tasks %}
+                                <option value="{{ task.employee.id }}">{{ task.employee.username }} (Currently: {{ task.shift }} | {{ task.machine }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">New Assigned Shift</label>
+                            <select name="shift_id" class="w-full border border-slate-300 dark:border-slate-600 rounded-xl p-3 bg-white dark:bg-slate-900 text-sm font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm">
+                                <option value="">Keep Current Shift</option>
+                                {% for s in all_shifts %}
+                                <option value="{{ s.id }}">{{ s.name }} ({{ s.start_time|time:"H:i" }} - {{ s.end_time|time:"H:i" }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">New Machine Line Station</label>
+                            <select name="machine_id" class="w-full border border-slate-300 dark:border-slate-600 rounded-xl p-3 bg-white dark:bg-slate-900 text-sm font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm">
+                                <option value="">Keep Current Machine Line</option>
+                                {% for m in all_machines %}
+                                <option value="{{ m.id }}">{{ m.code }}: {{ m.name }} (Status: {{ m.get_status_display }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-end gap-3 pt-3">
+                        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-2.5 rounded-xl text-sm shadow-md transition flex items-center gap-2">
+                            <i class="fa-solid fa-check"></i>
+                            <span>Apply Station Reassignment</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- =========================================================================
+     6. INTERACTIVE MODULAR DEEP-DIVE MODALS (Hidden by Default)
+     ========================================================================= -->
+
+<!-- Modal 1: Daily Tasks Deep-Dive Modal -->
+<div id="modal-tasks-deepdive" class="supervisor-modal hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+    <div class="modal-card erp-modal-animate bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-800/50">
+            <div>
+                <h3 class="text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                    <i class="fa-solid fa-list-check text-indigo-600"></i>
+                    <span>Automated Daily Task Assignments Ledger</span>
+                </h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Complete breakdown of active operators and auto-scheduled quotas</p>
+            </div>
+            <button type="button" onclick="closeSupervisorModal('modal-tasks-deepdive')" class="w-8 h-8 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center text-sm hover:bg-slate-300 dark:hover:bg-slate-600 transition">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="p-6 overflow-y-auto space-y-4">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider font-bold">
+                            <th class="px-4 py-3 border-b border-slate-100 dark:border-slate-800">Operator</th>
+                            <th class="px-4 py-3 border-b border-slate-100 dark:border-slate-800">Assigned Shift</th>
+                            <th class="px-4 py-3 border-b border-slate-100 dark:border-slate-800">Line Station</th>
+                            <th class="px-4 py-3 border-b border-slate-100 dark:border-slate-800">Target (kg)</th>
+                            <th class="px-4 py-3 border-b border-slate-100 dark:border-slate-800">Achieved (kg)</th>
+                            <th class="px-4 py-3 border-b border-slate-100 dark:border-slate-800">Progress</th>
+                            <th class="px-4 py-3 border-b border-slate-100 dark:border-slate-800">Status</th>
+                            <th class="px-4 py-3 border-b border-slate-100 dark:border-slate-800 text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                        {% for task in daily_tasks %}
+                        <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition">
+                            <td class="px-4 py-3 font-bold text-slate-900 dark:text-white">{{ task.employee.username }}</td>
+                            <td class="px-4 py-3 font-semibold text-slate-600 dark:text-slate-300">{{ task.shift }}</td>
+                            <td class="px-4 py-3 font-bold text-slate-800 dark:text-white">{{ task.machine }}</td>
+                            <td class="px-4 py-3 font-mono text-slate-600 dark:text-slate-400">{{ task.target_kg|floatformat:1 }} kg</td>
+                            <td class="px-4 py-3 font-extrabold text-slate-900 dark:text-white font-mono">{{ task.achieved_kg|floatformat:1 }} kg</td>
+                            <td class="px-4 py-3">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-16 bg-slate-100 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
+                                        <div class="{% if task.completion_pct >= 100 %}bg-emerald-500{% else %}bg-indigo-600{% endif %} h-2 rounded-full" style="width: {{ task.completion_pct }}%"></div>
+                                    </div>
+                                    <span class="text-xs font-bold text-slate-700 dark:text-slate-300">{{ task.completion_pct }}%</span>
+                                </div>
+                            </td>
+                            <td class="px-4 py-3">
+                                {% if task.task_status == 'Completed' %}
+                                <span class="px-2 py-0.5 rounded text-xs font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">Completed</span>
+                                {% elif task.task_status == 'In Progress' %}
+                                <span class="px-2 py-0.5 rounded text-xs font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">In Progress</span>
+                                {% else %}
+                                <span class="px-2 py-0.5 rounded text-xs font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">Auto-Assigned</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-4 py-3 text-right">
+                                <button type="button" onclick="closeSupervisorModal('modal-tasks-deepdive'); selectEmployeeForReassign('{{ task.employee.id }}');" class="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 font-bold text-xs underline">
+                                    Reassign
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 2: Employee Performance & Merit Tiers Deep-Dive -->
+<div id="modal-performance-deepdive" class="supervisor-modal hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+    <div class="modal-card erp-modal-animate bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-800/50">
+            <div>
+                <h3 class="text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                    <i class="fa-solid fa-award text-emerald-600"></i>
+                    <span>Employee Performance Tracking & Merit Tiers Ledger</span>
+                </h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Monthly throughput consistency, yield rate, merit score, and bonus qualification</p>
+            </div>
+            <button type="button" onclick="closeSupervisorModal('modal-performance-deepdive')" class="w-8 h-8 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center text-sm hover:bg-slate-300 dark:hover:bg-slate-600 transition">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="p-6 overflow-y-auto space-y-4">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider font-bold">
+                            <th class="px-4 py-3 border-b border-slate-100 dark:border-slate-800">Operator</th>
+                            <th class="px-4 py-3 border-b border-slate-100 dark:border-slate-800">Monthly Output (kg)</th>
+                            <th class="px-4 py-3 border-b border-slate-100 dark:border-slate-800">Avg Yield</th>
+                            <th class="px-4 py-3 border-b border-slate-100 dark:border-slate-800">Merit Score</th>
+                            <th class="px-4 py-3 border-b border-slate-100 dark:border-slate-800">Tier</th>
+                            <th class="px-4 py-3 border-b border-slate-100 dark:border-slate-800">Warnings</th>
+                            <th class="px-4 py-3 border-b border-slate-100 dark:border-slate-800 text-right">Bonus Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                        {% for p in employee_performance %}
+                        <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition">
+                            <td class="px-4 py-3 font-bold text-slate-900 dark:text-white">{{ p.employee.username }}</td>
+                            <td class="px-4 py-3 font-mono font-extrabold text-slate-800 dark:text-white">{{ p.month_output }} kg</td>
+                            <td class="px-4 py-3">
+                                <span class="px-2 py-0.5 rounded font-bold text-xs {% if p.yield_pct >= 90 %}bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-300{% else %}bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-300{% endif %}">
+                                    {{ p.yield_pct }}%
+                                </span>
+                            </td>
+                            <td class="px-4 py-3 font-extrabold text-indigo-600 dark:text-indigo-400">{{ p.perf_score }} / 100</td>
+                            <td class="px-4 py-3">
+                                {% if p.tier == 'Top Performer' %}
+                                <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">🌟 Top</span>
+                                {% elif p.tier == 'On Track' %}
+                                <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300">⚡ On Track</span>
+                                {% else %}
+                                <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">⚠️ Review</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-4 py-3">
+                                {% if p.warnings_count > 0 %}
+                                <span class="px-2 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300">{{ p.warnings_count }} Warning(s)</span>
+                                {% else %}
+                                <span class="text-xs text-emerald-600 font-bold">Clean</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-4 py-3 text-right">
+                                {% if p.bonus_qualified %}
+                                <span class="inline-flex items-center gap-1 text-xs font-extrabold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 dark:text-emerald-300 px-2.5 py-0.5 rounded-full">
+                                    <i class="fa-solid fa-gift"></i> Qualified
+                                </span>
+                                {% else %}
+                                <span class="text-xs text-slate-400">Standard</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 3: Salary & Payroll Distribution Deep-Dive -->
+<div id="modal-payroll-deepdive" class="supervisor-modal hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+    <div class="modal-card erp-modal-animate bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-800/50">
+            <div>
+                <h3 class="text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                    <i class="fa-solid fa-money-bill-wave text-amber-600"></i>
+                    <span>Salary & Payroll Distribution Ledger (AI Imputations)</span>
+                </h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Zero-lag autonomous payroll imputation and performance adjusted disbursements</p>
+            </div>
+            <button type="button" onclick="closeSupervisorModal('modal-payroll-deepdive')" class="w-8 h-8 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center text-sm hover:bg-slate-300 dark:hover:bg-slate-600 transition">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="p-6 overflow-y-auto space-y-4">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider font-bold">
+                            <th class="px-4 py-3 border-b border-slate-100 dark:border-slate-800">Operator</th>
+                            <th class="px-4 py-3 border-b border-slate-100 dark:border-slate-800">Base Salary</th>
+                            <th class="px-4 py-3 border-b border-slate-100 dark:border-slate-800">Target Assigned</th>
+                            <th class="px-4 py-3 border-b border-slate-100 dark:border-slate-800">Actual Output</th>
+                            <th class="px-4 py-3 border-b border-slate-100 dark:border-slate-800">Completion %</th>
+                            <th class="px-4 py-3 border-b border-slate-100 dark:border-slate-800">Imputation Status</th>
+                            <th class="px-4 py-3 border-b border-slate-100 dark:border-slate-800">Payout Date</th>
+                            <th class="px-4 py-3 border-b border-slate-100 dark:border-slate-800 text-right">Adjusted Payout</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                        {% for pr in payrolls %}
+                        <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition">
+                            <td class="px-4 py-3 font-bold text-slate-900 dark:text-white">{{ pr.employee.username }}</td>
+                            <td class="px-4 py-3 font-mono text-slate-600 dark:text-slate-400">₹{{ pr.base_salary|floatformat:2 }}</td>
+                            <td class="px-4 py-3 font-mono text-slate-600 dark:text-slate-400">{{ pr.target_assigned|floatformat:1 }} kg</td>
+                            <td class="px-4 py-3 font-mono font-bold text-slate-800 dark:text-white">{{ pr.actual_output|floatformat:1 }} kg</td>
+                            <td class="px-4 py-3 font-extrabold text-slate-700 dark:text-slate-300">{{ pr.completion_percentage|floatformat:1 }}%</td>
+                            <td class="px-4 py-3">
+                                {% if pr.is_auto_predicted %}
+                                <span class="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                                    <i class="fa-solid fa-robot"></i> Auto-Predicted
+                                </span>
+                                {% else %}
+                                <span class="px-2 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">Standard</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-4 py-3 text-xs text-slate-400">{{ pr.payout_date }}</td>
+                            <td class="px-4 py-3 text-right font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">₹{{ pr.salary_adjusted|floatformat:2 }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Floor Approvals, Leaves & Issues Deep-Dive -->
+<div id="modal-approvals-deepdive" class="supervisor-modal hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+    <div class="modal-card erp-modal-animate bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-800/50">
+            <div>
+                <h3 class="text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                    <i class="fa-solid fa-clipboard-check text-rose-600"></i>
+                    <span>Floor Approvals, Leave Applications & Incident Tickets</span>
+                </h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Direct supervisor approval actions and real-time floor resolution queue</p>
+            </div>
+            <button type="button" onclick="closeSupervisorModal('modal-approvals-deepdive')" class="w-8 h-8 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center text-sm hover:bg-slate-300 dark:hover:bg-slate-600 transition">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="p-6 overflow-y-auto space-y-6">
+            <!-- Summary Bar -->
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                <div class="flex items-center gap-3">
+                    <span class="px-3 py-1 rounded-full text-xs font-extrabold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                        {{ pending_leaves|length }} Leaves Pending
+                    </span>
+                    <span class="px-3 py-1 rounded-full text-xs font-extrabold bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300">
+                        {{ open_complaints|length }} Issues Open
+                    </span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <form method="POST" class="inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="auto_approve_eligible">
+                        <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition shadow-sm flex items-center gap-1.5">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i>
+                            <span>Autonomous Batch Approve</span>
+                        </button>
+                    </form>
+                    <button type="button" onclick="closeSupervisorModal('modal-approvals-deepdive'); switchTabSlide('tab-approvals');" class="bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-white font-bold px-3 py-1.5 rounded-lg text-xs transition flex items-center gap-1.5">
+                        <span>Full Approvals Console</span>
+                        <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Two-Column Grid for Leaves & Complaints -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Section 1: Leave Requests -->
+                <div class="space-y-3">
+                    <h4 class="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                        <i class="fa-solid fa-calendar-check text-amber-500"></i>
+                        <span>Pending Operator Leave Applications</span>
+                    </h4>
+                    <div class="space-y-3">
+                        {% for leave in pending_leaves %}
+                        <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 shadow-sm">
+                            <div class="flex justify-between items-start mb-2">
+                                <div>
+                                    <span class="font-extrabold text-slate-900 dark:text-white text-sm">{{ leave.employee.username }}</span>
+                                    <span class="text-xs text-slate-500 dark:text-slate-400 ml-2 font-medium">({{ leave.start_date }} to {{ leave.end_date }})</span>
+                                </div>
+                                <span class="text-[11px] font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300">Pending Review</span>
+                            </div>
+                            <p class="text-xs text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900/80 p-2.5 rounded-lg border border-slate-100 dark:border-slate-800 mb-3">
+                                {{ leave.reason }}
+                            </p>
+                            <form method="POST" class="flex gap-2">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="leave_action">
+                                <input type="hidden" name="leave_id" value="{{ leave.id }}">
+                                <button type="submit" name="status" value="A" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1.5 rounded-lg text-xs transition shadow-sm">
+                                    <i class="fa-solid fa-check mr-1"></i> Approve
+                                </button>
+                                <button type="submit" name="status" value="R" class="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-bold py-1.5 rounded-lg text-xs transition shadow-sm">
+                                    <i class="fa-solid fa-xmark mr-1"></i> Reject
+                                </button>
+                            </form>
+                        </div>
+                        {% empty %}
+                        <div class="p-8 text-center text-slate-400 bg-slate-50/50 dark:bg-slate-800/30 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">
+                            <i class="fa-solid fa-umbrella-beach text-2xl mb-2 text-slate-300 dark:text-slate-600"></i>
+                            <p class="text-xs font-semibold">No pending operator leave requests.</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Section 2: Machine & Floor Issues -->
+                <div class="space-y-3">
+                    <h4 class="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                        <i class="fa-solid fa-triangle-exclamation text-rose-500"></i>
+                        <span>Open Equipment & Floor Tickets</span>
+                    </h4>
+                    <div class="space-y-3">
+                        {% for comp in open_complaints %}
+                        <div class="p-4 rounded-xl bg-rose-50/40 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900 shadow-sm">
+                            <div class="flex justify-between items-start mb-2">
+                                <div>
+                                    <span class="font-extrabold text-slate-900 dark:text-white text-sm">
+                                        {{ comp.machine.code|default:"General Station" }}
+                                    </span>
+                                    <span class="text-xs text-slate-500 dark:text-slate-400 ml-2">Operator: {{ comp.employee.username }}</span>
+                                </div>
+                                <span class="text-[11px] font-bold px-2 py-0.5 rounded bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300">Open Ticket</span>
+                            </div>
+                            <p class="text-xs text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900/80 p-2.5 rounded-lg border border-rose-100 dark:border-rose-950 mb-3">
+                                {{ comp.description }}
+                            </p>
+                            <form method="POST">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="complaint_action">
+                                <input type="hidden" name="complaint_id" value="{{ comp.id }}">
+                                <button type="submit" class="w-full bg-slate-800 hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600 text-white font-bold py-1.5 rounded-lg text-xs transition shadow-sm">
+                                    <i class="fa-solid fa-check-circle mr-1"></i> Mark Resolved & Close
+                                </button>
+                            </form>
+                        </div>
+                        {% empty %}
+                        <div class="p-8 text-center text-slate-400 bg-slate-50/50 dark:bg-slate-800/30 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">
+                            <i class="fa-solid fa-circle-check text-2xl mb-2 text-emerald-400"></i>
+                            <p class="text-xs font-semibold">Zero open machine or floor complaints.</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 4: Autonomous Decision-Making Logs Deep-Dive -->
+<div id="modal-decisions-deepdive" class="supervisor-modal hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+    <div class="modal-card erp-modal-animate bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-800/50">
+            <div>
+                <h3 class="text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                    <i class="fa-solid fa-brain text-purple-600"></i>
+                    <span>Autonomous Decision-Making Logs & Audit Trail</span>
+                </h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Autonomous supervisor interventions, workload diversions, and quality guardrails</p>
+            </div>
+            <button type="button" onclick="closeSupervisorModal('modal-decisions-deepdive')" class="w-8 h-8 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center text-sm hover:bg-slate-300 dark:hover:bg-slate-600 transition">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="p-6 overflow-y-auto space-y-4">
+            {% for decision in autonomous_decision_logs %}
+            <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                <div class="space-y-1.5 flex-1">
+                    <div class="flex items-center gap-2">
+                        <span class="px-2.5 py-0.5 rounded-md text-xs font-extrabold bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300">
+                            {{ decision.category }}
+                        </span>
+                        <span class="text-xs text-slate-400 font-medium">{{ decision.time|date:"Y-m-d H:i" }}</span>
+                    </div>
+                    <p class="text-sm font-bold text-slate-800 dark:text-white">{{ decision.event }}</p>
+                    <div class="text-xs bg-white dark:bg-slate-900/80 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 font-medium">
+                        <strong class="text-slate-900 dark:text-white">Autonomous Decision:</strong> {{ decision.decision }}
+                    </div>
+                </div>
+                <div class="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2 flex-shrink-0">
+                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold text-emerald-700 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-300">
+                        <i class="fa-solid fa-circle-check"></i> {{ decision.status }}
+                    </span>
+                    <span class="text-[11px] font-bold text-slate-400">Autonomous Mode</span>
+                </div>
+            </div>
+            {% empty %}
+            <div class="p-8 text-center text-slate-400">
+                <p class="text-sm font-semibold">Autonomous supervisor audit trail active. All routine rules verified.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- =========================================================================
+     7. JAVASCRIPT LOGIC: TIMELINE ENGINE, SLIDING TABS & THEME-MATCHED CHARTS
+     ========================================================================= -->
+<script>
+    // -------------------------------------------------------------------------
+    // A. MASTER DATA INGESTION FROM BACKEND
+    // -------------------------------------------------------------------------
+    const MASTER_SUPERVISOR_TIMELINE = {{ master_supervisor_timeline_json|safe }};
+    const PAYROLL_TREND_DATA = {{ payroll_trend_chart_json|safe }};
+    const PERFORMANCE_TIERS_DATA = {{ performance_tiers_chart_json|safe }};
+
+    let currentSelectedWeekIndex = 0;
+    let currentSelectedDate = null;
+    let currentActiveTabId = 'tab-timeline';
+    let currentTabIndex = 0;
+
+    // Chart.js Instances
+    let meritChartInstance = null;
+    let taskYieldChartInstance = null;
+    let payrollTrendChartInstance = null;
+
+    // -------------------------------------------------------------------------
+    // B. ERP THEME PALETTE HELPER (Dark / Light Synchronized)
+    // -------------------------------------------------------------------------
+    function getERPThemePalette() {
+        const isDark = document.documentElement.classList.contains('dark');
+        return {
+            isDark: isDark,
+            // Brand Tones
+            indigo: isDark ? '#818cf8' : '#4f46e5',
+            emerald: isDark ? '#34d399' : '#059669',
+            amber: isDark ? '#fbbf24' : '#d97706',
+            purple: isDark ? '#a78bfa' : '#7c3aed',
+            rose: isDark ? '#f87171' : '#e11d48',
+            // Surface & Grid Lines
+            gridColor: isDark ? 'rgba(51, 65, 85, 0.45)' : 'rgba(226, 232, 240, 0.8)',
+            textColor: isDark ? '#94a3b8' : '#64748b',
+            titleColor: isDark ? '#f1f5f9' : '#1e293b',
+            tooltipBg: '#0f172a',
+            tooltipBorder: isDark ? '#334155' : '#1e293b'
+        };
+    }
+
+    // -------------------------------------------------------------------------
+    // C. SMOOTH SLIDING TAB TRANSITIONS (Slide-Left / Slide-Right)
+    // -------------------------------------------------------------------------
+    function switchTabSlide(targetTabId) {
+        if (targetTabId === currentActiveTabId) return;
+
+        const targetPane = document.getElementById(targetTabId);
+        const currentPane = document.getElementById(currentActiveTabId);
+        if (!targetPane) return;
+
+        const newIndex = parseInt(targetPane.getAttribute('data-tab-index') || '0');
+        const isSlidingRight = newIndex > currentTabIndex;
+
+        // Update Tab Button Styles
+        document.querySelectorAll('.tab-btn').forEach(function(btn) {
+            btn.classList.remove('active', 'border-indigo-600', 'text-indigo-600', 'dark:text-indigo-400');
+            btn.classList.add('border-transparent', 'text-slate-500', 'dark:text-slate-400');
+        });
+
+        const activeBtn = document.getElementById('tab-btn-' + targetTabId.replace('tab-', ''));
+        if (activeBtn) {
+            activeBtn.classList.add('active', 'border-indigo-600', 'text-indigo-600', 'dark:text-indigo-400');
+            activeBtn.classList.remove('border-transparent', 'text-slate-500', 'dark:text-slate-400');
+        }
+
+        // Instant Tab Switch
+        if (currentPane) {
+            currentPane.classList.remove('active', 'slide-out-left', 'slide-out-right');
+            currentPane.style.display = 'none';
+        }
+
+        // Display Target Tab Immediately
+        targetPane.style.display = 'block';
+        targetPane.classList.remove('slide-in-right', 'slide-in-left');
+        targetPane.classList.add('active');
+
+        currentActiveTabId = targetTabId;
+        currentTabIndex = newIndex;
+
+        // Auto-resize charts if opening analytics tab
+        if (targetTabId === 'tab-analytics') {
+            resizeAllCharts();
+        }
+    }
+
+    function switchTab(tabId) {
+        switchTabSlide(tabId);
+    }
+
+    // -------------------------------------------------------------------------
+    // D. MODULAR DRAWER & MODAL HANDLERS
+    // -------------------------------------------------------------------------
+    function toggleDrawer(drawerId) {
+        const drawer = document.getElementById(drawerId);
+        const toggleText = document.getElementById('drawer-toggle-text');
+        if (!drawer) return;
+
+        if (drawer.classList.contains('closed')) {
+            drawer.classList.remove('closed');
+            drawer.classList.add('open');
+            if (toggleText) toggleText.innerText = 'Hide Pulse Drawer';
+        } else {
+            drawer.classList.remove('open');
+            drawer.classList.add('closed');
+            if (toggleText) toggleText.innerText = 'Floor Pulse Drawer';
+        }
+    }
+
+    function toggleSection(elementId) {
+        const el = document.getElementById(elementId);
+        if (!el) return;
+        el.classList.toggle('hidden');
+    }
+
+    function openSupervisorModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.classList.remove('hidden');
+            const card = modal.querySelector('.modal-card');
+            if (card) {
+                card.classList.remove('erp-modal-animate');
+                void card.offsetWidth; // force reflow for snappy animation restart
+                card.classList.add('erp-modal-animate');
+            }
+            document.body.style.overflow = 'hidden';
+        }
+    }
+
+    function closeSupervisorModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+    }
+
+    // Close modal on Escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            document.querySelectorAll('.supervisor-modal:not(.hidden)').forEach(function(m) {
+                m.classList.add('hidden');
+            });
+            document.body.style.overflow = '';
+        }
+    });
+
+    // Delegated backdrop click listener for all supervisor modals
+    document.addEventListener('click', function(e) {
+        if (e.target && e.target.classList && e.target.classList.contains('supervisor-modal')) {
+            closeSupervisorModal(e.target.id);
+        }
+    });
+
+    // -------------------------------------------------------------------------
+    // D2. INTERACTIVE SUMMARY CARDS (Click & Keyboard Modal Triggers)
+    // -------------------------------------------------------------------------
+    function initSupervisorCardInteractions() {
+        document.querySelectorAll('.supervisor-interactive-card').forEach(function(card) {
+            card.addEventListener('click', function(e) {
+                // If clicked an interactive child (button, link, form control), don't trigger the modal
+                if (e.target.closest('button, a, form, input, select, textarea')) {
+                    return;
+                }
+                const modalId = card.getAttribute('data-card-modal');
+                if (modalId) {
+                    openSupervisorModal(modalId);
+                }
+            });
+
+            // Keyboard accessibility (Enter or Space)
+            card.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    if (e.target.closest('button, a, form, input, select, textarea')) {
+                        return;
+                    }
+                    e.preventDefault();
+                    const modalId = card.getAttribute('data-card-modal');
+                    if (modalId) {
+                        openSupervisorModal(modalId);
+                    }
+                }
+            });
+        });
+    }
+
+    // Quick Reassign Employee Helper
+    function selectEmployeeForReassign(employeeId) {
+        switchTabSlide('tab-reassign');
+        const select = document.getElementById('reassign-employee-select');
+        if (select) {
+            select.value = employeeId;
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // E. GRANULAR HISTORICAL TIMELINE ENGINE
+    // -------------------------------------------------------------------------
+    function renderWeek(weekIndex) {
+        if (!MASTER_SUPERVISOR_TIMELINE || MASTER_SUPERVISOR_TIMELINE.length === 0) return;
+        if (weekIndex < 0) weekIndex = 0;
+        if (weekIndex >= MASTER_SUPERVISOR_TIMELINE.length) weekIndex = MASTER_SUPERVISOR_TIMELINE.length - 1;
+
+        currentSelectedWeekIndex = weekIndex;
+        const weekData = MASTER_SUPERVISOR_TIMELINE[weekIndex];
+
+        // Update Week Selector Dropdown
+        const dropdown = document.getElementById('timeline-week-select');
+        if (dropdown) dropdown.value = weekIndex;
+
+        // Update Weekly Stats Banner
+        const rangeEl = document.getElementById('stat-week-range');
+        const tasksEl = document.getElementById('stat-week-tasks');
+        const compEl = document.getElementById('stat-week-completion');
+        const payEl = document.getElementById('stat-week-payroll');
+        const impEl = document.getElementById('stat-week-imputations');
+
+        if (rangeEl) rangeEl.innerText = weekData.date_range;
+        if (tasksEl) tasksEl.innerText = weekData.total_tasks_completed + ' / ' + weekData.total_tasks_allocated;
+        if (compEl) compEl.innerText = weekData.completion_rate + '%';
+        if (payEl) payEl.innerText = '₹' + Number(weekData.weekly_payroll_disbursed).toLocaleString();
+        if (impEl) impEl.innerText = weekData.auto_imputed_records + ' Records';
+
+        // Update Chart 2 with this week's data
+        updateTaskYieldChartForWeek(weekData);
+
+        // Render Day Pills for this week
+        renderDayPills(weekData.days);
+
+        // Auto-select latest day in this week
+        if (weekData.days && weekData.days.length > 0) {
+            const latestDay = weekData.days[weekData.days.length - 1];
+            selectDay(latestDay.date);
+        }
+    }
+
+    function renderDayPills(days) {
+        const container = document.getElementById('timeline-day-pills');
+        if (!container) return;
+        container.innerHTML = '';
+
+        days.forEach(function(day) {
+            const pill = document.createElement('div');
+            pill.id = 'day-pill-' + day.date;
+            pill.className = 'cursor-pointer p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all text-center shadow-sm';
+            pill.onclick = function() { selectDay(day.date); };
+
+            pill.innerHTML = `
+                <div class="text-[11px] font-black uppercase text-slate-400 tracking-wider">${day.short_label.split(' ')[0]}</div>
+                <div class="text-base font-extrabold text-slate-800 dark:text-white mt-0.5">${day.short_label.split(' ')[1]}</div>
+                <div class="mt-2 flex items-center justify-center">
+                    <span class="text-[11px] font-bold px-2 py-0.5 rounded-full ${day.completion_rate >= 90 ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300'}">
+                        ${day.completion_rate}%
+                    </span>
+                </div>
+                <div class="text-[10px] text-slate-400 mt-1 font-mono">₹${Number(day.payroll_disbursed).toFixed(0)}</div>
+            `;
+            container.appendChild(pill);
+        });
+    }
+
+    function selectDay(dayDate) {
+        currentSelectedDate = dayDate;
+        const weekData = MASTER_SUPERVISOR_TIMELINE[currentSelectedWeekIndex];
+        if (!weekData || !weekData.days) return;
+
+        const dayData = weekData.days.find(function(d) { return d.date === dayDate; });
+        if (!dayData) return;
+
+        // Highlight Active Pill
+        document.querySelectorAll('#timeline-day-pills > div').forEach(function(p) {
+            p.classList.remove('ring-2', 'ring-indigo-600', 'border-indigo-600', 'bg-indigo-50/50', 'dark:bg-indigo-950/40');
+            p.classList.add('border-slate-200', 'dark:border-slate-700', 'bg-white', 'dark:bg-slate-800');
+        });
+        const activePill = document.getElementById('day-pill-' + dayDate);
+        if (activePill) {
+            activePill.classList.remove('border-slate-200', 'dark:border-slate-700', 'bg-white', 'dark:bg-slate-800');
+            activePill.classList.add('ring-2', 'ring-indigo-600', 'border-indigo-600', 'bg-indigo-50/50', 'dark:bg-indigo-950/40');
+        }
+
+        // Animate Day Detail View with clean day-slide-in
+        const dayView = document.getElementById('active-day-view');
+        if (dayView) {
+            dayView.classList.remove('day-slide-in');
+            void dayView.offsetWidth; // force reflow
+            dayView.classList.add('day-slide-in');
+        }
+
+        // Update Day Banner
+        const weekdayEl = document.getElementById('day-badge-weekday');
+        const dateEl = document.getElementById('day-badge-date');
+        const decisionEl = document.getElementById('day-autonomous-decision-text');
+        const opsEl = document.getElementById('day-kpi-operators');
+        const tasksEl = document.getElementById('day-kpi-tasks');
+        const compEl = document.getElementById('day-kpi-completion');
+        const payEl = document.getElementById('day-kpi-payroll');
+
+        if (weekdayEl) weekdayEl.innerText = dayData.day_name.toUpperCase();
+        if (dateEl) dateEl.innerText = dayData.formatted_date;
+        if (decisionEl) decisionEl.innerText = '"' + dayData.supervisor_decision + '"';
+        if (opsEl) opsEl.innerText = dayData.workers_on_duty + ' Operators (100%)';
+        if (tasksEl) tasksEl.innerText = dayData.tasks_completed + ' / ' + dayData.tasks_allocated + ' Tasks';
+        if (compEl) compEl.innerText = dayData.completion_rate + '% Yield';
+        if (payEl) payEl.innerText = '₹' + Number(dayData.payroll_disbursed).toLocaleString();
+
+        // Render Operators Table for this day
+        renderDayOperators(dayData.operators || []);
+    }
+
+    function renderDayOperators(operators) {
+        const tbody = document.getElementById('day-operators-tbody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        if (operators.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="9" class="px-6 py-8 text-center text-slate-400">No operator shift logs for this day.</td></tr>`;
+            return;
+        }
+
+        operators.forEach(function(op) {
+            const tr = document.createElement('tr');
+            tr.className = 'hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors operator-row';
+            tr.setAttribute('data-name', op.employee_name.toLowerCase());
+
+            const tierBadge = op.tier === 'Top Performer' 
+                ? '<span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">🌟 Top</span>'
+                : (op.tier === 'On Track' 
+                    ? '<span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300">⚡ On Track</span>'
+                    : '<span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">⚠️ Review</span>');
+
+            tr.innerHTML = `
+                <td class="px-6 py-4 font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <div class="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 flex items-center justify-center text-xs font-extrabold">
+                        ${op.employee_name.charAt(0).toUpperCase()}
+                    </div>
+                    <span>${op.employee_name}</span>
+                </td>
+                <td class="px-6 py-4 font-semibold text-slate-600 dark:text-slate-300">${op.shift}</td>
+                <td class="px-6 py-4 font-bold text-slate-800 dark:text-white">${op.machine}</td>
+                <td class="px-6 py-4 font-mono text-slate-600 dark:text-slate-400">${op.target_kg} kg</td>
+                <td class="px-6 py-4 font-mono font-extrabold text-slate-900 dark:text-white">${op.achieved_kg} kg</td>
+                <td class="px-6 py-4">
+                    <div class="flex items-center gap-2">
+                        <div class="w-16 bg-slate-100 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
+                            <div class="${op.completion_pct >= 95 ? 'bg-emerald-500' : 'bg-indigo-500'} h-2 rounded-full" style="width: ${op.completion_pct}%"></div>
+                        </div>
+                        <span class="text-xs font-bold text-slate-700 dark:text-slate-300">${op.completion_pct}%</span>
+                    </div>
+                </td>
+                <td class="px-6 py-4">${tierBadge}</td>
+                <td class="px-6 py-4">
+                    <span class="inline-flex items-center gap-1 text-xs font-bold ${op.status === 'Completed' ? 'text-emerald-600 dark:text-emerald-400' : 'text-indigo-600 dark:text-indigo-400'}">
+                        <i class="fa-solid fa-circle-check"></i> ${op.status}
+                    </span>
+                </td>
+                <td class="px-6 py-4 text-right">
+                    <button type="button" onclick="selectEmployeeForReassign('${op.employee_id}')" class="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 font-bold text-xs underline">
+                        Reassign
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function filterDayOperators() {
+        const query = (document.getElementById('day-operator-search').value || '').toLowerCase().trim();
+        document.querySelectorAll('.operator-row').forEach(function(row) {
+            const name = row.getAttribute('data-name') || '';
+            row.style.display = (!query || name.includes(query)) ? '' : 'none';
+        });
+    }
+
+    // Timeline Navigation Handlers
+    function onWeekDropdownChange(value) {
+        renderWeek(parseInt(value));
+    }
+
+    function navigateWeek(delta) {
+        renderWeek(currentSelectedWeekIndex + delta);
+    }
+
+    function goToWeek(index) {
+        renderWeek(index);
+    }
+
+    function goToStartupWeek() {
+        if (MASTER_SUPERVISOR_TIMELINE && MASTER_SUPERVISOR_TIMELINE.length > 0) {
+            renderWeek(MASTER_SUPERVISOR_TIMELINE.length - 1);
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // F. THEME-MATCHED CHARTS & DIAGRAMS (Chart.js 4.4 Engine)
+    // -------------------------------------------------------------------------
+    function initSupervisorCharts() {
+        const p = getERPThemePalette();
+
+        // 1. Merit Tiers Polar / Doughnut Chart
+        const ctxMerit = document.getElementById('supervisorMeritChart');
+        if (ctxMerit) {
+            meritChartInstance = new Chart(ctxMerit, {
+                type: 'doughnut',
+                data: {
+                    labels: PERFORMANCE_TIERS_DATA.labels,
+                    datasets: [{
+                        data: PERFORMANCE_TIERS_DATA.counts,
+                        backgroundColor: [p.emerald, p.indigo, p.amber],
+                        borderColor: p.isDark ? '#1e293b' : '#ffffff',
+                        borderWidth: 2,
+                        hoverOffset: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '68%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: p.textColor,
+                                font: { size: 11, weight: 'bold' },
+                                boxWidth: 12,
+                                padding: 12
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: p.tooltipBg,
+                            titleColor: '#ffffff',
+                            bodyColor: '#ffffff',
+                            borderColor: p.tooltipBorder,
+                            borderWidth: 1
+                        }
+                    }
+                }
+            });
+        }
+
+        // 2. Weekly Shift Task Completion & Output Yield Chart
+        const ctxYield = document.getElementById('supervisorTaskYieldChart');
+        if (ctxYield && MASTER_SUPERVISOR_TIMELINE.length > 0) {
+            const currentWeek = MASTER_SUPERVISOR_TIMELINE[0];
+            const cd = currentWeek.chart_data;
+
+            taskYieldChartInstance = new Chart(ctxYield, {
+                type: 'bar',
+                data: {
+                    labels: cd.labels,
+                    datasets: [
+                        {
+                            label: 'Achieved Output (kg)',
+                            data: cd.achieved_kgs,
+                            backgroundColor: p.emerald,
+                            borderRadius: 6,
+                            order: 2,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'Target Quota (kg)',
+                            data: cd.target_kgs,
+                            backgroundColor: p.indigo + '55',
+                            borderColor: p.indigo,
+                            borderWidth: 1,
+                            borderRadius: 6,
+                            order: 3,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'Yield Trajectory (%)',
+                            data: cd.yield_pcts,
+                            type: 'line',
+                            borderColor: p.amber,
+                            backgroundColor: p.amber,
+                            borderWidth: 3,
+                            pointRadius: 4,
+                            pointHoverRadius: 6,
+                            tension: 0.35,
+                            order: 1,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: p.gridColor, drawBorder: false },
+                            ticks: { color: p.textColor, font: { size: 11, weight: 'bold' } }
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            grid: { color: p.gridColor, drawBorder: false },
+                            ticks: { color: p.textColor, font: { size: 11 } },
+                            title: { display: true, text: 'Throughput (kg)', color: p.textColor, font: { size: 11, weight: 'bold' } }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            min: 80,
+                            max: 100,
+                            grid: { drawOnChartArea: false },
+                            ticks: { color: p.amber, font: { size: 11 } },
+                            title: { display: true, text: 'Yield %', color: p.amber, font: { size: 11, weight: 'bold' } }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: p.tooltipBg,
+                            borderColor: p.tooltipBorder,
+                            borderWidth: 1
+                        }
+                    }
+                }
+            });
+        }
+
+        // 3. Multi-Week Historical Payroll & Incentive Pool Trend Chart
+        const ctxPayroll = document.getElementById('supervisorPayrollTrendChart');
+        if (ctxPayroll && PAYROLL_TREND_DATA) {
+            payrollTrendChartInstance = new Chart(ctxPayroll, {
+                type: 'line',
+                data: {
+                    labels: PAYROLL_TREND_DATA.labels,
+                    datasets: [
+                        {
+                            label: 'Total Adjusted Shift Payroll (₹)',
+                            data: PAYROLL_TREND_DATA.disbursed,
+                            borderColor: p.emerald,
+                            backgroundColor: p.emerald + '22',
+                            fill: true,
+                            tension: 0.3,
+                            borderWidth: 3,
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        },
+                        {
+                            label: 'Base Wage Allocation (₹)',
+                            data: PAYROLL_TREND_DATA.base,
+                            borderColor: p.indigo,
+                            backgroundColor: p.indigo + '15',
+                            fill: true,
+                            tension: 0.3,
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            pointRadius: 3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: p.gridColor, drawBorder: false },
+                            ticks: { color: p.textColor, font: { size: 11, weight: 'bold' } }
+                        },
+                        y: {
+                            grid: { color: p.gridColor, drawBorder: false },
+                            ticks: {
+                                color: p.textColor,
+                                font: { size: 11 },
+                                callback: function(val) { return '₹' + Number(val).toLocaleString(); }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                color: p.textColor,
+                                font: { size: 11, weight: 'bold' },
+                                boxWidth: 14
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: p.tooltipBg,
+                            borderColor: p.tooltipBorder,
+                            borderWidth: 1,
+                            callbacks: {
+                                label: function(ctx) {
+                                    return ctx.dataset.label + ': ₹' + Number(ctx.parsed.y).toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    function updateTaskYieldChartForWeek(weekData) {
+        if (!taskYieldChartInstance || !weekData || !weekData.chart_data) return;
+        const cd = weekData.chart_data;
+
+        taskYieldChartInstance.data.labels = cd.labels;
+        taskYieldChartInstance.data.datasets[0].data = cd.achieved_kgs;
+        taskYieldChartInstance.data.datasets[1].data = cd.target_kgs;
+        taskYieldChartInstance.data.datasets[2].data = cd.yield_pcts;
+        taskYieldChartInstance.update();
+
+        const badge = document.getElementById('chart-week-badge');
+        if (badge) badge.innerText = weekData.week_label.split(':')[0];
+    }
+
+    function resizeAllCharts() {
+        if (meritChartInstance) meritChartInstance.resize();
+        if (taskYieldChartInstance) taskYieldChartInstance.resize();
+        if (payrollTrendChartInstance) payrollTrendChartInstance.resize();
+    }
+
+    function updateThemeMatchedCharts() {
+        const p = getERPThemePalette();
+
+        // Update Merit Chart
+        if (meritChartInstance) {
+            meritChartInstance.data.datasets[0].backgroundColor = [p.emerald, p.indigo, p.amber];
+            meritChartInstance.data.datasets[0].borderColor = p.isDark ? '#1e293b' : '#ffffff';
+            meritChartInstance.options.plugins.legend.labels.color = p.textColor;
+            meritChartInstance.update();
+        }
+
+        // Update Task Yield Chart
+        if (taskYieldChartInstance) {
+            taskYieldChartInstance.data.datasets[0].backgroundColor = p.emerald;
+            taskYieldChartInstance.data.datasets[1].backgroundColor = p.indigo + '55';
+            taskYieldChartInstance.data.datasets[1].borderColor = p.indigo;
+            taskYieldChartInstance.data.datasets[2].borderColor = p.amber;
+            taskYieldChartInstance.data.datasets[2].backgroundColor = p.amber;
+            taskYieldChartInstance.options.scales.x.grid.color = p.gridColor;
+            taskYieldChartInstance.options.scales.x.ticks.color = p.textColor;
+            taskYieldChartInstance.options.scales.y.grid.color = p.gridColor;
+            taskYieldChartInstance.options.scales.y.ticks.color = p.textColor;
+            taskYieldChartInstance.update();
+        }
+
+        // Update Payroll Trend Chart
+        if (payrollTrendChartInstance) {
+            payrollTrendChartInstance.data.datasets[0].borderColor = p.emerald;
+            payrollTrendChartInstance.data.datasets[0].backgroundColor = p.emerald + '22';
+            payrollTrendChartInstance.data.datasets[1].borderColor = p.indigo;
+            payrollTrendChartInstance.data.datasets[1].backgroundColor = p.indigo + '15';
+            payrollTrendChartInstance.options.scales.x.grid.color = p.gridColor;
+            payrollTrendChartInstance.options.scales.x.ticks.color = p.textColor;
+            payrollTrendChartInstance.options.scales.y.grid.color = p.gridColor;
+            payrollTrendChartInstance.options.scales.y.ticks.color = p.textColor;
+            payrollTrendChartInstance.options.plugins.legend.labels.color = p.textColor;
+            payrollTrendChartInstance.update();
+        }
+    }
+
+    // Dynamic Theme Observer: Watches dark/light mode toggle on <html> element
+    const themeObserver = new MutationObserver(function(mutations) {
+        mutations.forEach(function(m) {
+            if (m.attributeName === 'class') {
+                updateThemeMatchedCharts();
+            }
+        });
+    });
+    themeObserver.observe(document.documentElement, { attributes: true });
+
+    // Handle window resize cleanly
+    window.addEventListener('resize', resizeAllCharts);
+
+    // -------------------------------------------------------------------------
+    // H. INITIALIZATION ON DOM READY
+    // -------------------------------------------------------------------------
+    document.addEventListener('DOMContentLoaded', function() {
+        renderWeek(0);
+        initSupervisorCharts();
+        initSupervisorCardInteractions();
+    });
+</script>
+{% endblock %}

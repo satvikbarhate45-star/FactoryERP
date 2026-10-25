@@ -1,0 +1,37 @@
+# ==============================================================================
+# PharmaERP - Enterprise Pharmaceutical ERP & Machine Learning Platform
+# Requirements & Dependencies Specification
+# ==============================================================================
+
+# Core Django Web Framework
+Django>=5.0,<6.2
+asgiref>=3.8.0
+sqlparse>=0.5.0
+tzdata>=2024.1
+
+# PostgreSQL & Supabase Database Connectivity
+psycopg2-binary>=2.9.9
+dj-database-url>=2.2.0
+
+# Background Task Scheduler & Workflow Automation
+APScheduler>=3.10.4
+django-apscheduler>=0.7.0
+
+# Scientific Computing & Predictive Analytics (Yield, Imputation & Failure Prediction)
+numpy>=1.26.0
+pandas>=2.2.0
+scikit-learn>=1.4.0
+scipy>=1.12.0
+joblib>=1.3.0
+
+# AI & Intelligent Chat Assistant (Gemini API Integration & Markdown Parsing)
+markdown>=3.6.0
+google-generativeai>=0.8.0
+google-api-python-client>=2.150.0
+google-auth>=2.35.0
+pydantic>=2.9.0
+
+# HTTP Requests, Environment & Image/Asset Processing
+requests>=2.32.0
+python-dotenv>=1.0.0
+Pillow>=10.4.0

@@ -1,0 +1,1932 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="space-y-8 production-analytics-root">
+
+    <!-- CSS Slide-Transitions, Responsive Layout & ERP Theme Styles -->
+    <style>
+        /* Tab Viewport & Sliding Animations */
+        .tabs-slider-viewport {
+            position: relative;
+            overflow: hidden;
+            width: 100%;
+            min-height: 480px;
+        }
+
+        .tab-pane {
+            display: none;
+            opacity: 0;
+            width: 100%;
+            transform: translate3d(55px, 0, 0) scale(0.97);
+            transition: opacity 0.38s cubic-bezier(0.25, 1, 0.5, 1), transform 0.38s cubic-bezier(0.25, 1, 0.5, 1);
+            will-change: transform, opacity;
+        }
+
+        .tab-pane.active {
+            display: block;
+            opacity: 1;
+            transform: translate3d(0, 0, 0) scale(1);
+        }
+
+        .tab-pane.slide-out-left {
+            display: block;
+            opacity: 0;
+            transform: translate3d(-50px, 0, 0) scale(0.97);
+        }
+
+        .tab-pane.slide-out-right {
+            display: block;
+            opacity: 0;
+            transform: translate3d(50px, 0, 0) scale(0.97);
+        }
+
+        /* Timeline Drilldown Transitions */
+        .timeline-content-wrapper {
+            transition: opacity 0.32s cubic-bezier(0.25, 1, 0.5, 1), transform 0.32s cubic-bezier(0.25, 1, 0.5, 1);
+            will-change: transform, opacity;
+        }
+
+        .timeline-content-wrapper.sliding-left {
+            opacity: 0;
+            transform: translate3d(-35px, 0, 0) scale(0.98);
+        }
+
+        .timeline-content-wrapper.sliding-right {
+            opacity: 0;
+            transform: translate3d(35px, 0, 0) scale(0.98);
+        }
+
+        /* Modal Transition Animations */
+        .deepdive-modal {
+            transition: opacity 0.3s cubic-bezier(0.25, 1, 0.5, 1), visibility 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+            visibility: hidden;
+            opacity: 0;
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            backdrop-filter: blur(14px) !important;
+            -webkit-backdrop-filter: blur(14px) !important;
+            background: rgba(15, 23, 42, 0.72) !important;
+        }
+
+        .deepdive-modal.active {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .deepdive-modal .modal-panel {
+            transition: transform 0.38s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.35s ease;
+            transform: translate3d(0, 50px, 0) scale(0.85);
+            opacity: 0;
+            will-change: transform, opacity;
+        }
+
+        .deepdive-modal.active .modal-panel {
+            transform: translate3d(0, 0, 0) scale(1);
+            opacity: 1;
+        }
+
+        /* Inline Drawer Transition */
+        #inline-analytics-drawer {
+            max-height: 0;
+            overflow: hidden;
+            opacity: 0;
+            transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease-in-out, margin 0.3s ease;
+        }
+
+        #inline-analytics-drawer.expanded {
+            max-height: 800px;
+            opacity: 1;
+            margin-top: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        /* KPI Cards */
+        .kpi-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .kpi-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 16px 30px -8px rgba(0, 0, 0, 0.08), 0 8px 12px -4px rgba(0, 0, 0, 0.04);
+        }
+        .dark .kpi-card:hover {
+            box-shadow: 0 16px 30px -8px rgba(0, 0, 0, 0.4);
+        }
+
+        /* Day Pill Scrollbar Styling */
+        .day-pill-scroll::-webkit-scrollbar {
+            height: 4px;
+        }
+        .day-pill-scroll::-webkit-scrollbar-thumb {
+            background-color: rgba(148, 163, 184, 0.4);
+            border-radius: 9999px;
+        }
+
+        /* Highlighted Day Row in Workflow Table */
+        .highlighted-day-row {
+            background-color: rgba(99, 102, 241, 0.08) !important;
+            border-left: 4px solid #6366f1 !important;
+        }
+        .dark .highlighted-day-row {
+            background-color: rgba(99, 102, 241, 0.2) !important;
+        }
+    </style>
+
+    <!-- Top Executive Header & Real-Time Operational Status -->
+    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-6">
+        <div>
+            <div class="flex items-center gap-3">
+                <h1 class="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+                    Manufacturing & Shift Production Analytics
+                </h1>
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
+                    <span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
+                    Master Timeline Active (Startup to Present)
+                </span>
+            </div>
+            <p class="text-slate-500 dark:text-slate-400 mt-1 font-medium text-sm">
+                Multi-week historical tracking, granular day-by-day drilldown, theme-matched analytical telemetry, and shift-to-machine production audits.
+            </p>
+        </div>
+
+        <!-- Quick Action Triggers -->
+        <div class="flex flex-wrap items-center gap-3">
+            <button type="button" onclick="switchTab('tab-controls')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2.5 rounded-xl shadow-md shadow-indigo-200 dark:shadow-none transition-all flex items-center gap-2 text-sm">
+                <i class="fa-solid fa-pen-to-square"></i>
+                <span>Manual Production Entry</span>
+            </button>
+
+            <form method="POST" class="inline">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="trigger_imputation">
+                <button type="submit" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 px-4 py-2.5 rounded-xl shadow-sm font-bold text-sm transition-colors flex items-center gap-2">
+                    <i class="fa-solid fa-bolt text-amber-500"></i>
+                    <span>Run AI Imputation</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 4 CLICKABLE SUMMARY CARDS (Interactive Deep-Dive Architecture) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        
+        <!-- Card 1: Monthly Output & Target (Clickable) -->
+        <div id="card-monthly-output" data-deepdive="modal-output-deepdive" data-drawer-view="output" class="kpi-card premium-card p-6 border-l-4 border-l-indigo-500 cursor-pointer group hover:border-indigo-600">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Monthly Plant Output</span>
+                <span class="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-sm group-hover:scale-110 transition-transform">
+                    <i class="fa-solid fa-boxes-stacked"></i>
+                </span>
+            </div>
+            <div class="mt-3">
+                <div class="flex items-baseline gap-2">
+                    <span class="text-3xl font-extrabold text-slate-900 dark:text-white">{{ current_output|floatformat:0 }}</span>
+                    <span class="text-sm font-bold text-slate-400">/ {{ monthly_target|floatformat:0 }} kg</span>
+                </div>
+                <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2 mt-3 overflow-hidden">
+                    <div class="{% if target_pct >= 100 %}bg-emerald-500{% else %}bg-indigo-500{% endif %} h-2 rounded-full transition-all duration-1000" style="width: {{ target_pct }}%"></div>
+                </div>
+                <div class="flex justify-between items-center mt-2.5 text-xs font-semibold">
+                    <span class="{% if target_pct >= 100 %}text-emerald-600 dark:text-emerald-400{% else %}text-indigo-600 dark:text-indigo-400{% endif %}">{{ target_pct }}% achieved</span>
+                    <button type="button" id="btn-deepdive-output" data-deepdive="modal-output-deepdive" class="card-action-btn text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 group-hover:underline flex items-center gap-1 font-bold outline-none">
+                        <span>Deep-Dive</span>
+                        <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 2: Active Shifts & Workforce Allocation (Clickable) -->
+        <div id="card-shift-roster" data-deepdive="modal-shift-deepdive" data-drawer-view="shifts" class="kpi-card premium-card p-6 border-l-4 border-l-emerald-500 cursor-pointer group hover:border-emerald-600">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Shift Production Roster</span>
+                <span class="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-sm group-hover:scale-110 transition-transform">
+                    <i class="fa-solid fa-users-gear"></i>
+                </span>
+            </div>
+            <div class="mt-3">
+                <div class="flex items-baseline gap-2">
+                    <span class="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400">{{ total_active_shifts }} Active</span>
+                    <span class="text-sm font-bold text-slate-400">Shifts / {{ total_allocated_operators }} Ops</span>
+                </div>
+                <div class="flex items-center gap-2 mt-3 text-xs font-bold">
+                    <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">100% Floor Staffing</span>
+                    <span class="text-slate-400">3 Shift Windows</span>
+                </div>
+                <div class="flex justify-between items-center mt-2.5 text-xs font-semibold">
+                    <span class="text-slate-500 dark:text-slate-400">Continuous Roster</span>
+                    <button type="button" id="btn-deepdive-shifts" data-deepdive="modal-shift-deepdive" class="card-action-btn text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 group-hover:underline flex items-center gap-1 font-bold outline-none">
+                        <span>View Shifts</span>
+                        <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 3: Machine Criticality & Bottlenecks (Clickable) -->
+        <div id="card-criticality-audit" data-deepdive="modal-criticality-deepdive" data-drawer-view="criticality" class="kpi-card premium-card p-6 border-l-4 border-l-amber-500 cursor-pointer group hover:border-amber-600">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Criticality & Bottlenecks</span>
+                <span class="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center text-sm group-hover:scale-110 transition-transform">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </span>
+            </div>
+            <div class="mt-3">
+                <div class="flex items-baseline gap-1">
+                    <span class="text-2xl font-extrabold text-slate-900 dark:text-white">{{ total_downtime_hours }}h</span>
+                    <span class="text-xs font-bold text-slate-400">Total Fleet Downtime</span>
+                </div>
+                <div class="flex items-center gap-2 mt-3 text-xs font-bold">
+                    <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">{{ auto_resolved_pct }}% Auto-Mitigated</span>
+                </div>
+                <div class="flex justify-between items-center mt-2.5 text-xs font-semibold">
+                    <span class="text-amber-600 dark:text-amber-400">{{ criticality_index }}</span>
+                    <button type="button" id="btn-deepdive-criticality" data-deepdive="modal-criticality-deepdive" class="card-action-btn text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 group-hover:underline flex items-center gap-1 font-bold outline-none">
+                        <span>Audit Logs</span>
+                        <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 4: Manufacturing Yield & Efficiency (Clickable) -->
+        <div id="card-yield-synthesis" data-deepdive="modal-yield-deepdive" data-drawer-view="yield" class="kpi-card premium-card p-6 border-l-4 border-l-purple-500 cursor-pointer group hover:border-purple-600">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Factory Yield & Synthesis</span>
+                <span class="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center text-sm group-hover:scale-110 transition-transform">
+                    <i class="fa-solid fa-chart-pie"></i>
+                </span>
+            </div>
+            <div class="mt-3">
+                <div class="flex items-baseline gap-2">
+                    <span class="text-3xl font-extrabold text-purple-600 dark:text-purple-400">{{ factory_avg_yield }}%</span>
+                    <span class="text-xs font-bold text-slate-400">Plant Yield</span>
+                </div>
+                <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2 mt-3 overflow-hidden">
+                    <div class="bg-purple-500 h-2 rounded-full" style="width: {{ autonomous_share_pct }}%"></div>
+                </div>
+                <div class="flex justify-between items-center mt-2.5 text-xs font-semibold">
+                    <span class="text-slate-500 dark:text-slate-400">{{ autonomous_share_pct }}% AI Synthesized</span>
+                    <button type="button" id="btn-deepdive-yield" data-deepdive="modal-yield-deepdive" class="card-action-btn text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 group-hover:underline flex items-center gap-1 font-bold outline-none">
+                        <span>Yield Trend</span>
+                        <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- INLINE EXPANDABLE ANALYTICS DRAWER (Instant Granular Record View) -->
+    <div id="inline-analytics-drawer" class="premium-card p-6 border-2 border-indigo-400/40 bg-gradient-to-br from-white via-indigo-50/20 to-slate-50 dark:from-slate-800 dark:via-slate-800/80 dark:to-slate-900 shadow-xl rounded-2xl">
+        <div class="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-700">
+            <div class="flex items-center gap-3">
+                <span id="drawer-icon" class="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-sm font-bold">
+                    <i class="fa-solid fa-chart-line"></i>
+                </span>
+                <div>
+                    <h3 id="drawer-title" class="text-base font-extrabold text-slate-900 dark:text-white">
+                        Granular Analytical Deep-Dive
+                    </h3>
+                    <p id="drawer-subtitle" class="text-xs text-slate-500 dark:text-slate-400">
+                        Inspecting telemetry records and operational metrics.
+                    </p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button type="button" id="btn-open-full-modal" class="text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950 px-3 py-1.5 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900 transition flex items-center gap-1.5">
+                    <span>Full Screen Modal</span>
+                    <i class="fa-solid fa-expand text-[10px]"></i>
+                </button>
+                <button type="button" onclick="closeInlineDrawer()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 text-lg font-bold leading-none">
+                    &times;
+                </button>
+            </div>
+        </div>
+        <div id="drawer-content-slot" class="pt-4 text-sm">
+            <!-- Dynamic Content Injected via JS -->
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- MASTER TIMELINE: GRANULAR WEEKLY BUCKETS & DAY-BY-DAY DRILLDOWN CONTROLS  -->
+    <!-- ========================================================================= -->
+    <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
+        
+        <!-- Row 1: Weekly Timeline Navigation & Jump Selector -->
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-700/80">
+            <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                <div class="flex items-center gap-2">
+                    <span class="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-sm font-bold">
+                        <i class="fa-solid fa-calendar-week"></i>
+                    </span>
+                    <div>
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-400 block">Historical Timeline</span>
+                        <h2 class="text-base font-extrabold text-slate-900 dark:text-white" id="timeline-active-title">
+                            Current Week: Oct 18 - Oct 24, 2026
+                        </h2>
+                    </div>
+                </div>
+
+                <!-- Previous / Next Week Stepper Buttons -->
+                <div class="flex items-center gap-1.5 sm:ml-4">
+                    <button type="button" id="btn-prev-week" onclick="stepTimelineWeek(1)" title="Previous Week" class="p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                        <span class="hidden sm:inline">Older Week</span>
+                    </button>
+                    <button type="button" id="btn-next-week" onclick="stepTimelineWeek(-1)" title="Next Week" class="p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold transition flex items-center gap-1.5">
+                        <span class="hidden sm:inline">Newer Week</span>
+                        <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Historical Week Dropdown Selector (From Startup to Present) -->
+            <div class="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+                <div class="relative w-full sm:w-auto min-w-0 sm:min-w-[220px] flex-1 sm:flex-initial">
+                    <select id="timeline-week-select" onchange="selectTimelineWeek(this.value)" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white text-xs font-bold rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer appearance-none pr-8 shadow-sm">
+                        {% for w in timeline_weeks_select %}
+                        <option value="{{ w.id }}">{{ w.label }}</option>
+                        {% endfor %}
+                    </select>
+                    <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+                </div>
+
+                <!-- Quick Jump Buttons -->
+                <button type="button" onclick="jumpToCurrentWeek()" class="px-3 py-2 rounded-xl text-xs font-bold bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900 transition">
+                    Current Week
+                </button>
+                <button type="button" onclick="jumpToStartupWeek()" class="px-3 py-2 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition">
+                    Startup (Aug 2026)
+                </button>
+            </div>
+        </div>
+
+        <!-- Row 2: Granular Day-by-Day Strip (Click Any Day to Drill Down) -->
+        <div>
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                    <i class="fa-solid fa-calendar-day text-indigo-500"></i>
+                    <span>Granular Day-by-Day Drilldown:</span>
+                </span>
+                <span id="drilldown-mode-label" class="text-xs font-bold text-indigo-600 dark:text-indigo-400">
+                    Showing: Full Week Summary
+                </span>
+            </div>
+
+            <div id="day-pill-container" class="day-pill-scroll flex items-center gap-2 overflow-x-auto pb-1">
+                <!-- Day Pills Rendered Dynamically via JS -->
+            </div>
+        </div>
+
+        <!-- Row 3: Active Timeline Comparison KPI Badges -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+            <div class="bg-slate-50 dark:bg-slate-900/80 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
+                <span class="text-[11px] text-slate-400 uppercase font-bold block" id="kpi-output-title">Period Finished Output</span>
+                <span id="kpi-week-output" class="text-xl font-extrabold text-indigo-600 dark:text-indigo-400 font-mono">29,878 kg</span>
+            </div>
+            <div class="bg-slate-50 dark:bg-slate-900/80 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
+                <span class="text-[11px] text-slate-400 uppercase font-bold block">Average Plant Yield</span>
+                <span id="kpi-week-yield" class="text-xl font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">97.6%</span>
+            </div>
+            <div class="bg-slate-50 dark:bg-slate-900/80 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
+                <span class="text-[11px] text-slate-400 uppercase font-bold block">Fleet Stoppage Duration</span>
+                <span id="kpi-week-incidents" class="text-xl font-extrabold text-amber-600 dark:text-amber-400 font-mono">136.0h (48 tkts)</span>
+            </div>
+            <div class="bg-slate-50 dark:bg-slate-900/80 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
+                <span class="text-[11px] text-slate-400 uppercase font-bold block">Autonomous Mitigation</span>
+                <span id="kpi-week-mitigated" class="text-xl font-extrabold text-purple-600 dark:text-purple-400 font-mono">98.4%</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- SECTION: THEME-MATCHED EMBEDDED ANALYTICAL CHARTS (RESPONSIVE)           -->
+    <!-- ========================================================================= -->
+    <div id="charts-sliding-wrapper" class="timeline-content-wrapper space-y-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- Chart 1: Output Trajectory & Baseline Quota Trend -->
+            <div class="premium-card p-6 lg:col-span-2 flex flex-col justify-between">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 gap-2">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-indigo-500"></span>
+                            <h2 class="text-base font-extrabold text-slate-900 dark:text-white" id="output-chart-title">
+                                Finished Manufacturing Output Trajectory (kg)
+                            </h2>
+                        </div>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5" id="output-chart-sub">
+                            Actual production throughput benchmarked against baseline quota.
+                        </p>
+                    </div>
+                    <div class="flex items-center gap-3 text-xs font-semibold">
+                        <span class="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400">
+                            <span class="w-3 h-1.5 rounded-sm bg-indigo-500"></span> Actual Output
+                        </span>
+                        <span class="flex items-center gap-1.5 text-slate-400">
+                            <span class="w-3 h-0.5 bg-slate-400 border-dashed"></span> Quota Threshold
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Canvas Wrapper -->
+                <div class="relative w-full h-72 pt-3">
+                    <canvas id="plantOutputChart"></canvas>
+                </div>
+
+                <div class="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-400">
+                    <span id="output-chart-timeline-footnote">Timeline: Current Operational Horizon</span>
+                    <span class="font-semibold text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
+                        <i class="fa-solid fa-wave-square"></i> Telemetry Synced
+                    </span>
+                </div>
+            </div>
+
+            <!-- Chart 2: Shift-Wise Production & Headcount Distribution -->
+            <div class="premium-card p-6 flex flex-col justify-between">
+                <div class="pb-4 border-b border-slate-100 dark:border-slate-800">
+                    <div class="flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
+                        <h2 class="text-base font-extrabold text-slate-900 dark:text-white" id="shift-chart-title">
+                            Shift-Wise Production Share
+                        </h2>
+                    </div>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5" id="shift-chart-sub">
+                        Output mass (kg) & operator allocation across shift windows.
+                    </p>
+                </div>
+
+                <!-- Doughnut Canvas -->
+                <div class="relative w-full h-64 pt-2 flex items-center justify-center">
+                    <canvas id="shiftDistributionChart"></canvas>
+                </div>
+
+                <!-- Shift Breakdown Legend Footer -->
+                <div id="shift-legend-container" class="grid grid-cols-3 gap-2 pt-3 border-t border-slate-100 dark:border-slate-800 text-center text-xs">
+                    <div class="p-2 rounded-lg bg-indigo-50/60 dark:bg-indigo-950/40">
+                        <div class="text-[11px] text-slate-400">Morning</div>
+                        <div id="legend-morning-out" class="font-extrabold text-indigo-600 dark:text-indigo-400 mt-0.5">10.7k kg</div>
+                    </div>
+                    <div class="p-2 rounded-lg bg-emerald-50/60 dark:bg-emerald-950/40">
+                        <div class="text-[11px] text-slate-400">Evening</div>
+                        <div id="legend-evening-out" class="font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5">7.6k kg</div>
+                    </div>
+                    <div class="p-2 rounded-lg bg-purple-50/60 dark:bg-purple-950/40">
+                        <div class="text-[11px] text-slate-400">Night</div>
+                        <div id="legend-night-out" class="font-extrabold text-purple-600 dark:text-purple-400 mt-0.5">11.0k kg</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chart 3: Machine Criticality & Processing Bottlenecks -->
+            <div class="premium-card p-6 lg:col-span-3 flex flex-col justify-between">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 gap-2">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-amber-500"></span>
+                            <h2 class="text-base font-extrabold text-slate-900 dark:text-white" id="bottleneck-chart-title">
+                                Machine Criticality & Processing Bottleneck Frequency
+                            </h2>
+                        </div>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5" id="bottleneck-chart-sub">
+                            Cumulative downtime duration (minutes) & stoppage frequency across operational processing lines.
+                        </p>
+                    </div>
+                    <div class="flex items-center gap-4 text-xs font-semibold">
+                        <span class="flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
+                            <span class="w-3 h-3 rounded bg-amber-500"></span> Downtime Minutes
+                        </span>
+                        <span class="flex items-center gap-1.5 text-rose-600 dark:text-rose-400">
+                            <span class="w-3 h-3 rounded bg-rose-500"></span> Incident Count
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Canvas Wrapper -->
+                <div class="relative w-full h-64 pt-3">
+                    <canvas id="bottleneckFrequencyChart"></canvas>
+                </div>
+
+                <div class="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-400">
+                    <span id="bottleneck-footer-note">Target fleet tolerance: &lt; 30 min stoppage per machine line</span>
+                    <span class="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                        <i class="fa-solid fa-shield-check"></i> Active Predictive Throttling Enabled
+                    </span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- INTERACTIVE MODULAR TABS NAVIGATION WITH SLIDING TRANSITIONS              -->
+    <!-- ========================================================================= -->
+    <div class="border-b border-slate-200 dark:border-slate-800">
+        <nav class="flex space-x-2 sm:space-x-8 overflow-x-auto" aria-label="Tabs">
+            <button type="button" onclick="switchTabSlide('tab-shift-mapping')" id="tab-btn-shift-mapping" class="tab-btn active border-b-2 border-indigo-600 py-3 px-2 text-sm font-extrabold text-indigo-600 dark:text-indigo-400 flex items-center gap-2 whitespace-nowrap">
+                <i class="fa-solid fa-people-arrows"></i>
+                <span>Shift Production Mapping</span>
+                <span class="ml-1 text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 font-bold">
+                    {{ shift_production_mapping|length }}
+                </span>
+            </button>
+
+            <button type="button" onclick="switchTabSlide('tab-criticality')" id="tab-btn-criticality" class="tab-btn border-b-2 border-transparent py-3 px-2 text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 flex items-center gap-2 whitespace-nowrap">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <span>Criticality & Downtime Logs</span>
+                <span class="ml-1 text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 font-bold">
+                    {{ criticality_logs|length }}
+                </span>
+            </button>
+
+            <button type="button" onclick="switchTabSlide('tab-workflow-history')" id="tab-btn-workflow-history" class="tab-btn border-b-2 border-transparent py-3 px-2 text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 flex items-center gap-2 whitespace-nowrap">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+                <span>Daily Workflow History</span>
+                <span id="tab-history-badge" class="ml-1 text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 font-bold">
+                    Audit Records
+                </span>
+            </button>
+
+            <button type="button" onclick="switchTabSlide('tab-controls')" id="tab-btn-controls" class="tab-btn border-b-2 border-transparent py-3 px-2 text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 flex items-center gap-2 whitespace-nowrap">
+                <i class="fa-solid fa-sliders"></i>
+                <span>Production Entry & Target Form</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- TABS SLIDING VIEWPORT -->
+    <div class="tabs-slider-viewport">
+
+        <!-- TAB 1: EMPLOYEE-SHIFT-MACHINE PRODUCTION MAPPING -->
+        <div id="tab-shift-mapping" class="tab-pane active space-y-6" data-tab-index="0">
+            <!-- Filter and Search Toolbar -->
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                <!-- Shift Filter Pills -->
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider mr-1">Filter Shift:</span>
+                    <button type="button" onclick="filterByShift('all')" class="shift-filter-btn active text-xs font-bold px-3 py-1.5 rounded-lg bg-indigo-600 text-white transition">
+                        All Shifts ({{ shift_production_mapping|length }})
+                    </button>
+                    {% for s in shifts_summary %}
+                    <button type="button" onclick="filterByShift('{{ s.code }}')" class="shift-filter-btn text-xs font-bold px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition">
+                        {{ s.name }} ({{ s.headcount }})
+                    </button>
+                    {% endfor %}
+                </div>
+
+                <!-- Search Input -->
+                <div class="relative w-full sm:w-64">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                    <input type="text" id="operator-search-input" onkeyup="searchOperators()" placeholder="Search operator or line..." class="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+            </div>
+
+            <!-- Structured Production Mapping Table -->
+            <div class="premium-card overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table id="shift-mapping-table" class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider font-bold">
+                                <th class="px-6 py-4 border-b border-slate-100 dark:border-slate-800">Operator</th>
+                                <th class="px-6 py-4 border-b border-slate-100 dark:border-slate-800">Assigned Shift</th>
+                                <th class="px-6 py-4 border-b border-slate-100 dark:border-slate-800">Assigned Machine Line</th>
+                                <th class="px-6 py-4 border-b border-slate-100 dark:border-slate-800">Day Output (kg)</th>
+                                <th class="px-6 py-4 border-b border-slate-100 dark:border-slate-800">Period Output (kg)</th>
+                                <th class="px-6 py-4 border-b border-slate-100 dark:border-slate-800">Yield Ratio</th>
+                                <th class="px-6 py-4 border-b border-slate-100 dark:border-slate-800">Target Quota</th>
+                                <th class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 text-right">Deep-Dive Action</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-sm divide-y divide-slate-100 dark:divide-slate-800">
+                            {% for item in shift_production_mapping %}
+                            <tr class="mapping-row hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors" data-shift="{{ item.shift_code }}" data-name="{{ item.operator_name|lower }} {{ item.machine_code|lower }}">
+                                <td class="px-6 py-4 font-bold text-slate-900 dark:text-white">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 flex items-center justify-center text-xs font-extrabold">
+                                            {{ item.operator_name|make_list|first|upper }}
+                                        </div>
+                                        <div>
+                                            <div class="font-bold text-slate-800 dark:text-white text-sm">{{ item.operator_name }}</div>
+                                            <div class="text-[11px] text-slate-400 font-medium">{{ item.month_batches }} total batches</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                                        {{ item.shift_name }}
+                                    </span>
+                                    <div class="text-[11px] text-slate-400 mt-0.5">{{ item.shift_hours }}</div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="font-extrabold text-slate-800 dark:text-white">{{ item.machine_code }}</div>
+                                    <div class="text-xs text-slate-400 truncate max-w-[150px]">{{ item.machine_name }}</div>
+                                </td>
+                                <td class="px-6 py-4 font-extrabold text-slate-900 dark:text-white font-mono">
+                                    {{ item.today_output_kg }} kg
+                                </td>
+                                <td class="px-6 py-4 font-extrabold text-indigo-600 dark:text-indigo-400 font-mono">
+                                    {{ item.month_output_kg }} kg
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="px-2.5 py-1 rounded-md font-bold text-xs {% if item.yield_pct >= 90 %}bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-300{% else %}bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-300{% endif %}">
+                                        {{ item.yield_pct }}%
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-16 bg-slate-100 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
+                                            <div class="{% if item.completion_pct >= 100 %}bg-emerald-500{% else %}bg-indigo-500{% endif %} h-2 rounded-full" style="width: {{ item.completion_pct }}%"></div>
+                                        </div>
+                                        <span class="text-xs font-bold text-slate-600 dark:text-slate-300">{{ item.completion_pct }}%</span>
+                                    </div>
+                                    <div class="text-[11px] text-slate-400">Target: {{ item.target_quota_kg }} kg</div>
+                                </td>
+                                <td class="px-6 py-4 text-right">
+                                    <button type="button" onclick="openOperatorDeepDive('{{ item.operator_name }}', '{{ item.shift_name }}', '{{ item.shift_hours }}', '{{ item.machine_code }}', '{{ item.today_output_kg }}', '{{ item.month_output_kg }}', '{{ item.yield_pct }}', '{{ item.target_quota_kg }}', '{{ item.perf_status }}')" class="bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950 dark:hover:bg-indigo-900 text-indigo-700 dark:text-indigo-300 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ml-auto">
+                                        <span>Deep-Dive</span>
+                                        <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="8" class="px-6 py-12 text-center text-slate-400">
+                                    No operator shift mappings recorded.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: MACHINE CRITICALITY & DOWNTIME HISTORY LOGS -->
+        <div id="tab-criticality" class="tab-pane space-y-6" data-tab-index="1">
+            <!-- Criticality Summary Banner -->
+            <div class="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-slate-800 dark:to-slate-900 p-5 rounded-2xl border border-amber-200 dark:border-amber-900 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h3 class="text-base font-extrabold text-amber-900 dark:text-amber-300 flex items-center gap-2">
+                        <i class="fa-solid fa-triangle-exclamation text-amber-600"></i>
+                        <span>Processing Bottlenecks & Critical Incident Audit</span>
+                    </h3>
+                    <p class="text-xs text-amber-700 dark:text-slate-400 mt-0.5">
+                        Concise logs tracking critical states, bottleneck durations, output loss estimations, and automated mitigation statuses.
+                    </p>
+                </div>
+                <div class="flex items-center gap-4 text-xs font-bold">
+                    <div class="bg-white dark:bg-slate-800 px-3 py-2 rounded-xl shadow-sm border border-amber-200 dark:border-slate-700">
+                        <span class="text-slate-400">Fleet Downtime:</span>
+                        <strong class="text-slate-900 dark:text-white ml-1">{{ total_downtime_hours }} Hours</strong>
+                    </div>
+                    <div class="bg-white dark:bg-slate-800 px-3 py-2 rounded-xl shadow-sm border border-amber-200 dark:border-slate-700">
+                        <span class="text-slate-400">Auto-Mitigated:</span>
+                        <strong class="text-emerald-600 dark:text-emerald-400 ml-1">{{ auto_resolved_pct }}%</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Criticality Logs Table -->
+            <div class="premium-card overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider font-bold">
+                                <th class="px-6 py-4 border-b border-slate-100 dark:border-slate-800">Machine Line</th>
+                                <th class="px-6 py-4 border-b border-slate-100 dark:border-slate-800">Incident Timestamp</th>
+                                <th class="px-6 py-4 border-b border-slate-100 dark:border-slate-800">Processing Bottleneck / Cause</th>
+                                <th class="px-6 py-4 border-b border-slate-100 dark:border-slate-800">Downtime Duration</th>
+                                <th class="px-6 py-4 border-b border-slate-100 dark:border-slate-800">Output Impact (kg)</th>
+                                <th class="px-6 py-4 border-b border-slate-100 dark:border-slate-800">Automated Resolution Status</th>
+                                <th class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 text-right">Severity</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-sm divide-y divide-slate-100 dark:divide-slate-800">
+                            {% for log in criticality_logs %}
+                            <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors">
+                                <td class="px-6 py-4 font-bold text-slate-900 dark:text-white">
+                                    <div class="font-extrabold text-sm">{{ log.machine_code }}</div>
+                                    <div class="text-xs text-slate-400">{{ log.machine_name }}</div>
+                                </td>
+                                <td class="px-6 py-4 text-xs text-slate-500 dark:text-slate-400">
+                                    {{ log.incident_date|date:"M d, Y - H:i" }}
+                                </td>
+                                <td class="px-6 py-4 text-xs font-semibold text-slate-700 dark:text-slate-300 max-w-sm">
+                                    {{ log.cause_summary }}
+                                </td>
+                                <td class="px-6 py-4 font-bold text-slate-800 dark:text-white font-mono text-xs">
+                                    {{ log.downtime_minutes }} min
+                                </td>
+                                <td class="px-6 py-4 text-xs font-mono font-bold text-amber-600 dark:text-amber-400">
+                                    -{{ log.bottleneck_impact_kg }} kg
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold {% if log.res_badge == 'emerald' %}bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300{% elif log.res_badge == 'indigo' %}bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300{% else %}bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300{% endif %}">
+                                        <i class="fa-solid fa-shield-halved text-[10px]"></i>
+                                        {{ log.automated_resolution_status }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 text-right">
+                                    {% if log.severity == 'Critical' %}
+                                    <span class="px-2.5 py-0.5 rounded text-xs font-extrabold bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300">
+                                        Critical
+                                    </span>
+                                    {% else %}
+                                    <span class="px-2.5 py-0.5 rounded text-xs font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                                        Moderate
+                                    </span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="px-6 py-12 text-center text-slate-400">
+                                    Zero critical machine downtime incidents recorded. Fleet operating optimally.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: DAILY PRODUCTION WORKFLOW HISTORY -->
+        <div id="tab-workflow-history" class="tab-pane space-y-6" data-tab-index="2">
+            <div class="premium-card overflow-hidden">
+                <div class="px-6 py-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+                    <div>
+                        <h2 class="text-xl font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                            <i class="fa-solid fa-clock-rotate-left text-indigo-600"></i>
+                            <span>Daily Production Workflow History & Shift Audit Trace</span>
+                        </h2>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                            Chronological plant workflow audit covering material ingestion, finished output, and autonomous script intervention traces.
+                        </p>
+                    </div>
+                    <span id="history-timeline-badge" class="text-xs font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 px-3 py-1.5 rounded-lg whitespace-nowrap">
+                        Active Timeline: Current Week
+                    </span>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider font-bold">
+                                <th class="px-6 py-4 border-b border-slate-100 dark:border-slate-800">Date & Day</th>
+                                <th class="px-6 py-4 border-b border-slate-100 dark:border-slate-800">Raw Consumed (kg)</th>
+                                <th class="px-6 py-4 border-b border-slate-100 dark:border-slate-800">Output Produced (kg)</th>
+                                <th class="px-6 py-4 border-b border-slate-100 dark:border-slate-800">Yield %</th>
+                                <th class="px-6 py-4 border-b border-slate-100 dark:border-slate-800">Operational Fleet</th>
+                                <th class="px-6 py-4 border-b border-slate-100 dark:border-slate-800">Workflow Status</th>
+                                <th class="px-6 py-4 border-b border-slate-100 dark:border-slate-800">Autonomous Workflow Trace</th>
+                                <th class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 text-right">Audit Sign-off</th>
+                            </tr>
+                        </thead>
+                        <tbody id="workflow-history-tbody" class="text-sm divide-y divide-slate-100 dark:divide-slate-800">
+                            <!-- Populated dynamically via JS matching selected timeline -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: OPERATIONAL CONTROLS & MANUAL OVERRIDE -->
+        <div id="tab-controls" class="tab-pane space-y-6" data-tab-index="3">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Manual Production Override Form -->
+                <div class="premium-card p-6 border-2 border-indigo-500 bg-white dark:bg-slate-800">
+                    <div class="flex justify-between items-center mb-5 pb-3 border-b border-slate-100 dark:border-slate-700">
+                        <div>
+                            <h3 class="text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                                <i class="fa-solid fa-pen-to-square text-indigo-600"></i>
+                                <span>Manual Production Output Entry</span>
+                            </h3>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Log exact machine output and raw material consumption.</p>
+                        </div>
+                    </div>
+
+                    <form method="POST" class="space-y-4">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="production">
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Machine Processing Line</label>
+                            <select name="machine_id" required class="w-full border border-slate-300 dark:border-slate-600 rounded-xl p-3 bg-slate-50 dark:bg-slate-900 text-sm font-medium text-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none">
+                                <option value="">Select line station...</option>
+                                {% for m in machines %}
+                                <option value="{{ m.id }}">{{ m.code }}: {{ m.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Raw Consumed (kg)</label>
+                                <input type="number" step="0.1" name="raw_material" required placeholder="e.g. 250" class="w-full border border-slate-300 dark:border-slate-600 rounded-xl p-3 bg-slate-50 dark:bg-slate-900 text-sm font-mono text-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Finished Output (kg)</label>
+                                <input type="number" step="0.1" name="finished_output" required placeholder="e.g. 238" class="w-full border border-slate-300 dark:border-slate-600 rounded-xl p-3 bg-slate-50 dark:bg-slate-900 text-sm font-mono text-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none">
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl text-sm shadow-md transition">
+                            Submit Production Log
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Factory Target Configuration -->
+                <div class="premium-card p-6 border-2 border-rose-500 bg-white dark:bg-slate-800">
+                    <div class="flex justify-between items-center mb-5 pb-3 border-b border-slate-100 dark:border-slate-700">
+                        <div>
+                            <h3 class="text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                                <i class="fa-solid fa-bullseye text-rose-600"></i>
+                                <span>Configure Monthly Plant Target</span>
+                            </h3>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Adjust monthly production quota and operator bonus threshold.</p>
+                        </div>
+                    </div>
+
+                    <form method="POST" class="space-y-4">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="set_target">
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Monthly Plant Quota (kg)</label>
+                            <input type="number" step="10" name="target_kg" value="{{ monthly_target|floatformat:0 }}" required class="w-full border border-slate-300 dark:border-slate-600 rounded-xl p-3 bg-slate-50 dark:bg-slate-900 text-sm font-bold text-slate-800 dark:text-white focus:ring-2 focus:ring-rose-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Achievement Bonus Pool (₹)</label>
+                            <input type="number" step="100" name="bonus_amount" value="{{ bonus_amt|floatformat:0 }}" required class="w-full border border-slate-300 dark:border-slate-600 rounded-xl p-3 bg-slate-50 dark:bg-slate-900 text-sm font-bold text-slate-800 dark:text-white focus:ring-2 focus:ring-rose-500 outline-none">
+                        </div>
+                        <button type="submit" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-3 rounded-xl text-sm shadow-md transition">
+                            Update Target & Bonus
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+<!-- ========================================================================= -->
+<!-- INTERACTIVE DEEP-DIVE MODALS                                              -->
+<!-- ========================================================================= -->
+
+<!-- Modal 1: Output & Target Deep-Dive -->
+<div id="modal-output-deepdive" class="deepdive-modal bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="modal-panel bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-xl w-full p-6 border border-slate-200 dark:border-slate-700">
+        <div class="flex justify-between items-center mb-5 pb-3 border-b border-slate-100 dark:border-slate-700">
+            <h3 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <i class="fa-solid fa-boxes-stacked text-indigo-500"></i> Monthly Production Trajectory Deep-Dive
+            </h3>
+            <button type="button" onclick="closeDeepDiveModal('modal-output-deepdive')" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-2xl font-bold leading-none">&times;</button>
+        </div>
+        <div class="space-y-4 text-sm">
+            <div class="grid grid-cols-2 gap-4">
+                <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
+                    <span class="text-xs text-slate-400 font-semibold">Total Month Output</span>
+                    <div class="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">{{ current_output|floatformat:1 }} kg</div>
+                    <div class="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold mt-1">
+                        <i class="fa-solid fa-arrow-trend-up"></i> Nominal Fleet Throughput
+                    </div>
+                </div>
+                <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
+                    <span class="text-xs text-slate-400 font-semibold">Total Material Consumed</span>
+                    <div class="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">{{ current_material|floatformat:1 }} kg</div>
+                    <div class="text-[11px] text-slate-400 font-semibold mt-1">Aggregated Batches</div>
+                </div>
+            </div>
+            <div class="p-4 rounded-xl border border-indigo-100 dark:border-indigo-900 bg-indigo-50/50 dark:bg-indigo-950/30">
+                <div class="flex justify-between text-xs font-bold text-indigo-900 dark:text-indigo-300">
+                    <span>Target Attainment</span>
+                    <span>{{ target_pct }}% Completed</span>
+                </div>
+                <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5 mt-2 overflow-hidden">
+                    <div class="bg-indigo-600 h-2.5 rounded-full" style="width: {{ target_pct }}%"></div>
+                </div>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-2.5">
+                    Projected completion run-rate: <strong class="text-slate-800 dark:text-white">On Track</strong> for monthly bonus qualification (<span class="font-bold text-emerald-600">₹{{ bonus_amt|floatformat:0 }} pool</span>).
+                </p>
+            </div>
+        </div>
+        <div class="mt-6 flex justify-end gap-2">
+            <button type="button" onclick="closeDeepDiveModal('modal-output-deepdive')" class="bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-5 py-2.5 rounded-xl text-xs font-bold hover:bg-slate-200 transition">
+                Close View
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 2: Shift Deep-Dive -->
+<div id="modal-shift-deepdive" class="deepdive-modal bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="modal-panel bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-2xl w-full p-6 border border-slate-200 dark:border-slate-700">
+        <div class="flex justify-between items-center mb-5 pb-3 border-b border-slate-100 dark:border-slate-700">
+            <h3 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <i class="fa-solid fa-users-gear text-emerald-500"></i> Active Shift Breakdown & Headcount
+            </h3>
+            <button type="button" onclick="closeDeepDiveModal('modal-shift-deepdive')" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-2xl font-bold leading-none">&times;</button>
+        </div>
+        <div class="space-y-3 max-h-[60vh] overflow-y-auto">
+            {% for s in shifts_summary %}
+            <div class="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 flex items-center justify-between">
+                <div>
+                    <div class="font-extrabold text-sm text-slate-800 dark:text-white flex items-center gap-2">
+                        <span>{{ s.name }}</span>
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                            {{ s.active_lines }} Lines
+                        </span>
+                    </div>
+                    <div class="text-xs text-slate-400 font-mono mt-0.5">{{ s.hours }}</div>
+                </div>
+                <div class="text-right">
+                    <div class="text-sm font-extrabold text-emerald-600 dark:text-emerald-400">{{ s.headcount }} Operators</div>
+                    <div class="text-xs text-slate-400 font-mono">{{ s.output_kg }} kg Produced</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="mt-6 flex justify-end">
+            <button type="button" onclick="closeDeepDiveModal('modal-shift-deepdive')" class="bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-5 py-2.5 rounded-xl text-xs font-bold hover:bg-slate-200 transition">
+                Close View
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 3: Criticality & Downtime Deep-Dive -->
+<div id="modal-criticality-deepdive" class="deepdive-modal bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="modal-panel bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-2xl w-full p-6 border border-slate-200 dark:border-slate-700">
+        <div class="flex justify-between items-center mb-5 pb-3 border-b border-slate-100 dark:border-slate-700">
+            <h3 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <i class="fa-solid fa-triangle-exclamation text-amber-500"></i> Machine Criticality & Bottleneck Analysis
+            </h3>
+            <button type="button" onclick="closeDeepDiveModal('modal-criticality-deepdive')" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-2xl font-bold leading-none">&times;</button>
+        </div>
+        <div class="space-y-4 text-xs">
+            <div class="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900">
+                <div class="font-bold text-amber-900 dark:text-amber-300 text-sm">Critical State Summary</div>
+                <p class="text-amber-700 dark:text-slate-400 mt-1">
+                    {{ total_downtime_hours }} hours cumulative machine downtime recorded across fleet history.
+                    Over <strong>{{ auto_resolved_pct }}%</strong> of potential stoppages were autonomously averted via workload re-routing and kinetic throttling.
+                </p>
+            </div>
+            <div class="space-y-2 max-h-60 overflow-y-auto">
+                {% for log in criticality_logs|slice:":8" %}
+                <div class="p-3 rounded-lg border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex justify-between items-center">
+                    <div>
+                        <span class="font-bold text-slate-800 dark:text-white">{{ log.machine_code }}:</span>
+                        <span class="text-slate-500">{{ log.cause_summary }}</span>
+                    </div>
+                    <span class="font-mono font-bold text-amber-600">{{ log.downtime_minutes }} min</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="mt-6 flex justify-end">
+            <button type="button" onclick="closeDeepDiveModal('modal-criticality-deepdive')" class="bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-5 py-2.5 rounded-xl text-xs font-bold hover:bg-slate-200 transition">
+                Close View
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 4: Yield Deep-Dive -->
+<div id="modal-yield-deepdive" class="deepdive-modal bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="modal-panel bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-xl w-full p-6 border border-slate-200 dark:border-slate-700">
+        <div class="flex justify-between items-center mb-5 pb-3 border-b border-slate-100 dark:border-slate-700">
+            <h3 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <i class="fa-solid fa-chart-pie text-purple-500"></i> Manufacturing Yield & Autonomous Synthesis
+            </h3>
+            <button type="button" onclick="closeDeepDiveModal('modal-yield-deepdive')" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-2xl font-bold leading-none">&times;</button>
+        </div>
+        <div class="space-y-4 text-xs">
+            <div class="p-4 rounded-xl bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-900">
+                <div class="font-bold text-purple-900 dark:text-purple-300 text-sm">Plant Yield Benchmark: {{ factory_avg_yield }}%</div>
+                <p class="text-purple-700 dark:text-slate-400 mt-1">
+                    Autonomous ML background daemon accounts for <strong>{{ autonomous_share_pct }}%</strong> of processed logs via predictive gap healing and batch synthesis.
+                </p>
+            </div>
+            <div class="relative h-48 w-full">
+                <canvas id="modalYieldChart"></canvas>
+            </div>
+        </div>
+        <div class="mt-6 flex justify-end">
+            <button type="button" onclick="closeDeepDiveModal('modal-yield-deepdive')" class="bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-5 py-2.5 rounded-xl text-xs font-bold hover:bg-slate-200 transition">
+                Close View
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 5: Dynamic Operator Production Profile Deep-Dive -->
+<div id="modal-operator-deepdive" class="deepdive-modal bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="modal-panel bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-slate-200 dark:border-slate-700">
+        <div class="flex justify-between items-center mb-5 pb-3 border-b border-slate-100 dark:border-slate-700">
+            <h3 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <i class="fa-solid fa-user-gear text-indigo-500"></i> Operator Production Profile
+            </h3>
+            <button type="button" onclick="closeDeepDiveModal('modal-operator-deepdive')" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-2xl font-bold leading-none">&times;</button>
+        </div>
+        <div class="space-y-4 text-xs">
+            <div class="flex items-center gap-3 p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
+                <div class="w-12 h-12 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 flex items-center justify-center font-extrabold text-base" id="op-modal-avatar">
+                    OP
+                </div>
+                <div>
+                    <div class="text-base font-extrabold text-slate-900 dark:text-white" id="op-modal-name">Operator Name</div>
+                    <div class="text-slate-400 font-medium" id="op-modal-shift">Shift Details</div>
+                </div>
+                <div class="ml-auto">
+                    <span class="px-2.5 py-1 rounded text-xs font-bold bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300" id="op-modal-status">
+                        On Track
+                    </span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 text-center">
+                <div class="p-3 rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/40">
+                    <span class="text-slate-400">Day Output</span>
+                    <div class="text-base font-extrabold text-slate-900 dark:text-white mt-1 font-mono" id="op-modal-today">0 kg</div>
+                </div>
+                <div class="p-3 rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/40">
+                    <span class="text-slate-400">Month Output</span>
+                    <div class="text-base font-extrabold text-indigo-600 dark:text-indigo-400 mt-1 font-mono" id="op-modal-month">0 kg</div>
+                </div>
+                <div class="p-3 rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/40">
+                    <span class="text-slate-400">Yield Ratio</span>
+                    <div class="text-base font-extrabold text-emerald-600 dark:text-emerald-400 mt-1 font-mono" id="op-modal-yield">0%</div>
+                </div>
+                <div class="p-3 rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/40">
+                    <span class="text-slate-400">Assigned Machine</span>
+                    <div class="text-base font-extrabold text-slate-800 dark:text-white mt-1" id="op-modal-machine">M-01</div>
+                </div>
+            </div>
+        </div>
+        <div class="mt-6 flex justify-end">
+            <button type="button" onclick="closeDeepDiveModal('modal-operator-deepdive')" class="bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-5 py-2.5 rounded-xl text-xs font-bold hover:bg-slate-200 transition">
+                Close Profile
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- JAVASCRIPT: MASTER TIMELINE, DAY DRILLDOWN, THEME-MATCHED CHARTS & SLIDING -->
+<!-- ========================================================================= -->
+<script>
+    // 0. Parse Master Timeline Data
+    let masterTimelineData = [];
+    try {
+        masterTimelineData = JSON.parse('{{ master_timeline_json|safe }}');
+    } catch(e) {
+        console.error('Failed to parse master_timeline_json:', e);
+    }
+
+    // State Variables
+    let currentWeekIndex = 0; // 0 is Current Week
+    let activeDayIndex = -1;  // -1 indicates "Full Week Summary"
+    let currentTabIndex = 0;  // 0 is Shift Mapping
+
+    // Chart Instances
+    let plantOutputChartInstance = null;
+    let shiftDistributionChartInstance = null;
+    let bottleneckFrequencyChartInstance = null;
+    let modalYieldChartInstance = null;
+    let activeDrawerTarget = null;
+
+    // 1. Theme-Aware Color Palette Provider
+    function getERPThemePalette() {
+        const isDark = document.documentElement.classList.contains('dark');
+        return {
+            isDark: isDark,
+            textPrimary: isDark ? '#f8fafc' : '#0f172a',
+            textMuted: isDark ? '#94a3b8' : '#64748b',
+            gridLines: isDark ? 'rgba(51, 65, 85, 0.55)' : 'rgba(226, 232, 240, 0.85)',
+            border: isDark ? '#334155' : '#e2e8f0',
+            cardBg: isDark ? '#1e293b' : '#ffffff',
+            tooltipBg: isDark ? '#0f172a' : '#1e293b',
+            // Enterprise Tailored Colors
+            primary: isDark ? '#818cf8' : '#4f46e5',
+            primaryFill: isDark ? 'rgba(129, 140, 248, 0.22)' : 'rgba(79, 70, 229, 0.12)',
+            targetLine: isDark ? '#64748b' : '#94a3b8',
+            emerald: isDark ? '#34d399' : '#059669',
+            amber: isDark ? '#fbbf24' : '#d97706',
+            purple: isDark ? '#a78bfa' : '#7c3aed',
+            rose: isDark ? '#f87171' : '#e11d48',
+            shiftColors: isDark ? ['#818cf8', '#34d399', '#a78bfa'] : ['#4f46e5', '#059669', '#7c3aed']
+        };
+    }
+
+    // 2. Initializer on DOM Loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        // Move modals to body so position: fixed pins to true viewport
+        document.querySelectorAll('.deepdive-modal').forEach(function(modal) {
+            document.body.appendChild(modal);
+        });
+
+        // Initialize Theme-Matched Charts
+        initPlantOutputChart();
+        initShiftDistributionChart();
+        initBottleneckFrequencyChart();
+
+        // Populate Day Pills for Initial Week
+        renderDayPills(currentWeekIndex);
+
+        // Render Workflow Table for Initial Week
+        if (masterTimelineData.length > 0) {
+            renderWorkflowHistoryTable(masterTimelineData[0].days || []);
+        }
+
+        // Wire Up Card Click Listeners & Action Buttons
+        setupInteractiveCardActions();
+
+        // Close Modals on ESC Key & Backdrop Click
+        setupModalBackdropAndEsc();
+
+        // Listen for Theme Changes (Dark Mode Toggle in Header)
+        setupThemeObserver();
+
+        // Window Resize Listener for Charts
+        window.addEventListener('resize', handleWindowResize);
+    });
+
+    // 3. Theme Observer: Auto-update Charts when Dark Mode is Toggled
+    function setupThemeObserver() {
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.attributeName === 'class') {
+                    updateChartsTheme();
+                }
+            });
+        });
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    }
+
+    function updateChartsTheme() {
+        const p = getERPThemePalette();
+
+        // Output Chart Theme Update
+        if (plantOutputChartInstance) {
+            const ctx = plantOutputChartInstance.ctx;
+            const gradient = ctx.createLinearGradient(0, 0, 0, 280);
+            gradient.addColorStop(0, p.primaryFill);
+            gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+            plantOutputChartInstance.data.datasets[0].borderColor = p.primary;
+            plantOutputChartInstance.data.datasets[0].backgroundColor = gradient;
+            plantOutputChartInstance.data.datasets[0].pointBackgroundColor = p.primary;
+            plantOutputChartInstance.data.datasets[1].borderColor = p.targetLine;
+            plantOutputChartInstance.options.scales.x.ticks.color = p.textMuted;
+            plantOutputChartInstance.options.scales.y.ticks.color = p.textMuted;
+            plantOutputChartInstance.options.scales.y.grid.color = p.gridLines;
+            plantOutputChartInstance.update('none');
+        }
+
+        // Shift Chart Theme Update
+        if (shiftDistributionChartInstance) {
+            shiftDistributionChartInstance.data.datasets[0].backgroundColor = p.shiftColors;
+            shiftDistributionChartInstance.data.datasets[0].borderColor = p.cardBg;
+            shiftDistributionChartInstance.update('none');
+        }
+
+        // Bottleneck Chart Theme Update
+        if (bottleneckFrequencyChartInstance) {
+            bottleneckFrequencyChartInstance.data.datasets[0].backgroundColor = p.amber;
+            bottleneckFrequencyChartInstance.data.datasets[1].backgroundColor = p.rose;
+            bottleneckFrequencyChartInstance.options.scales.x.ticks.color = p.textMuted;
+            bottleneckFrequencyChartInstance.options.scales.y.ticks.color = p.textMuted;
+            bottleneckFrequencyChartInstance.options.scales.y.grid.color = p.gridLines;
+            bottleneckFrequencyChartInstance.update('none');
+        }
+    }
+
+    function handleWindowResize() {
+        if (plantOutputChartInstance) plantOutputChartInstance.resize();
+        if (shiftDistributionChartInstance) shiftDistributionChartInstance.resize();
+        if (bottleneckFrequencyChartInstance) bottleneckFrequencyChartInstance.resize();
+    }
+
+    // 4. Setup Card Action Buttons & Deep-Dive Listeners
+    function setupInteractiveCardActions() {
+        document.querySelectorAll('.card-action-btn, [data-deepdive]').forEach(function(el) {
+            el.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const modalId = this.getAttribute('data-deepdive');
+                openDeepDiveModal(modalId);
+            });
+        });
+
+        document.querySelectorAll('.kpi-card').forEach(function(card) {
+            card.addEventListener('click', function(e) {
+                if (!e.target.closest('.card-action-btn')) {
+                    const modalId = this.getAttribute('data-deepdive');
+                    if (modalId) openDeepDiveModal(modalId);
+                }
+            });
+        });
+
+        const btnOpenFull = document.getElementById('btn-open-full-modal');
+        if (btnOpenFull) {
+            btnOpenFull.addEventListener('click', function() {
+                if (activeDrawerTarget) {
+                    openDeepDiveModal('modal-' + activeDrawerTarget + '-deepdive');
+                }
+            });
+        }
+    }
+
+    // 5. Modal Engine
+    function openDeepDiveModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (!modal) return;
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+
+        if (modalId === 'modal-yield-deepdive') {
+            setTimeout(initModalYieldChart, 100);
+        }
+    }
+
+    function closeDeepDiveModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) modal.classList.remove('active');
+        if (!document.querySelector('.deepdive-modal.active')) {
+            document.body.style.overflow = '';
+        }
+    }
+
+    function setupModalBackdropAndEsc() {
+        document.querySelectorAll('.deepdive-modal').forEach(function(modal) {
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.classList.remove('active');
+                    if (!document.querySelector('.deepdive-modal.active')) {
+                        document.body.style.overflow = '';
+                    }
+                }
+            });
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.deepdive-modal.active').forEach(function(m) {
+                    m.classList.remove('active');
+                });
+                document.body.style.overflow = '';
+            }
+        });
+    }
+
+    // 6. Inline Expandable Drawer Engine
+    function closeInlineDrawer() {
+        const drawer = document.getElementById('inline-analytics-drawer');
+        if (drawer) drawer.classList.remove('expanded');
+        activeDrawerTarget = null;
+    }
+
+    // 7. Operator Detail Modal Opener
+    function openOperatorDeepDive(name, shift, hours, machine, todayOut, monthOut, yieldPct, targetQuota, status) {
+        document.getElementById('op-modal-name').textContent = name;
+        document.getElementById('op-modal-avatar').textContent = name.charAt(0).toUpperCase();
+        document.getElementById('op-modal-shift').textContent = shift + ' (' + hours + ')';
+        document.getElementById('op-modal-today').textContent = todayOut + ' kg';
+        document.getElementById('op-modal-month').textContent = monthOut + ' kg';
+        document.getElementById('op-modal-yield').textContent = yieldPct + '%';
+        document.getElementById('op-modal-machine').textContent = machine;
+        document.getElementById('op-modal-status').textContent = status;
+
+        openDeepDiveModal('modal-operator-deepdive');
+    }
+
+    // 8. Embedded Chart 1: Plant Output Trajectory Chart
+    function initPlantOutputChart() {
+        const ctx = document.getElementById('plantOutputChart');
+        if (!ctx) return;
+
+        const p = getERPThemePalette();
+        const currentWeek = masterTimelineData[currentWeekIndex] || {};
+        const chartData = currentWeek.output_chart || {
+            labels: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+            output_data: [495, 5857, 5857, 5857, 5857, 5857, 95],
+            target_data: [480, 480, 480, 480, 480, 480, 480]
+        };
+
+        const chartCtx = ctx.getContext('2d');
+        const gradient = chartCtx.createLinearGradient(0, 0, 0, 280);
+        gradient.addColorStop(0, p.primaryFill);
+        gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+        plantOutputChartInstance = new Chart(chartCtx, {
+            type: 'line',
+            data: {
+                labels: chartData.labels,
+                datasets: [
+                    {
+                        label: 'Finished Output (kg)',
+                        data: chartData.output_data,
+                        borderColor: p.primary,
+                        backgroundColor: gradient,
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.35,
+                        pointBackgroundColor: p.primary,
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 7,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'Baseline Target (kg)',
+                        data: chartData.target_data,
+                        borderColor: p.targetLine,
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        fill: false,
+                        pointRadius: 0,
+                        tension: 0,
+                        yAxisID: 'y'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: p.tooltipBg,
+                        titleColor: '#ffffff',
+                        bodyColor: '#cbd5e1',
+                        padding: 11,
+                        borderRadius: 10,
+                        borderColor: p.border,
+                        borderWidth: 1,
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + Number(context.parsed.y).toLocaleString() + ' kg';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: p.textMuted, font: { family: 'Inter', size: 11, weight: 'bold' } }
+                    },
+                    y: {
+                        grid: { color: p.gridLines },
+                        ticks: {
+                            color: p.textMuted,
+                            font: { family: 'Inter', size: 11 },
+                            callback: function(v) { return v >= 1000 ? (v / 1000).toFixed(1) + 'k' : v; }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // 9. Embedded Chart 2: Shift-Wise Distribution Chart
+    function initShiftDistributionChart() {
+        const ctx = document.getElementById('shiftDistributionChart');
+        if (!ctx) return;
+
+        const p = getERPThemePalette();
+        const currentWeek = masterTimelineData[currentWeekIndex] || {};
+        const chartData = currentWeek.shift_chart || {
+            labels: ['Morning Shift', 'Evening Shift', 'Night Shift'],
+            output_data: [10739, 7566, 10983],
+            headcount: [10, 10, 9]
+        };
+
+        const chartCtx = ctx.getContext('2d');
+        shiftDistributionChartInstance = new Chart(chartCtx, {
+            type: 'doughnut',
+            data: {
+                labels: chartData.labels,
+                datasets: [{
+                    data: chartData.output_data,
+                    backgroundColor: p.shiftColors,
+                    borderColor: p.cardBg,
+                    borderWidth: 3,
+                    hoverOffset: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '72%',
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: p.tooltipBg,
+                        titleColor: '#ffffff',
+                        bodyColor: '#cbd5e1',
+                        padding: 10,
+                        borderRadius: 8,
+                        borderColor: p.border,
+                        borderWidth: 1,
+                        callbacks: {
+                            label: function(context) {
+                                const val = Number(context.parsed).toLocaleString();
+                                const idx = context.dataIndex;
+                                const hc = chartData.headcount ? chartData.headcount[idx] : 10;
+                                return ' Output: ' + val + ' kg (' + hc + ' Operators)';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // 10. Embedded Chart 3: Machine Bottleneck & Criticality Frequency Chart
+    function initBottleneckFrequencyChart() {
+        const ctx = document.getElementById('bottleneckFrequencyChart');
+        if (!ctx) return;
+
+        const p = getERPThemePalette();
+        const currentWeek = masterTimelineData[currentWeekIndex] || {};
+        const chartData = currentWeek.bottleneck_chart || {
+            labels: ['M-01', 'M-02', 'M-03', 'M-04', 'M-05', 'M-06'],
+            downtime_minutes: [1360, 1360, 1360, 1360, 1360, 1360],
+            incident_counts: [2, 2, 2, 2, 2, 2]
+        };
+
+        const chartCtx = ctx.getContext('2d');
+        bottleneckFrequencyChartInstance = new Chart(chartCtx, {
+            type: 'bar',
+            data: {
+                labels: chartData.labels,
+                datasets: [
+                    {
+                        label: 'Downtime (min)',
+                        data: chartData.downtime_minutes,
+                        backgroundColor: p.amber,
+                        borderRadius: 6,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'Incident Count',
+                        data: chartData.incident_counts,
+                        backgroundColor: p.rose,
+                        borderRadius: 6,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: p.tooltipBg,
+                        titleColor: '#ffffff',
+                        bodyColor: '#cbd5e1',
+                        padding: 10,
+                        borderRadius: 8,
+                        borderColor: p.border,
+                        borderWidth: 1
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: p.textMuted, font: { family: 'Inter', size: 11, weight: 'bold' } }
+                    },
+                    y: {
+                        type: 'linear',
+                        position: 'left',
+                        grid: { color: p.gridLines },
+                        ticks: { color: p.textMuted, font: { family: 'Inter', size: 10 }, callback: v => v + 'm' }
+                    },
+                    y1: {
+                        type: 'linear',
+                        position: 'right',
+                        grid: { display: false },
+                        ticks: { color: p.rose, font: { family: 'Inter', size: 10 }, precision: 0 }
+                    }
+                }
+            }
+        });
+    }
+
+    // 11. Modal Yield Chart Engine
+    function initModalYieldChart() {
+        if (modalYieldChartInstance) modalYieldChartInstance.destroy();
+        const p = getERPThemePalette();
+
+        let yieldLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        let yieldData = [94.5, 95.2, 94.8, 96.1, 95.0, 94.7, 95.5];
+        try {
+            yieldLabels = JSON.parse('{{ yield_labels|safe }}');
+            yieldData = JSON.parse('{{ yield_data|safe }}');
+        } catch(e) {}
+
+        const ctx = document.getElementById('modalYieldChart');
+        if (!ctx) return;
+
+        modalYieldChartInstance = new Chart(ctx.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: yieldLabels,
+                datasets: [{
+                    label: 'Yield %',
+                    data: yieldData,
+                    backgroundColor: yieldData.map(val => val < 90 ? p.amber : p.emerald),
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { display: false }, ticks: { color: p.textMuted, font: { size: 10 } } },
+                    y: { min: 75, max: 100, grid: { color: p.gridLines }, ticks: { color: p.textMuted, callback: v => v + '%' } }
+                }
+            }
+        });
+    }
+
+    // =========================================================================
+    // 12. MASTER TIMELINE ENGINE: WEEKLY SELECTION & DAY DRILLDOWN
+    // =========================================================================
+
+    function selectTimelineWeek(weekId) {
+        const foundIdx = masterTimelineData.findIndex(w => w.week_id === weekId);
+        if (foundIdx === -1) return;
+        applyTimelineWeek(foundIdx, 'slide-right');
+    }
+
+    function stepTimelineWeek(stepDelta) {
+        const newIdx = currentWeekIndex + stepDelta;
+        if (newIdx >= 0 && newIdx < masterTimelineData.length) {
+            const direction = stepDelta > 0 ? 'slide-left' : 'slide-right';
+            applyTimelineWeek(newIdx, direction);
+        }
+    }
+
+    function jumpToCurrentWeek() {
+        applyTimelineWeek(0, 'slide-right');
+    }
+
+    function jumpToStartupWeek() {
+        applyTimelineWeek(masterTimelineData.length - 1, 'slide-left');
+    }
+
+    function applyTimelineWeek(weekIdx, slideDirection) {
+        currentWeekIndex = weekIdx;
+        activeDayIndex = -1; // Reset to full week summary
+
+        const weekData = masterTimelineData[weekIdx];
+        if (!weekData) return;
+
+        // Update Dropdown Selection
+        const selectEl = document.getElementById('timeline-week-select');
+        if (selectEl) selectEl.value = weekData.week_id;
+
+        // Update Titles
+        document.getElementById('timeline-active-title').textContent = weekData.label;
+        document.getElementById('drilldown-mode-label').textContent = 'Showing: Full Week Summary';
+        document.getElementById('output-chart-title').textContent = 'Finished Manufacturing Output Trajectory (kg)';
+        document.getElementById('output-chart-sub').textContent = 'Actual production throughput benchmarked against baseline quota.';
+        document.getElementById('shift-chart-title').textContent = 'Shift-Wise Production Share';
+        document.getElementById('bottleneck-chart-title').textContent = 'Machine Criticality & Processing Bottleneck Frequency';
+
+        // Update Stepper Button Disabled States
+        document.getElementById('btn-next-week').disabled = (weekIdx === 0);
+        document.getElementById('btn-prev-week').disabled = (weekIdx === masterTimelineData.length - 1);
+        document.getElementById('btn-next-week').style.opacity = (weekIdx === 0) ? '0.4' : '1';
+        document.getElementById('btn-prev-week').style.opacity = (weekIdx === masterTimelineData.length - 1) ? '0.4' : '1';
+
+        // Trigger Smooth Slide Animation on Charts
+        triggerTimelineSlideAnimation(slideDirection, function() {
+            // Update Summary KPI Badges
+            const stats = weekData.stats || {};
+            document.getElementById('kpi-output-title').textContent = 'Period Finished Output';
+            document.getElementById('kpi-week-output').textContent = Number(stats.total_output_kg || 0).toLocaleString() + ' kg';
+            document.getElementById('kpi-week-yield').textContent = (stats.avg_yield_pct || 94.8) + '%';
+            document.getElementById('kpi-week-incidents').textContent = (stats.total_downtime_hours || 0) + 'h (' + (stats.total_incidents || 0) + ' tkts)';
+            document.getElementById('kpi-week-mitigated').textContent = (stats.auto_mitigated_pct || 98.4) + '%';
+
+            // Footnotes
+            document.getElementById('output-chart-timeline-footnote').textContent = 'Timeline: ' + weekData.label;
+            document.getElementById('history-timeline-badge').textContent = 'Active Timeline: ' + weekData.short_title;
+
+            // Update Chart.js Data
+            if (plantOutputChartInstance && weekData.output_chart) {
+                plantOutputChartInstance.data.labels = weekData.output_chart.labels;
+                plantOutputChartInstance.data.datasets[0].data = weekData.output_chart.output_data;
+                plantOutputChartInstance.data.datasets[1].data = weekData.output_chart.target_data;
+                plantOutputChartInstance.update();
+            }
+
+            if (shiftDistributionChartInstance && weekData.shift_chart) {
+                shiftDistributionChartInstance.data.datasets[0].data = weekData.shift_chart.output_data;
+                shiftDistributionChartInstance.update();
+
+                const sOut = weekData.shift_chart.output_data;
+                document.getElementById('legend-morning-out').textContent = (sOut[0] / 1000).toFixed(1) + 'k kg';
+                document.getElementById('legend-evening-out').textContent = (sOut[1] / 1000).toFixed(1) + 'k kg';
+                document.getElementById('legend-night-out').textContent = (sOut[2] / 1000).toFixed(1) + 'k kg';
+            }
+
+            if (bottleneckFrequencyChartInstance && weekData.bottleneck_chart) {
+                bottleneckFrequencyChartInstance.data.labels = weekData.bottleneck_chart.labels;
+                bottleneckFrequencyChartInstance.data.datasets[0].data = weekData.bottleneck_chart.downtime_minutes;
+                bottleneckFrequencyChartInstance.data.datasets[1].data = weekData.bottleneck_chart.incident_counts;
+                bottleneckFrequencyChartInstance.update();
+            }
+
+            // Render Day Pills for this week
+            renderDayPills(weekIdx);
+
+            // Render Workflow History Table
+            renderWorkflowHistoryTable(weekData.days || []);
+        });
+    }
+
+    // Trigger sliding animation on timeline container
+    function triggerTimelineSlideAnimation(direction, updateCallback) {
+        const wrapper = document.getElementById('charts-sliding-wrapper');
+        if (!wrapper) {
+            updateCallback();
+            return;
+        }
+
+        const slideClass = direction === 'slide-left' ? 'sliding-left' : 'sliding-right';
+        wrapper.classList.add(slideClass);
+
+        setTimeout(function() {
+            updateCallback();
+            wrapper.classList.remove(slideClass);
+        }, 180);
+    }
+
+    // 13. Render Day-by-Day Granular Drilldown Pills
+    function renderDayPills(weekIdx) {
+        const container = document.getElementById('day-pill-container');
+        if (!container) return;
+
+        const weekData = masterTimelineData[weekIdx];
+        if (!weekData || !weekData.days) return;
+
+        let html = '';
+
+        // Pill 0: Full Week Summary
+        const weekActive = (activeDayIndex === -1);
+        html += `
+            <button type="button" onclick="selectFullWeekOverview()" class="day-drill-pill whitespace-nowrap text-xs font-extrabold px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 shadow-sm ${weekActive ? 'bg-indigo-600 text-white shadow-indigo-200 dark:shadow-none' : 'bg-slate-100 dark:bg-slate-700/80 text-slate-700 dark:text-slate-300 hover:bg-slate-200'}">
+                <i class="fa-solid fa-chart-pie text-[10px]"></i>
+                <span>📊 Full Week Overview (${weekData.days.length} Days)</span>
+            </button>
+        `;
+
+        // Pills for Each Day
+        weekData.days.forEach(function(day, dIdx) {
+            const isDayActive = (activeDayIndex === dIdx);
+            const yieldBadge = day.is_good_yield 
+                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' 
+                : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300';
+
+            html += `
+                <button type="button" onclick="drillDownToDay(${dIdx})" class="day-drill-pill whitespace-nowrap text-xs font-bold px-3 py-2 rounded-xl transition flex items-center gap-2 border ${isDayActive ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 ring-2 ring-indigo-500/30' : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-100'}">
+                    <span>${day.short_label}</span>
+                    <span class="text-[10px] px-1.5 py-0.5 rounded font-mono font-extrabold ${yieldBadge}">${day.yield_pct}%</span>
+                </button>
+            `;
+        });
+
+        container.innerHTML = html;
+    }
+
+    function selectFullWeekOverview() {
+        activeDayIndex = -1;
+        applyTimelineWeek(currentWeekIndex, 'slide-right');
+    }
+
+    // 14. Drill Down into an Individual Specific Day
+    function drillDownToDay(dayIdx) {
+        activeDayIndex = dayIdx;
+        const weekData = masterTimelineData[currentWeekIndex];
+        if (!weekData || !weekData.days || !weekData.days[dayIdx]) return;
+
+        const day = weekData.days[dayIdx];
+
+        // Update Labels
+        document.getElementById('drilldown-mode-label').innerHTML = `
+            <span class="inline-flex items-center gap-1 text-emerald-600 font-extrabold">
+                <i class="fa-solid fa-crosshairs"></i> Day Drilldown: ${day.day_name}, ${day.formatted_date}
+            </span>
+        `;
+        document.getElementById('timeline-active-title').textContent = `${day.day_name}, ${day.formatted_date} (Operational Drilldown)`;
+        document.getElementById('output-chart-title').textContent = `Shift Output Profile: ${day.short_label}`;
+        document.getElementById('output-chart-sub').textContent = `Target quota: 480 kg | Finished: ${day.output_kg} kg | Material used: ${day.material_used_kg} kg`;
+        document.getElementById('shift-chart-title').textContent = `Day Shift Breakdown: ${day.short_label}`;
+        document.getElementById('bottleneck-chart-title').textContent = `Critical Incidents on ${day.short_label}`;
+
+        // Trigger Smooth Slide
+        triggerTimelineSlideAnimation('slide-left', function() {
+            // Update Summary KPI Badges to this exact day
+            document.getElementById('kpi-output-title').textContent = 'Daily Finished Output';
+            document.getElementById('kpi-week-output').textContent = Number(day.output_kg).toLocaleString() + ' kg';
+            document.getElementById('kpi-week-yield').textContent = day.yield_pct + '%';
+            document.getElementById('kpi-week-incidents').textContent = (day.downtime_min) + ' min (' + day.incident_count + ' tkts)';
+            document.getElementById('kpi-week-mitigated').textContent = day.is_auto_filled ? '100% (ML)' : 'Manual Ops';
+
+            // Update Output Chart to show this specific day's shift profile
+            if (plantOutputChartInstance) {
+                plantOutputChartInstance.data.labels = ['Morning Shift', 'Evening Shift', 'Night Shift'];
+                plantOutputChartInstance.data.datasets[0].data = [
+                    day.shift_output['Morning Shift'],
+                    day.shift_output['Evening Shift'],
+                    day.shift_output['Night Shift']
+                ];
+                plantOutputChartInstance.data.datasets[1].data = [160, 160, 160];
+                plantOutputChartInstance.update();
+            }
+
+            // Update Shift Chart to show this specific day's shift breakdown
+            if (shiftDistributionChartInstance) {
+                shiftDistributionChartInstance.data.datasets[0].data = [
+                    day.shift_output['Morning Shift'],
+                    day.shift_output['Evening Shift'],
+                    day.shift_output['Night Shift']
+                ];
+                shiftDistributionChartInstance.update();
+
+                document.getElementById('legend-morning-out').textContent = (day.shift_output['Morning Shift']).toFixed(0) + ' kg';
+                document.getElementById('legend-evening-out').textContent = (day.shift_output['Evening Shift']).toFixed(0) + ' kg';
+                document.getElementById('legend-night-out').textContent = (day.shift_output['Night Shift']).toFixed(0) + ' kg';
+            }
+
+            // Update Bottleneck Chart to show this day's incidents
+            if (bottleneckFrequencyChartInstance) {
+                if (day.incidents && day.incidents.length > 0) {
+                    bottleneckFrequencyChartInstance.data.labels = day.incidents.map(i => i.machine_code);
+                    bottleneckFrequencyChartInstance.data.datasets[0].data = day.incidents.map(i => i.downtime_min);
+                    bottleneckFrequencyChartInstance.data.datasets[1].data = day.incidents.map(() => 1);
+                } else {
+                    bottleneckFrequencyChartInstance.data.labels = ['Optimal Fleet'];
+                    bottleneckFrequencyChartInstance.data.datasets[0].data = [0];
+                    bottleneckFrequencyChartInstance.data.datasets[1].data = [0];
+                }
+                bottleneckFrequencyChartInstance.update();
+            }
+
+            // Re-render Day Pills to highlight the chosen pill
+            renderDayPills(currentWeekIndex);
+
+            // Re-render Workflow Table with Highlight on this chosen day
+            renderWorkflowHistoryTable(weekData.days, day.date);
+        });
+    }
+
+    // 15. Render Daily Workflow History Table with Highlight
+    function renderWorkflowHistoryTable(daysList, highlightedDate) {
+        const tbody = document.getElementById('workflow-history-tbody');
+        if (!tbody) return;
+
+        let html = '';
+        daysList.forEach(function(day) {
+            const isHighlighted = (highlightedDate && day.date === highlightedDate);
+            const yieldBadgeClass = day.is_good_yield 
+                ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-300' 
+                : 'bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-300';
+
+            const statusBadge = day.is_auto_filled
+                ? `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300"><i class="fa-solid fa-robot"></i> Auto-Healed (ML)</span>`
+                : `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"><i class="fa-solid fa-check"></i> Standard Shift</span>`;
+
+            html += `
+                <tr class="workflow-row hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors ${isHighlighted ? 'highlighted-day-row' : ''}">
+                    <td class="px-6 py-4 font-bold text-slate-900 dark:text-white">
+                        <div>${day.formatted_date}</div>
+                        <div class="text-xs text-slate-400 font-medium">${day.day_name}</div>
+                    </td>
+                    <td class="px-6 py-4 text-slate-600 dark:text-slate-400 font-mono">
+                        ${day.material_used_kg} kg
+                    </td>
+                    <td class="px-6 py-4 font-extrabold text-slate-900 dark:text-white font-mono">
+                        ${day.output_kg} kg
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="px-2.5 py-1 rounded-md font-bold text-xs ${yieldBadgeClass}">
+                            ${day.yield_pct}%
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 font-semibold text-slate-700 dark:text-slate-300">
+                        ${day.active_machines} Units Active
+                    </td>
+                    <td class="px-6 py-4">
+                        ${statusBadge}
+                    </td>
+                    <td class="px-6 py-4 text-xs text-slate-600 dark:text-slate-400 font-medium max-w-sm truncate" title="${day.workflow_trace}">
+                        ${day.workflow_trace}
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        <span class="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                            <i class="fa-solid fa-stamp"></i> ${day.audit_status}
+                        </span>
+                    </td>
+                </tr>
+            `;
+        });
+
+        if (daysList.length === 0) {
+            html = `<tr><td colspan="8" class="px-6 py-12 text-center text-slate-400">No operational audit records for this timeline.</td></tr>`;
+        }
+
+        tbody.innerHTML = html;
+    }
+
+    // =========================================================================
+    // 16. SMOOTH TAB SLIDING TRANSITION ENGINE
+    // =========================================================================
+
+    function switchTabSlide(tabId) {
+        const targetTab = document.getElementById(tabId);
+        if (!targetTab) return;
+
+        const newIndex = parseInt(targetTab.getAttribute('data-tab-index') || '0');
+        if (newIndex === currentTabIndex) return;
+
+        const isSlidingRight = newIndex > currentTabIndex;
+        const currentTab = document.querySelector('.tab-pane.active');
+
+        // Update Tab Button Styles
+        document.querySelectorAll('.tab-btn').forEach(function(btn) {
+            btn.classList.remove('active', 'border-indigo-600', 'text-indigo-600', 'dark:text-indigo-400');
+            btn.classList.add('border-transparent', 'text-slate-500', 'dark:text-slate-400');
+        });
+        const activeBtn = document.getElementById('tab-btn-' + tabId.replace('tab-', ''));
+        if (activeBtn) {
+            activeBtn.classList.add('active', 'border-indigo-600', 'text-indigo-600', 'dark:text-indigo-400');
+            activeBtn.classList.remove('border-transparent', 'text-slate-500', 'dark:text-slate-400');
+        }
+
+        // Instant Tab Switch
+        if (currentTab) {
+            currentTab.classList.remove('active', 'slide-out-left', 'slide-out-right');
+            currentTab.style.display = 'none';
+        }
+
+        // Display Target Tab Immediately
+        targetTab.style.display = 'block';
+        targetTab.style.transform = 'none';
+        targetTab.style.opacity = '1';
+        targetTab.classList.add('active');
+
+        currentTabIndex = newIndex;
+
+        // Auto-resize charts if tab contains canvas
+        handleWindowResize();
+    }
+
+    // Traditional switchTab fallback
+    function switchTab(tabId) {
+        switchTabSlide(tabId);
+    }
+
+    // 17. Shift Filter Pills Engine
+    function filterByShift(shiftCode) {
+        document.querySelectorAll('.shift-filter-btn').forEach(function(btn) {
+            btn.classList.remove('active', 'bg-indigo-600', 'text-white');
+            btn.classList.add('bg-slate-100', 'dark:bg-slate-700', 'text-slate-600', 'dark:text-slate-300');
+        });
+        if (event && event.currentTarget) {
+            event.currentTarget.classList.add('active', 'bg-indigo-600', 'text-white');
+            event.currentTarget.classList.remove('bg-slate-100', 'dark:bg-slate-700', 'text-slate-600', 'dark:text-slate-300');
+        }
+
+        const rows = document.querySelectorAll('.mapping-row');
+        rows.forEach(function(row) {
+            if (shiftCode === 'all' || row.getAttribute('data-shift') === shiftCode) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+
+    // 18. Search Operators or Machines
+    function searchOperators() {
+        const query = document.getElementById('operator-search-input').value.toLowerCase().trim();
+        const rows = document.querySelectorAll('.mapping-row');
+        rows.forEach(function(row) {
+            const rowData = row.getAttribute('data-name');
+            if (!query || (rowData && rowData.includes(query))) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+</script>
+{% endblock %}

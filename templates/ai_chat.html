@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="mb-6 flex justify-between items-center">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-800 flex items-center">
+            <svg class="w-6 h-6 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+            Pharma AI Assistant
+        </h1>
+        <p class="text-gray-500">Gemini-powered strategic intelligence for operations and growth</p>
+    </div>
+</div>
+
+<div class="bg-white rounded-lg shadow-sm border border-gray-100 flex flex-col h-[70vh]">
+    <!-- Chat History -->
+    <div id="chat-box" class="flex-grow p-6 overflow-y-auto space-y-6 bg-gray-50 rounded-t-lg">
+        
+        <!-- Welcome Message -->
+        <div class="flex items-start max-w-[85%]">
+            <div class="bg-purple-100 p-2 rounded-full mr-3 border border-purple-200 shadow-sm shrink-0">
+                <svg class="w-5 h-5 text-purple-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+            </div>
+            <div class="bg-white p-4 rounded-lg rounded-tl-none shadow-sm border border-gray-200 text-gray-800 text-sm prose prose-sm max-w-none">
+                <p>Hello! I am the PharmaERP AI Assistant powered by Google Gemini. I have real-time access to the factory's production yield, maintenance alerts, and inventory levels.</p>
+                <p>How can I help you optimise operations today?</p>
+            </div>
+        </div>
+        
+    </div>
+
+    <!-- Input Area -->
+    <div class="p-4 bg-white border-t border-gray-100 rounded-b-lg">
+        <form id="chat-form" class="flex space-x-3">
+            {% csrf_token %}
+            <input type="text" id="prompt-input" placeholder="Ask about machine efficiency, employee output, or stock alerts..." class="flex-grow px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent" autocomplete="off" required>
+            <button type="submit" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg shadow-sm font-medium transition flex items-center">
+                <span>Send</span>
+                <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+document.getElementById('chat-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const inputField = document.getElementById('prompt-input');
+    const prompt = inputField.value.trim();
+    if (!prompt) return;
+    
+    const chatBox = document.getElementById('chat-box');
+    
+    // Add user message to UI
+    const userHtml = `
+    <div class="flex items-start justify-end w-full">
+        <div class="bg-blue-600 text-white p-4 rounded-lg rounded-tr-none shadow-sm text-sm max-w-[85%]">
+            ${prompt}
+        </div>
+    </div>
+    `;
+    chatBox.insertAdjacentHTML('beforeend', userHtml);
+    
+    // Add loading indicator
+    const loadingId = 'loading-' + Date.now();
+    const loadingHtml = `
+    <div id="${loadingId}" class="flex items-start max-w-[85%]">
+        <div class="bg-purple-100 p-2 rounded-full mr-3 border border-purple-200 shadow-sm shrink-0">
+            <svg class="w-5 h-5 text-purple-700 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z"></path></svg>
+        </div>
+        <div class="bg-white p-4 rounded-lg rounded-tl-none shadow-sm border border-gray-200 text-gray-500 text-sm italic">
+            Analysing factory data...
+        </div>
+    </div>
+    `;
+    chatBox.insertAdjacentHTML('beforeend', loadingHtml);
+    
+    // Scroll to bottom
+    chatBox.scrollTop = chatBox.scrollHeight;
+    
+    // Clear input
+    inputField.value = '';
+    
+    // Get CSRF Token
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
+    // Send API Request
+    try {
+        const response = await fetch('/ai/api/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': csrfToken
+            },
+            body: new URLSearchParams({'prompt': prompt})
+        });
+        
+        const data = await response.json();
+        
+        // Remove loading
+        document.getElementById(loadingId).remove();
+        
+        // Add AI response
+        const aiHtml = `
+        <div class="flex items-start max-w-[85%] w-full">
+            <div class="bg-purple-100 p-2 rounded-full mr-3 border border-purple-200 shadow-sm shrink-0">
+                <svg class="w-5 h-5 text-purple-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+            </div>
+            <div class="bg-white p-4 rounded-lg rounded-tl-none shadow-sm border border-gray-200 text-gray-800 text-sm prose prose-sm max-w-none w-full">
+                ${data.response || '<span class="text-red-500">Error: ' + data.error + '</span>'}
+            </div>
+        </div>
+        `;
+        chatBox.insertAdjacentHTML('beforeend', aiHtml);
+        chatBox.scrollTop = chatBox.scrollHeight;
+        
+        // Speak Response asynchronously
+        if (data.raw_response) {
+            let cleanText = data.raw_response.replace(/#/g, '').replace(/\\*/g, '').replace(/\!\[.*?\]\(.*?\)/g, '');
+            
+            // Fetch Native Gemini Audio
+            const formData = new FormData();
+            formData.append('text', cleanText);
+            
+            fetch('/ai/api/tts/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken
+                },
+                body: formData
+            }).then(r => r.json()).then(ttsData => {
+                if (ttsData.audio_base64) {
+                    if (window.currentAiAudio) window.currentAiAudio.pause();
+                    const audioSrc = "data:audio/wav;base64," + ttsData.audio_base64;
+                    window.currentAiAudio = new Audio(audioSrc);
+                    window.currentAiAudio.play();
+                } else if (window.speechSynthesis) {
+                    // Fallback
+                    window.speechSynthesis.cancel();
+                    const utterance = new SpeechSynthesisUtterance(cleanText);
+                    const langCode = "{{ user_lang|default:'en' }}";
+                    utterance.lang = langCode === 'hi' ? 'hi-IN' : (langCode === 'mr' ? 'mr-IN' : 'en-US');
+                    window.speechSynthesis.speak(utterance);
+                }
+            }).catch(e => console.error("TTS fetch failed", e));
+        }
+        
+    } catch (err) {
+        document.getElementById(loadingId).remove();
+        alert("Failed to communicate with AI server: " + err);
+    }
+});
+</script>
+{% endblock %}

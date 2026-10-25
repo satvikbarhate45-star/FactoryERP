@@ -1,0 +1,1867 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { inter: ["Inter", "sans-serif"] },
+                    colors: {
+                        brand: {
+                            50: "#eff6ff", 100: "#dbeafe", 200: "#bfdbfe",
+                            300: "#93c5fd", 400: "#60a5fa", 500: "#3b82f6",
+                            600: "#2563eb", 700: "#1d4ed8", 800: "#1e40af",
+                            900: "#1e3a8a"
+                        }
+                    }
+                }
+            }
+        };
+    </script>
+    <link rel="stylesheet" href="{% static 'css/kyc.css' %}">
+    <style>
+        /* CRITICAL MASTER ENFORCEMENT: TOP-BOTTOM VERTICAL STACKING (< 768px) */
+        @media screen and (max-width: 767.98px) {
+            html, body { width: 100% !important; max-width: 100vw !important; overflow-x: hidden !important; }
+            .main-wrapper { display: flex !important; flex-direction: column !important; width: 100% !important; max-width: 100vw !important; padding: 12px 10px 32px 10px !important; min-height: 100vh !important; justify-content: flex-start !important; align-items: stretch !important; overflow-x: hidden !important; }
+            .main-card, .auth-card { display: flex !important; flex-direction: column !important; width: 100% !important; max-width: 100% !important; min-height: auto !important; height: auto !important; border-radius: 18px !important; margin: 0 auto !important; overflow: hidden !important; }
+            .left-panel, .auth-top-panel { display: flex !important; flex-direction: column !important; width: 100% !important; max-width: 100% !important; min-width: 100% !important; order: 1 !important; position: relative !important; float: none !important; top: auto !important; left: auto !important; padding: 20px 18px !important; border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important; border-radius: 18px 18px 0 0 !important; }
+            .right-panel, .auth-bottom-panel { display: flex !important; flex-direction: column !important; width: 100% !important; max-width: 100% !important; min-width: 100% !important; order: 2 !important; position: relative !important; float: none !important; top: auto !important; left: auto !important; padding: 20px 18px !important; border-radius: 0 0 18px 18px !important; background: #ffffff !important; }
+            .left-heading { font-size: 1.35rem !important; line-height: 1.25 !important; margin: 0 0 6px 0 !important; }
+            .left-description { font-size: 0.85rem !important; line-height: 1.4 !important; margin: 0 0 10px 0 !important; }
+            .form-grid, .role-grid, .summary-grid { display: flex !important; flex-direction: column !important; gap: 12px !important; width: 100% !important; }
+            .role-card { width: 100% !important; padding: 14px !important; }
+            .form-area, .form-area form, #kycForm, .field, .input-wrapper { width: 100% !important; max-width: 100% !important; box-sizing: border-box !important; }
+            .input-field { width: 100% !important; max-width: 100% !important; font-size: 16px !important; padding: 11px 12px 11px 42px !important; border-radius: 10px !important; box-sizing: border-box !important; }
+            .navigation { display: flex !important; flex-direction: column !important; width: 100% !important; gap: 10px !important; margin-top: 18px !important; padding-top: 12px !important; }
+            .navigation .btn, .navigation button.btn { width: 100% !important; max-width: 100% !important; min-height: 46px !important; padding: 12px 16px !important; font-size: 0.95rem !important; border-radius: 10px !important; display: flex !important; align-items: center !important; justify-content: center !important; text-align: center !important; box-sizing: border-box !important; }
+            #navigation #nextButton { order: 1 !important; }
+            #navigation #backButton { order: 2 !important; }
+        }
+    </style>
+    <title>FactoryTrack | KYC Registration</title>
+</head>
+
+<body>
+
+    <!-- =====================================================
+         BACKGROUND VIDEO
+    ====================================================== -->
+
+    <video
+        class="video-background"
+        autoplay
+        muted
+        loop
+        playsinline
+        preload="auto">
+
+        <source
+            src="WhatsApp Video 2026-09-25 at 9.29.12 AM.mp4"
+            type="video/mp4">
+
+        Your browser does not support video playback.
+    </video>
+
+    <div class="video-overlay"></div>
+    <div class="blue-overlay"></div>
+
+
+    <!-- =====================================================
+         MAIN
+    ====================================================== -->
+
+    <main class="main-wrapper">
+
+        <div class="main-card auth-card">
+
+            <!-- =================================================
+                 LEFT INFORMATION PANEL (TOP ON MOBILE)
+            ================================================== -->
+
+            <aside class="left-panel auth-top-panel">
+
+                <div class="left-content">
+
+                    <!-- LOGO -->
+
+                    <div class="logo-box">
+
+                        <div class="logo-icon">
+                            FT
+                        </div>
+
+                        <div>
+                            <div class="logo-title">
+                                FactoryTrack
+                            </div>
+
+                            <div class="logo-subtitle">
+                                Workforce Management Platform
+                            </div>
+                        </div>
+
+                    </div>
+
+
+                    <!-- HEADING -->
+
+                    <h1 class="left-heading">
+                        Complete your
+                        <span>
+                            KYC profile.
+                        </span>
+                    </h1>
+
+                    <p class="left-description">
+                        Submit your professional, identity and banking
+                        information to create your FactoryTrack workforce
+                        account.
+                    </p>
+
+
+                    <!-- SECURITY -->
+
+                    <div class="security-box">
+
+                        <div class="security-item">
+
+                            <div class="security-icon">
+                                🔐
+                            </div>
+
+                            <div class="security-text">
+                                <strong>Secure Registration</strong>
+                                <span>Your information is securely processed.</span>
+                            </div>
+
+                        </div>
+
+
+                        <div class="security-item">
+
+                            <div class="security-icon">
+                                ✓
+                            </div>
+
+                            <div class="security-text">
+                                <strong>Admin Verification</strong>
+                                <span>Every registration is manually reviewed.</span>
+                            </div>
+
+                        </div>
+
+
+                        <div class="security-item">
+
+                            <div class="security-icon">
+                                ⚡
+                            </div>
+
+                            <div class="security-text">
+                                <strong>Fast Access Setup</strong>
+                                <span>Credentials are generated after approval.</span>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- STATUS LEGEND -->
+
+                    <div class="status-legend">
+
+                        <div class="legend-title">
+                            Verification status
+                        </div>
+
+                        <div class="legend-row" style="display:flex;gap:1rem;font-size:0.85rem;margin-top:1rem;">
+
+                            <div class="legend-item" style="display:flex;align-items:center;">
+                                <span class="legend-dot red" style="width:10px;height:10px;border-radius:50%;background:#ef4444;margin-right:0.5rem;"></span>
+                                Attention
+                            </div>
+
+                            <div class="legend-item" style="display:flex;align-items:center;">
+                                <span class="legend-dot yellow" style="width:10px;height:10px;border-radius:50%;background:#f59e0b;margin-right:0.5rem;"></span>
+                                Pending
+                            </div>
+
+                            <div class="legend-item" style="display:flex;align-items:center;">
+                                <span class="legend-dot green" style="width:10px;height:10px;border-radius:50%;background:#10b981;margin-right:0.5rem;"></span>
+                                Verified
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </aside>
+
+
+            <!-- =================================================
+                 RIGHT FORM PANEL (BOTTOM ON MOBILE)
+            ================================================== -->
+
+            <section class="right-panel auth-bottom-panel">
+
+
+                <!-- TOP HEADER -->
+
+                <div class="top-header">
+
+                    <div>
+
+                        <div class="page-title">
+                            KYC Registration
+                        </div>
+
+                        <div class="page-subtitle">
+                            Complete all required steps to submit your profile. Already registered? <a href="{% url 'login' %}" style="color: #2563eb; font-weight: 600; text-decoration: none;">Sign In</a>
+                        </div>
+
+                    </div>
+
+                    <div class="review-tag">
+
+                        <span class="review-dot"></span>
+
+                        Admin Review Required
+
+                    </div>
+
+                </div>
+
+
+                <!-- =================================================
+                     PROGRESS
+                ================================================== -->
+
+                <div class="progress-container">
+
+                    <div class="progress-line">
+
+                        <div
+                            id="progressFill"
+                            class="progress-fill">
+                        </div>
+
+                    </div>
+
+
+                    <div class="progress-steps">
+
+                        <div
+                            class="progress-step active"
+                            data-step="1">
+
+                            <div class="step-circle">
+                                1
+                            </div>
+
+                            <div class="step-name">
+                                Personal
+                            </div>
+
+                        </div>
+
+
+                        <div
+                            class="progress-step"
+                            data-step="2">
+
+                            <div class="step-circle">
+                                2
+                            </div>
+
+                            <div class="step-name">
+                                Role
+                            </div>
+
+                        </div>
+
+
+                        <div
+                            class="progress-step"
+                            data-step="3">
+
+                            <div class="step-circle">
+                                3
+                            </div>
+
+                            <div class="step-name">
+                                Identity
+                            </div>
+
+                        </div>
+
+
+                        <div
+                            class="progress-step"
+                            data-step="4">
+
+                            <div class="step-circle">
+                                4
+                            </div>
+
+                            <div class="step-name">
+                                Banking
+                            </div>
+
+                        </div>
+
+
+                        <div
+                            class="progress-step"
+                            data-step="5">
+
+                            <div class="step-circle">
+                                5
+                            </div>
+
+                            <div class="step-name">
+                                Review
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- =================================================
+                     FORM AREA
+                ================================================== -->
+
+                <form id="kycForm" method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" id="selectedRoleInput" name="role">
+
+                <div class="form-area">
+
+
+                    <!-- =================================================
+                         STEP 1
+                    ================================================== -->
+
+                    <div
+                        class="form-step active"
+                        id="step1">
+
+                        <div class="step-heading">
+
+                            <div class="step-number">
+                                Step 01
+                            </div>
+
+                            <div class="step-title">
+                                Personal Details
+                            </div>
+
+                            <div class="step-description">
+                                Tell us about yourself and provide your contact information.
+                            </div>
+
+                        </div>
+
+
+                        <div class="form-grid">
+
+
+                            <!-- FULL NAME -->
+
+                            <div class="field">
+
+                                <label>
+                                    Full Name
+                                    <span class="required">*</span>
+                                </label>
+
+                                <div class="input-wrapper">
+
+                                    <span class="input-icon">
+                                        👤
+                                    </span>
+
+                                    <input
+                                        id="fullName"
+                                        name="full_name"
+                                        class="input-field"
+                                        type="text"
+                                        placeholder="Enter your full name"
+                                        required>
+
+                                </div>
+
+                                <div class="error-message">
+                                    Please enter your full name.
+                                </div>
+
+                            </div>
+
+
+                            <!-- EMAIL -->
+
+                            <div class="field">
+
+                                <label>
+                                    Work Email
+                                    <span class="required">*</span>
+                                </label>
+
+                                <div class="input-wrapper">
+
+                                    <span class="input-icon">
+                                        ✉
+                                    </span>
+
+                                    <input
+                                        id="workEmail"
+                                        name="work_email"
+                                        class="input-field"
+                                        type="email"
+                                        placeholder="name@company.com"
+                                        required>
+
+                                </div>
+
+                            </div>
+
+
+                            <!-- USERNAME -->
+
+                            <div class="field">
+
+                                <label>
+                                    Username
+                                    <span class="required">*</span>
+                                </label>
+
+                                <div class="input-wrapper">
+
+                                    <span class="input-icon">
+                                        👤
+                                    </span>
+
+                                    <input
+                                        id="username"
+                                        name="username"
+                                        class="input-field"
+                                        type="text"
+                                        placeholder="Choose a username"
+                                        required>
+
+                                </div>
+
+                            </div>
+
+
+                            <!-- PASSWORD -->
+
+                            <div class="field">
+
+                                <label>
+                                    Password
+                                    <span class="required">*</span>
+                                </label>
+
+                                <div class="input-wrapper">
+
+                                    <span class="input-icon">
+                                        🔑
+                                    </span>
+
+                                    <input
+                                        id="password"
+                                        name="password"
+                                        class="input-field"
+                                        type="password"
+                                        placeholder="Create a strong password"
+                                        required>
+
+                                </div>
+
+                            </div>
+
+
+                            <!-- PHONE -->
+
+                            <div class="field">
+
+                                <label>
+                                    Phone Number
+                                    <span class="required">*</span>
+                                </label>
+
+                                <div class="input-wrapper">
+
+                                    <span class="input-icon">
+                                        ☎
+                                    </span>
+
+                                    <input
+                                        id="phone"
+                                        name="phone"
+                                        maxlength="25"
+                                        class="input-field"
+                                        type="tel"
+                                        placeholder="+91 XXXXX XXXXX"
+                                        required>
+
+                                </div>
+
+                            </div>
+
+
+                            <!-- WHATSAPP -->
+
+                            <div class="field">
+
+                                <label>
+                                    WhatsApp Number
+                                </label>
+
+                                <div class="input-wrapper">
+
+                                    <span class="input-icon">
+                                        💬
+                                    </span>
+
+                                    <input
+                                        id="whatsapp"
+                                        name="whatsapp"
+                                        maxlength="25"
+                                        class="input-field"
+                                        type="tel"
+                                        placeholder="+91 XXXXX XXXXX">
+
+                                </div>
+
+                            </div>
+
+
+                            <!-- PHOTO -->
+
+                            <div class="field full-width">
+
+                                <label>
+                                    Passport-Size Photo
+                                    <span class="required">*</span>
+                                </label>
+
+                                <div
+                                    class="photo-upload"
+                                    id="photoUpload">
+
+                                    <div class="photo-preview" id="photoPreview">
+                                        📷
+                                    </div>
+
+                                    <div>
+
+                                        <div class="upload-title">
+                                            Upload your photo
+                                        </div>
+
+                                        <div class="upload-subtitle">
+                                            JPG, JPEG or PNG • Maximum 5 MB
+                                        </div>
+
+                                        <input
+                                            id="photoInput"
+                                            name="photo"
+                                            type="file"
+                                            accept="image/*"
+                                            data-existing-photo="{% if kyc and kyc.photo %}true{% else %}false{% endif %}"
+                                            hidden>
+
+                                        {% if kyc and kyc.photo %}
+                                            <div class="upload-subtitle">A photo is already on file. Upload another to replace it.</div>
+                                        {% endif %}
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- =================================================
+                         STEP 2
+                    ================================================== -->
+
+                    <div
+                        class="form-step"
+                        id="step2">
+
+                        <div class="step-heading">
+
+                            <div class="step-number">
+                                Step 02
+                            </div>
+
+                            <div class="step-title">
+                                Select Your Role
+                            </div>
+
+                            <div class="step-description">
+                                Choose the role that matches your responsibilities.
+                            </div>
+
+                        </div>
+
+
+                        <div class="role-grid">
+
+
+                            <!-- MAINTENANCE -->
+
+                            <div
+                                class="role-card"
+                                data-role="Maintenance Tech">
+
+                                <div class="role-radio"></div>
+
+                                <div class="role-icon">
+                                    🔧
+                                </div>
+
+                                <div class="role-name">
+                                    Maintenance Tech
+                                </div>
+
+                                <div class="role-description">
+                                    Handle machine maintenance,
+                                    repairs and technical issues.
+                                </div>
+
+                            </div>
+
+
+                            <!-- EQUIPMENT -->
+
+                            <div
+                                class="role-card"
+                                data-role="Equipments Manager">
+
+                                <div class="role-radio"></div>
+
+                                <div class="role-icon">
+                                    ⚙
+                                </div>
+
+                                <div class="role-name">
+                                    Equipments Manager
+                                </div>
+
+                                <div class="role-description">
+                                    Manage factory equipment,
+                                    assets and machine allocation.
+                                </div>
+
+                            </div>
+
+
+                            <!-- SUPERVISOR -->
+
+                            <div
+                                class="role-card"
+                                data-role="Supervisor">
+
+                                <div class="role-radio"></div>
+
+                                <div class="role-icon">
+                                    👨💼
+                                </div>
+
+                                <div class="role-name">
+                                    Supervisor
+                                </div>
+
+                                <div class="role-description">
+                                    Monitor teams, production,
+                                    tasks and operational activities.
+                                </div>
+
+                            </div>
+
+
+                            <!-- PRODUCTION -->
+
+                            <div
+                                class="role-card"
+                                data-role="Production">
+
+                                <div class="role-radio"></div>
+
+                                <div class="role-icon">
+                                    📈
+                                </div>
+
+                                <div class="role-name">
+                                    Production
+                                </div>
+
+                                <div class="role-description">
+                                    Monitor production targets,
+                                    output and shift progress.
+                                </div>
+
+                            </div>
+
+
+                                                        <!-- OPERATOR -->
+                            <div class="role-card" data-role="Local Operator">
+                                <div class="role-radio"></div>
+                                <div class="role-icon">👷</div>
+                                <div class="role-name">Local Operator</div>
+                                <div class="role-description">Operate assigned machines and record production activity.</div>
+                            </div>
+
+                                                       <div class="role-card" data-role="Logistics">
+                                <div class="role-radio"></div>
+                                <div class="role-icon">📦</div>
+                                <div class="role-name">Logistics</div>
+                                <div class="role-description">Manage supply chain, inventory movement, and materials shipping.</div>
+                            </div>
+
+                        </div>
+                    </div>
+<!-- =================================================
+                         STEP 3
+                    ================================================== -->
+
+                    <div
+                        class="form-step"
+                        id="step3">
+
+                        <div class="step-heading">
+
+                            <div class="step-number">
+                                Step 03
+                            </div>
+
+                            <div class="step-title">
+                                Identity & Tax Identification
+                            </div>
+
+                            <div class="step-description">
+                                Provide your government identification information.
+                            </div>
+
+                        </div>
+
+
+                        <div class="form-grid">
+
+
+                            <!-- PAN -->
+
+                            <div class="field">
+
+                                <label>
+                                    PAN Card Number
+                                    <span class="required">*</span>
+                                </label>
+
+                                <div class="input-wrapper">
+
+                                    <span class="input-icon">
+                                        🪪
+                                    </span>
+
+                                    <input
+                                        id="pan"
+                                        name="pan"
+                                        class="input-field"
+                                        type="text"
+                                        maxlength="10"
+                                        placeholder="ABCDE1234F"
+                                        required>
+
+                                </div>
+
+                                <div class="helper-text" style="font-size:0.8rem;color:#64748b;margin-top:0.25rem;">
+                                    Example: ABCDE1234F
+                                </div>
+
+                            </div>
+
+
+                            <!-- GOV ID -->
+
+                            <div class="field">
+
+                                <label>
+                                    Government ID Reference Number
+                                    <span class="required">*</span>
+                                </label>
+
+                                <div class="input-wrapper">
+
+                                    <span class="input-icon">
+                                        🔖
+                                    </span>
+
+                                    <input
+                                        id="govId"
+                                        name="government_id"
+                                        class="input-field"
+                                        type="text"
+                                        placeholder="Enter government ID reference"
+                                        required>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- =================================================
+                         STEP 4
+                    ================================================== -->
+
+                    <div
+                        class="form-step"
+                        id="step4">
+
+                        <div class="step-heading">
+
+                            <div class="step-number">
+                                Step 04
+                            </div>
+
+                            <div class="step-title">
+                                Financial & Banking
+                            </div>
+
+                            <div class="step-description">
+                                Enter your banking details for account verification.
+                            </div>
+
+                        </div>
+
+
+                        <div class="form-grid">
+
+
+                            <!-- ACCOUNT -->
+
+                            <div class="field">
+
+                                <label>
+                                    Bank Account Number
+                                    <span class="required">*</span>
+                                </label>
+
+                                <div class="input-wrapper">
+
+                                    <span class="input-icon">
+                                        🏦
+                                    </span>
+
+                                    <input
+                                        id="accountNumber"
+                                        name="account_number"
+                                        class="input-field"
+                                        type="text"
+                                        placeholder="Enter bank account number"
+                                        required>
+
+                                </div>
+
+                            </div>
+
+
+                            <!-- IFSC -->
+
+                            <div class="field">
+
+                                <label>
+                                    IFSC Code
+                                    <span class="required">*</span>
+                                </label>
+
+                                <div class="input-wrapper">
+
+                                    <span class="input-icon">
+                                        🔢
+                                    </span>
+
+                                    <input
+                                        id="ifsc"
+                                        name="ifsc"
+                                        class="input-field"
+                                        type="text"
+                                        maxlength="11"
+                                        placeholder="SBIN0001234"
+                                        required>
+
+                                </div>
+
+                                <div class="helper-text" style="font-size:0.8rem;color:#64748b;margin-top:0.25rem;">
+                                    Example: SBIN0001234
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- =================================================
+                         STEP 5
+                    ================================================== -->
+
+                    <div
+                        class="form-step"
+                        id="step5">
+
+                        <div class="step-heading">
+
+                            <div class="step-number">
+                                Step 05
+                            </div>
+
+                            <div class="step-title">
+                                Verification & Status
+                            </div>
+
+                            <div class="step-description">
+                                Review the information before submitting your KYC request.
+                            </div>
+
+                        </div>
+
+
+                        <!-- SUMMARY -->
+
+                        <div class="summary-box">
+
+
+                            <!-- PERSONAL -->
+
+                            <div class="summary-section">
+
+                                <div class="summary-header">
+                                    👤
+                                    Personal Information
+                                </div>
+
+                                <div class="summary-grid">
+
+                                    <div class="summary-item">
+                                        <span>Full Name</span>
+                                        <strong id="summaryName">
+                                            —
+                                        </strong>
+                                    </div>
+
+                                    <div class="summary-item">
+                                        <span>Work Email</span>
+                                        <strong id="summaryEmail">
+                                            —
+                                        </strong>
+                                    </div>
+
+                                    <div class="summary-item">
+                                        <span>Phone</span>
+                                        <strong id="summaryPhone">
+                                            —
+                                        </strong>
+                                    </div>
+
+                                    <div class="summary-item">
+                                        <span>WhatsApp</span>
+                                        <strong id="summaryWhatsapp">
+                                            —
+                                        </strong>
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+
+                            <!-- ROLE -->
+
+                            <div class="summary-section">
+
+                                <div class="summary-header">
+                                    💼
+                                    Work Role
+                                </div>
+
+                                <div class="summary-grid">
+
+                                    <div class="summary-item">
+
+                                        <span>
+                                            Selected Role
+                                        </span>
+
+                                        <strong id="summaryRole">
+                                            —
+                                        </strong>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+
+                            <!-- IDENTITY -->
+
+                            <div class="summary-section">
+
+                                <div class="summary-header">
+                                    🪪
+                                    Identity
+                                </div>
+
+                                <div class="summary-grid">
+
+                                    <div class="summary-item">
+
+                                        <span>
+                                            PAN
+                                        </span>
+
+                                        <strong id="summaryPan">
+                                            —
+                                        </strong>
+
+                                    </div>
+
+                                    <div class="summary-item">
+
+                                        <span>
+                                            Government ID
+                                        </span>
+
+                                        <strong id="summaryGovId">
+                                            —
+                                        </strong>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+
+                            <!-- BANK -->
+
+                            <div class="summary-section">
+
+                                <div class="summary-header">
+                                    🏦
+                                    Banking
+                                </div>
+
+                                <div class="summary-grid">
+
+                                    <div class="summary-item">
+
+                                        <span>
+                                            Account Number
+                                        </span>
+
+                                        <strong id="summaryAccount">
+                                            —
+                                        </strong>
+
+                                    </div>
+
+                                    <div class="summary-item">
+
+                                        <span>
+                                            IFSC Code
+                                        </span>
+
+                                        <strong id="summaryIfsc">
+                                            —
+                                        </strong>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- PENDING STATUS -->
+
+                        <div class="pending-card">
+
+                            <div class="pending-icon">
+                                ⏳
+                            </div>
+
+                            <div>
+
+                                <div class="pending-title">
+                                    Pending Admin Review
+                                </div>
+
+                                <div class="pending-description">
+                                    After submission, an administrator will review
+                                    your KYC details. Once approved, your FactoryTrack
+                                    account will be activated and a temporary password
+                                    will be generated securely.
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- =================================================
+                     NAVIGATION
+                ================================================== -->
+
+                <div
+                    class="navigation"
+                    id="navigation">
+
+                    <button
+                        type="button"
+                        id="backButton"
+                        class="btn btn-secondary"
+                        onclick="previousStep()">
+                        ← Back
+                    </button>
+
+
+                    <button
+                        type="button"
+                        id="nextButton"
+                        class="btn btn-primary"
+                        onclick="nextStep()">
+                        Continue →
+                    </button>
+
+                </div>
+
+                </form>
+
+            </section>
+
+        </div>
+
+    </main>
+
+
+    <!-- =====================================================
+         JAVASCRIPT
+    ====================================================== -->
+
+    <script>
+
+        let currentStep = 1;
+
+        const totalSteps = 5;
+
+        let selectedRole = "";
+
+
+        /* =====================================================
+           GET ELEMENTS
+        ====================================================== */
+
+        const formSteps =
+            document.querySelectorAll(".form-step");
+
+        const progressSteps =
+            document.querySelectorAll(".progress-step");
+
+        const progressFill =
+            document.getElementById("progressFill");
+
+        const backButton =
+            document.getElementById("backButton");
+
+        const nextButton =
+            document.getElementById("nextButton");
+
+        const navigation =
+            document.getElementById("navigation");
+
+
+        /* =====================================================
+           SHOW STEP
+        ====================================================== */
+
+        function showStep(step) {
+
+            currentStep = step;
+
+
+            /* FORM */
+
+            formSteps.forEach((formStep) => {
+
+                formStep.classList.remove("active");
+
+            });
+
+
+            const activeForm =
+                document.getElementById(`step${step}`);
+
+            if (activeForm) {
+                activeForm.classList.add("active");
+            }
+
+
+            /* PROGRESS */
+
+            progressSteps.forEach((item, index) => {
+
+                const stepNumber = index + 1;
+
+                item.classList.remove(
+                    "active",
+                    "completed"
+                );
+
+
+                if (stepNumber < step) {
+
+                    item.classList.add("completed");
+
+                    item.querySelector(
+                        ".step-circle"
+                    ).innerHTML = "✓";
+
+                }
+
+                else if (stepNumber === step) {
+
+                    item.classList.add("active");
+
+                    item.querySelector(
+                        ".step-circle"
+                    ).innerHTML = stepNumber;
+
+                }
+
+                else {
+
+                    item.querySelector(
+                        ".step-circle"
+                    ).innerHTML = stepNumber;
+
+                }
+
+            });
+
+
+            /* PROGRESS BAR */
+
+            const progress =
+                ((step - 1) / (totalSteps - 1)) * 100;
+
+            progressFill.style.width =
+                `${progress}%`;
+
+
+            /* BACK BUTTON */
+
+            if (step === 1) {
+
+                backButton.style.display =
+                    "none";
+
+            } else {
+
+                backButton.style.display =
+                    "inline-flex";
+
+            }
+
+
+            /* NEXT BUTTON */
+
+            if (step === totalSteps) {
+
+                nextButton.innerHTML =
+                    "Submit KYC ✓";
+
+                nextButton.classList.remove(
+                    "btn-primary"
+                );
+
+                nextButton.classList.add(
+                    "btn-success"
+                );
+
+            } else {
+
+                nextButton.innerHTML =
+                    "Continue →";
+
+                nextButton.classList.remove(
+                    "btn-success"
+                );
+
+                nextButton.classList.add(
+                    "btn-primary"
+                );
+
+            }
+
+        }
+
+
+        /* =====================================================
+           NEXT STEP
+        ====================================================== */
+
+        function nextStep() {
+
+            if (!validateCurrentStep()) {
+                return;
+            }
+
+
+            if (currentStep < totalSteps) {
+
+                if (currentStep === 4) {
+                    updateSummary();
+                }
+
+                showStep(currentStep + 1);
+
+            }
+
+            else {
+
+                submitKYC();
+
+            }
+
+        }
+
+
+        /* =====================================================
+           PREVIOUS
+        ====================================================== */
+
+        function previousStep() {
+
+            if (currentStep > 1) {
+
+                showStep(currentStep - 1);
+
+            }
+
+        }
+
+
+        /* =====================================================
+           VALIDATION
+        ====================================================== */
+
+        function validateCurrentStep() {
+
+            let valid = true;
+
+
+            if (currentStep === 1) {
+
+                const fullName =
+                    document.getElementById("fullName");
+
+                const email =
+                    document.getElementById("workEmail");
+
+                const usernameInput =
+                    document.getElementById("username");
+
+                const passwordInput =
+                    document.getElementById("password");
+
+                const phone =
+                    document.getElementById("phone");
+                const photo =
+                    document.getElementById("photoInput");
+
+                if (!fullName.value.trim()) {
+
+                    markError(fullName);
+
+                    valid = false;
+
+                }
+
+
+                if (!email.value.trim()) {
+
+                    markError(email);
+
+                    valid = false;
+
+                }
+
+
+                if (!usernameInput.value.trim()) {
+
+                    markError(usernameInput);
+
+                    valid = false;
+
+                }
+
+
+                if (!passwordInput.value.trim()) {
+
+                    markError(passwordInput);
+
+                    valid = false;
+
+                }
+
+
+                if (!phone.value.trim()) {
+
+                    markError(phone);
+
+                    valid = false;
+
+                }
+
+            }
+
+
+            if (currentStep === 2) {
+
+                if (!selectedRole) {
+
+                    alert(
+                        "Please select your work role."
+                    );
+
+                    valid = false;
+
+                }
+
+            }
+
+
+            if (currentStep === 3) {
+
+                const pan =
+                    document.getElementById("pan");
+
+                const govId =
+                    document.getElementById("govId");
+
+
+                if (!pan.value.trim()) {
+
+                    markError(pan);
+
+                    valid = false;
+
+                }
+
+
+                if (!govId.value.trim()) {
+
+                    markError(govId);
+
+                    valid = false;
+
+                }
+
+            }
+
+
+            if (currentStep === 4) {
+
+                const account =
+                    document.getElementById(
+                        "accountNumber"
+                    );
+
+                const ifsc =
+                    document.getElementById("ifsc");
+
+
+                if (!account.value.trim()) {
+
+                    markError(account);
+
+                    valid = false;
+
+                }
+
+
+                if (!ifsc.value.trim()) {
+
+                    markError(ifsc);
+
+                    valid = false;
+
+                }
+
+            }
+
+
+            return valid;
+
+        }
+
+
+        /* =====================================================
+           ERROR
+        ====================================================== */
+
+        function markError(input) {
+
+            input.style.borderColor =
+                "#ef4444";
+
+            input.focus();
+
+            setTimeout(() => {
+
+                input.style.borderColor =
+                    "";
+
+            }, 2500);
+
+        }
+
+
+        /* =====================================================
+           ROLE SELECTION
+        ====================================================== */
+
+        const roleCards =
+            document.querySelectorAll(".role-card");
+
+
+        roleCards.forEach((card) => {
+
+            card.addEventListener(
+                "click",
+                function() {
+
+                    roleCards.forEach(
+                        c => c.classList.remove(
+                            "selected"
+                        )
+                    );
+
+
+                    this.classList.add(
+                        "selected"
+                    );
+
+
+                    selectedRole =
+                        this.dataset.role;
+
+                }
+            );
+
+        });
+
+
+        /* =====================================================
+           PHOTO UPLOAD
+        ====================================================== */
+
+        const photoUpload =
+            document.getElementById(
+                "photoUpload"
+            );
+
+        const photoInput =
+            document.getElementById(
+                "photoInput"
+            );
+
+        const photoPreview =
+            document.getElementById(
+                "photoPreview"
+            );
+
+
+        photoUpload.addEventListener(
+            "click",
+            function() {
+
+                photoInput.click();
+
+            }
+        );
+
+
+        photoInput.addEventListener(
+            "change",
+            function() {
+
+                const file =
+                    this.files[0];
+
+                if (!file) {
+                    return;
+                }
+
+                const reader =
+                    new FileReader();
+
+
+                reader.onload =
+                    function(event) {
+
+                        photoPreview.innerHTML = "";
+
+                        const img =
+                            document.createElement(
+                                "img"
+                            );
+
+                        img.src =
+                            event.target.result;
+
+                        photoPreview.appendChild(
+                            img
+                        );
+
+                    };
+
+
+                reader.readAsDataURL(file);
+
+            }
+        );
+
+
+        /* =====================================================
+           UPDATE SUMMARY
+        ====================================================== */
+
+        function updateSummary() {
+
+            document.getElementById(
+                "summaryName"
+            ).textContent =
+                getValue("fullName");
+
+
+            document.getElementById(
+                "summaryEmail"
+            ).textContent =
+                getValue("workEmail");
+
+
+            document.getElementById(
+                "summaryPhone"
+            ).textContent =
+                getValue("phone");
+
+
+            document.getElementById(
+                "summaryWhatsapp"
+            ).textContent =
+                getValue("whatsapp") || "Not provided";
+
+
+            document.getElementById(
+                "summaryRole"
+            ).textContent =
+                selectedRole || "—";
+
+
+            document.getElementById(
+                "summaryPan"
+            ).textContent =
+                maskPAN(
+                    getValue("pan")
+                );
+
+
+            document.getElementById(
+                "summaryGovId"
+            ).textContent =
+                maskValue(
+                    getValue("govId")
+                );
+
+
+            document.getElementById(
+                "summaryAccount"
+            ).textContent =
+                maskAccount(
+                    getValue("accountNumber")
+                );
+
+
+            document.getElementById(
+                "summaryIfsc"
+            ).textContent =
+                getValue("ifsc").toUpperCase();
+
+        }
+
+
+        /* =====================================================
+           GET VALUE
+        ====================================================== */
+
+        function getValue(id) {
+
+            const element =
+                document.getElementById(id);
+
+            return element
+                ? element.value.trim()
+                : "";
+
+        }
+
+
+        /* =====================================================
+           MASK PAN
+        ====================================================== */
+
+        function maskPAN(value) {
+
+            if (!value) {
+                return "—";
+            }
+
+            value =
+                value.toUpperCase();
+
+            if (value.length !== 10) {
+                return value;
+            }
+
+            return (
+                value.substring(0, 3) +
+                "****" +
+                value.substring(7)
+            );
+
+        }
+
+
+        /* =====================================================
+           MASK GENERAL
+        ====================================================== */
+
+        function maskValue(value) {
+
+            if (!value) {
+                return "—";
+            }
+
+            if (value.length <= 4) {
+                return "****";
+            }
+
+            return (
+                "****" +
+                value.substring(
+                    value.length - 4
+                )
+            );
+
+        }
+
+
+        /* =====================================================
+           MASK ACCOUNT
+        ====================================================== */
+
+        function maskAccount(value) {
+
+            if (!value) {
+                return "—";
+            }
+
+            if (value.length <= 4) {
+                return "****";
+            }
+
+            return (
+                "•••• •••• " +
+                value.substring(
+                    value.length - 4
+                )
+            );
+
+        }
+
+
+        /* =====================================================
+           SUBMIT
+        ====================================================== */
+
+        function submitKYC() {
+
+            const confirmed =
+                confirm(
+                    "Are you sure you want to submit your KYC details for admin review?"
+                );
+
+
+            if (!confirmed) {
+                return;
+            }
+
+            document.getElementById(
+                "selectedRoleInput"
+            ).value = selectedRole;
+
+            nextButton.disabled = true;
+            nextButton.textContent = "Submitting...";
+            document.getElementById("kycForm").submit();
+
+        }
+
+
+        /* =====================================================
+           INITIALIZE
+        ====================================================== */
+
+        showStep(1);
+
+        // Global loader completely disabled for instant signup
+        function showGlobalLoader() {}
+        function hideGlobalLoader() {}
+    </script>
+</body>
+</html>

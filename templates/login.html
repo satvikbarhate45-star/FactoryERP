@@ -1,0 +1,249 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { inter: ["Inter", "sans-serif"] },
+                    colors: {
+                        brand: {
+                            50: "#eff6ff", 100: "#dbeafe", 200: "#bfdbfe",
+                            300: "#93c5fd", 400: "#60a5fa", 500: "#3b82f6",
+                            600: "#2563eb", 700: "#1d4ed8", 800: "#1e40af",
+                            900: "#1e3a8a"
+                        }
+                    }
+                }
+            }
+        };
+    </script>
+    <link rel="stylesheet" href="{% static 'css/kyc.css' %}">
+    <style>
+        /* CRITICAL MASTER ENFORCEMENT: TOP-BOTTOM VERTICAL STACKING (< 768px) */
+        @media screen and (max-width: 767.98px) {
+            html, body { width: 100% !important; max-width: 100vw !important; overflow-x: hidden !important; }
+            .main-wrapper { display: flex !important; flex-direction: column !important; width: 100% !important; max-width: 100vw !important; padding: 12px 10px 32px 10px !important; min-height: 100vh !important; justify-content: flex-start !important; align-items: stretch !important; overflow-x: hidden !important; }
+            .main-card, .auth-card { display: flex !important; flex-direction: column !important; width: 100% !important; max-width: 100% !important; min-height: auto !important; height: auto !important; border-radius: 18px !important; margin: 0 auto !important; overflow: hidden !important; }
+            .left-panel, .auth-top-panel { display: flex !important; flex-direction: column !important; width: 100% !important; max-width: 100% !important; min-width: 100% !important; order: 1 !important; position: relative !important; float: none !important; top: auto !important; left: auto !important; padding: 20px 18px !important; border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important; border-radius: 18px 18px 0 0 !important; }
+            .right-panel, .auth-bottom-panel { display: flex !important; flex-direction: column !important; width: 100% !important; max-width: 100% !important; min-width: 100% !important; order: 2 !important; position: relative !important; float: none !important; top: auto !important; left: auto !important; padding: 20px 18px !important; border-radius: 0 0 18px 18px !important; background: #ffffff !important; }
+            .left-heading { font-size: 1.35rem !important; line-height: 1.25 !important; margin: 0 0 6px 0 !important; }
+            .left-description { font-size: 0.85rem !important; line-height: 1.4 !important; margin: 0 0 10px 0 !important; }
+            .form-area, .form-area form, .field, .input-wrapper { width: 100% !important; max-width: 100% !important; box-sizing: border-box !important; }
+            .input-field { width: 100% !important; max-width: 100% !important; font-size: 16px !important; padding: 11px 12px 11px 42px !important; border-radius: 10px !important; box-sizing: border-box !important; }
+            .navigation, .login-navigation { display: flex !important; flex-direction: column !important; width: 100% !important; gap: 10px !important; margin-top: 18px !important; padding-top: 0 !important; }
+            .navigation .btn, .navigation a.btn, .navigation button.btn, .login-navigation .btn, .login-navigation a.btn, .login-navigation button.btn { width: 100% !important; max-width: 100% !important; min-height: 46px !important; padding: 12px 16px !important; font-size: 0.95rem !important; border-radius: 10px !important; display: flex !important; align-items: center !important; justify-content: center !important; text-align: center !important; box-sizing: border-box !important; }
+            .login-navigation .btn-primary { order: 1 !important; }
+            .login-navigation .btn-secondary { order: 2 !important; }
+        }
+    </style>
+    <title>FactoryTrack | Sign In</title>
+</head>
+
+<body>
+
+    <!-- =====================================================
+         BACKGROUND VIDEO
+    ====================================================== -->
+
+    <video
+        class="video-background"
+        autoplay
+        muted
+        loop
+        playsinline
+        preload="auto">
+
+        <source
+            src="WhatsApp Video 2026-09-25 at 9.29.12 AM.mp4"
+            type="video/mp4">
+
+        Your browser does not support video playback.
+    </video>
+
+    <div class="video-overlay"></div>
+    <div class="blue-overlay"></div>
+
+
+    <!-- =====================================================
+         MAIN
+    ====================================================== -->
+
+    <main class="main-wrapper">
+
+        <div class="main-card auth-card">
+
+            <!-- =================================================
+                 LEFT INFORMATION PANEL (TOP ON MOBILE)
+            ================================================== -->
+
+            <aside class="left-panel auth-top-panel">
+
+                <div class="left-content">
+
+                    <!-- LOGO -->
+
+                    <div class="logo-box">
+
+                        <div class="logo-icon">
+                            FT
+                        </div>
+
+                        <div>
+                            <div class="logo-title">
+                                FactoryTrack
+                            </div>
+
+                            <div class="logo-subtitle">
+                                Workforce Management Platform
+                            </div>
+                        </div>
+
+                    </div>
+
+
+                    <!-- HEADING -->
+
+                    <h1 class="left-heading">
+                        Welcome back to
+                        <span>
+                            your portal.
+                        </span>
+                    </h1>
+
+                    <p class="left-description">
+                        Log in to access your dashboard, monitor production, and manage factory operations.
+                    </p>
+
+                    <!-- SECURITY -->
+                    <div class="security-box">
+                        <div class="security-item">
+                            <div class="security-icon">
+                                🔐
+                            </div>
+                            <div class="security-text">
+                                <strong>Role-Based Access</strong>
+                                <span>You will be redirected based on your department.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+            </aside>
+
+
+            <!-- =================================================
+                 RIGHT FORM PANEL (BOTTOM ON MOBILE)
+            ================================================== -->
+
+            <section class="right-panel auth-bottom-panel">
+
+
+                <!-- TOP HEADER -->
+
+                <div class="top-header">
+
+                    <div>
+
+                        <div class="page-title">
+                            Sign In
+                        </div>
+
+                        <div class="page-subtitle">
+                            Enter your credentials to access the system.
+                        </div>
+
+                    </div>
+                    
+                    <div class="review-tag" style="background:#f1f5f9; color:#475569;">
+                        <span class="review-dot" style="background:#94a3b8;"></span>
+                        Secure Login
+                    </div>
+
+                </div>
+
+                <!-- =================================================
+                     FORM AREA
+                ================================================== -->
+
+                <div class="form-area">
+
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="bg-red-50 text-red-700 p-4 rounded-md mb-6 text-sm font-medium border border-red-100 flex items-start">
+                                <span class="mr-2">⚠️</span> {{ message }}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <form method="POST" action="{% url 'login' %}">
+                        {% csrf_token %}
+                        
+                        <div class="field">
+                            <label>
+                                Username or Work Email
+                            </label>
+                            <div class="input-wrapper">
+                                <span class="input-icon">👤</span>
+                                <input
+                                    name="username"
+                                    class="input-field"
+                                    type="text"
+                                    placeholder="Enter your username or email"
+                                    autocomplete="username"
+                                    required>
+                            </div>
+                        </div>
+                        
+                        <div class="field">
+                            <label>
+                                Password
+                            </label>
+                            <div class="input-wrapper">
+                                <span class="input-icon">🔑</span>
+                                <input
+                                    name="password"
+                                    class="input-field"
+                                    type="password"
+                                    placeholder="Enter your password"
+                                    autocomplete="current-password"
+                                    required>
+                            </div>
+                        </div>
+                        
+                        <div class="navigation login-navigation">
+                            <button type="submit" class="btn btn-primary">
+                                Sign In →
+                            </button>
+
+                            <a href="{% url 'signup' %}" class="btn btn-secondary">
+                                New Employee? KYC
+                            </a>
+                        </div>
+                        
+                    </form>
+
+                </div>
+
+            </section>
+
+        </div>
+
+    </main>
+
+    <script>
+        // Global loader completely disabled for instant login
+        function showGlobalLoader() {}
+        function hideGlobalLoader() {}
+    </script>
+</body>
+</html>
