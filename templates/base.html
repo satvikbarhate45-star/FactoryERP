@@ -958,14 +958,21 @@
                     body: formData
                 });
                 
-                const data = await response.json();
-                chatBox.removeChild(loadingDiv);
+                let data = null;
+                try {
+                    data = await response.json();
+                } catch (jsonErr) {
+                    data = { error: 'Server returned an invalid response. Status: ' + response.status };
+                }
+                
+                if (loadingDiv.parentElement) chatBox.removeChild(loadingDiv);
                 
                 const aiDiv = document.createElement('div');
                 aiDiv.className = 'bg-indigo-100 dark:bg-indigo-950/70 text-indigo-900 dark:text-indigo-100 p-4 rounded-lg rounded-tl-none self-start max-w-[90%] shadow-sm border border-indigo-200 dark:border-indigo-800 prose prose-sm dark:prose-invert';
                 
-                if (response.ok) {
-                    let renderedHTML = data.response.replace(/<pre><code class="language-mermaid">([\s\S]*?)<\/code><\/pre>/g, '<div class="mermaid">$1</div>');
+                if (response.ok && data && (data.response || data.raw_response)) {
+                    let textContent = data.response || data.raw_response;
+                    let renderedHTML = textContent.replace(/<pre><code class="language-mermaid">([\s\S]*?)<\/code><\/pre>/g, '<div class="mermaid">$1</div>');
                     aiDiv.innerHTML = renderedHTML;
                     
                     setTimeout(() => {
@@ -981,15 +988,15 @@
                         window.speechSynthesis.cancel();
                         currentAudio = new Audio('data:audio/wav;base64,' + data.audio_base64);
                         currentAudio.play();
-                    } else {
+                    } else if (voiceEnabled) {
                         const tempDiv = document.createElement('div');
                         tempDiv.innerHTML = renderedHTML;
                         let spokenText = tempDiv.innerText.trim();
                         speakText(spokenText);
                     }
                 } else {
-                    aiDiv.innerHTML = `<span class="text-rose-600 font-bold">Error:</span> ${data.error || 'Failed to get response.'}`;
-                    speakText("Sorry, I encountered an error communicating with the server.");
+                    const errorMsg = (data && (data.error || data.response)) ? (data.error || data.response) : 'AI सर्व्हरशी संपर्क होऊ शकला नाही. कृपया थोड्या वेळाने प्रयत्न करा.';
+                    aiDiv.innerHTML = `<span class="text-rose-600 font-bold">⚠️ Error:</span> ${errorMsg}`;
                 }
                 
                 chatBox.appendChild(aiDiv);
@@ -998,10 +1005,11 @@
                 if (loadingDiv.parentElement) chatBox.removeChild(loadingDiv);
                 const errDiv = document.createElement('div');
                 errDiv.className = 'bg-rose-100 text-rose-900 p-3 rounded-lg rounded-tl-none self-start max-w-[85%] shadow-sm text-xs sm:text-sm';
-                errDiv.innerText = 'Network error communicating with AI server.';
+                errDiv.innerText = 'Network request error: ' + (error.message || 'Server timeout');
                 chatBox.appendChild(errDiv);
                 chatBox.scrollTop = chatBox.scrollHeight;
             }
+
         }
         
         // Dark Mode Logic

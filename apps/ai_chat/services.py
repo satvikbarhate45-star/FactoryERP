@@ -11,135 +11,127 @@ from apps.production.models import ProductionLog
 def get_factory_context(user_language='en'):
     from django.utils import timezone
     from datetime import timedelta
+    from django.core.cache import cache
     
+    cache_key = f"ai_factory_context_{user_language}"
+    cached_ctx = cache.get(cache_key)
+    if cached_ctx:
+        return cached_ctx
+        
     today = timezone.now().date()
-    yesterday = today - timedelta(days=1)
     
-    # Gather key factory metrics to feed as context to the AI
+    # 1. Quick aggregate metrics
     machines_down = Machine.objects.filter(status='UM').count()
     total_machines = Machine.objects.count()
     open_tickets = MaintenanceTicket.objects.filter(status='O').count()
     
-    # Inventory
-    critical_stock = WarehouseStock.objects.filter(quantity__lte=10000)
-    stock_context = ", ".join([s.material for s in critical_stock]) if critical_stock else "None"
+    # 2. Critical Inventory Stock
+    critical_stock = WarehouseStock.objects.filter(quantity__lte=10000)[:5]
+    stock_context = ", ".join([f"{s.material} ({s.quantity} units)" for s in critical_stock]) if critical_stock else "All materials sufficiently stocked"
     
-    # Production
+    # 3. Overall Production Yield
     prod = ProductionLog.objects.aggregate(total_out=Sum('output_kg'), total_in=Sum('material_used'))
-    yield_perc = (prod['total_out'] / prod['total_in'] * 100) if prod['total_in'] else 0
+    yield_perc = (prod['total_out'] / prod['total_in'] * 100) if (prod and prod.get('total_in')) else 0
     
-    # All Historical Data
-    history_str = ""
-    # Fetch distinct dates that have production data, ordered oldest to newest
-    all_dates = ProductionLog.objects.values_list('date', flat=True).distinct().order_by('date')
+    # 4. Recent Production Activity (Last 8 logs in a single fast query)
+    recent_logs = ProductionLog.objects.select_related('machine', 'employee').order_by('-date')[:8]
+    recent_summary = []
+    for log in recent_logs:
+        emp_name = log.employee.username if log.employee else 'Operator'
+        mach_name = log.machine.code if log.machine else 'Machine'
+        recent_summary.append(f"- {log.date}: Machine {mach_name} | {emp_name} | Input: {float(log.material_used):.1f}kg, Output: {float(log.output_kg):.1f}kg")
     
-    for hist_date in all_dates:
-        hist_logs = ProductionLog.objects.filter(date=hist_date).select_related('machine', 'employee')
-        h_out = sum(float(log.output_kg) for log in hist_logs)
-        h_mat = sum(float(log.material_used) for log in hist_logs)
-        h_tickets = MaintenanceTicket.objects.filter(opened_at__date=hist_date).count()
-        history_str += f"  * {hist_date} (TOTALS): Output {h_out:.2f} kg, Material Used {h_mat:.2f} kg, Tickets Opened {h_tickets}\n"
-        
-        # Detailed breakdown
-        for log in hist_logs:
-            history_str += f"    - Machine {log.machine.code} ({log.machine.name}) | Employee: {log.employee.username}: Input {float(log.material_used):.2f} kg, Output {float(log.output_kg):.2f} kg\n"
-    
-    if not history_str:
-        history_str = "  * No historical data available yet.\n"
+    recent_str = "\n".join(recent_summary) if recent_summary else "- No recent production logs recorded."
         
     language_map = {'en': 'English', 'hi': 'Hindi', 'mr': 'Marathi'}
     language_name = language_map.get(user_language, 'English')
     
     context_str = (
-        f"FACTORY METRICS:\n"
+        f"FACTORY OPERATIONAL METRICS:\n"
         f"Current System Date: {today}\n"
-        f"- Uptime: {total_machines - machines_down}/{total_machines} Machines\n"
-        f"- Open Tickets: {open_tickets}\n"
-        f"- Critical Stock: {stock_context}\n"
-        f"- Lifetime Yield: {yield_perc:.1f}%\n"
-        f"- Financials: Selling Price = ₹50/kg, Raw Material Cost = ₹20/kg\n\n"
-        f"HISTORICAL DATA (All Time):\n{history_str}\n"
-        f"You are the PharmaERP AI Assistant. Your personality is extremely warm, friendly, and highly empathetic. You care deeply about the user and their factory.\n"
-        f"You MUST respond completely in the {language_name} language.\n\n"
-        f"Follow this exact formatting for ALL responses:\n"
-        f"1. Start with a brief 1-sentence summary.\n"
-        f"2. Use highlighted bullet points for detailed explanations.\n"
-        f"3. If the user asks about machine warnings (e.g., vibration alerts) or errors, provide a full diagnostic explanation and clear suggestions to fix it.\n"
-        f"4. End with a 1-sentence actionable conclusion.\n"
-        f"5. Proactively provide strategic growth suggestions and operational optimizations based on the production data to increase yield and reduce costs.\n"
-        f"Do NOT include fake diagrams or random characters. Keep it clean and professional."
+        f"- Machine Status: {total_machines - machines_down}/{total_machines} Operational ({machines_down} Down/Under Maintenance)\n"
+        f"- Active Maintenance Tickets: {open_tickets}\n"
+        f"- Critical Inventory: {stock_context}\n"
+        f"- Overall Yield Rate: {yield_perc:.1f}%\n"
+        f"- Standard Financials: Selling Price = ₹50/kg, Raw Material Cost = ₹20/kg\n\n"
+        f"RECENT BATCH RUNS:\n{recent_str}\n\n"
+        f"You are the PharmaERP AI Assistant. You are warm, empathetic, and knowledgeable.\n"
+        f"You MUST respond completely in {language_name}.\n"
+        f"Keep responses clear, professional, well-formatted with bullet points, and concise."
     )
+    cache.set(cache_key, context_str, 90)  # Cache for 90 seconds
     return context_str
 
-def generate_ai_response(prompt_text, user_language='en', model_choice='gemini-1.5-flash', chat_history=None):
-    # Normalize model selection to valid production Gemini model names
-    model_mapping = {
-        'gemini-latest': 'gemini-1.5-flash',
-        'gemini-1.5-flash': 'gemini-1.5-flash',
-        'gemini-3.5-flash': 'gemini-1.5-flash',
-        'gemini-pro-latest': 'gemini-1.5-pro',
-        'gemini-1.5-pro': 'gemini-1.5-pro',
-    }
-    model_choice = model_mapping.get(model_choice, model_choice or 'gemini-1.5-flash')
+def get_gemini_api_key():
+    """Fetches Gemini API key from standard environment variables."""
+    return (
+        os.environ.get("GEMINI_API_KEY") or
+        os.environ.get("GOOGLE_API_KEY") or
+        os.environ.get("GEMINI_KEY") or
+        os.environ.get("GOOGLE_AI_KEY")
+    )
 
-    api_key = os.environ.get("GEMINI_API_KEY")
-    if not api_key:
-        from apps.production.hf_service import get_hf_api_key, generate_hf_chat_fallback
-        if get_hf_api_key():
-            system_context = get_factory_context(user_language)
-            hf_res = generate_hf_chat_fallback(prompt_text, system_context, user_language)
-            if hf_res:
-                return hf_res
-        return "ERROR: GEMINI_API_KEY (or HUGGINGFACE_API_KEY / HF_TOKEN) environment variable not set."
-        
-    try:
-        genai.configure(api_key=api_key, transport='rest')
-        system_context = get_factory_context(user_language)
-        
-        history_text = ""
-        if chat_history:
-            history_text = "\n\nPAST CONVERSATION HISTORY:\n"
-            for msg in chat_history:
-                history_text += f"User: {msg.prompt}\nAI: {msg.response}\n\n"
-                
-        full_prompt = f"{system_context}{history_text}\n\nUSER QUESTION: {prompt_text}"
-        
-        # Primary attempt with chosen model
+
+def generate_ai_response(prompt_text, user_language='en', model_choice='gemini-1.5-flash', chat_history=None):
+    api_key = get_gemini_api_key()
+    system_context = get_factory_context(user_language)
+    
+    # Priority order of Gemini models
+    # Always include gemini-2.5-flash and gemini-1.5-flash
+    candidate_models = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-flash-latest', 'gemini-2.5-pro', 'gemini-1.5-pro']
+    if 'pro' in (model_choice or '').lower():
+        candidate_models = ['gemini-2.5-pro', 'gemini-1.5-pro', 'gemini-2.5-flash', 'gemini-1.5-flash']
+
+    history_text = ""
+    if chat_history:
+        history_text = "\n\nPAST CONVERSATION HISTORY:\n"
+        for msg in chat_history:
+            history_text += f"User: {msg.prompt}\nAI: {msg.response}\n\n"
+            
+    full_prompt = f"{system_context}{history_text}\n\nUSER QUESTION: {prompt_text}"
+    
+    if api_key:
         try:
-            model = genai.GenerativeModel(model_choice)
-            response = model.generate_content(full_prompt)
-            if response and response.text:
-                return response.text
-        except Exception as inner_e:
-            # Fallback ladder across available production models
-            backup_models = ['gemini-1.5-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-pro', 'gemini-pro', 'gemini-2.0-flash-exp', 'gemini-flash-latest']
-            for m in backup_models:
-                if m == model_choice:
-                    continue
+            genai.configure(api_key=api_key)
+            for m in candidate_models:
                 try:
-                    fallback_model = genai.GenerativeModel(m)
-                    response = fallback_model.generate_content(full_prompt)
+                    model = genai.GenerativeModel(m)
+                    response = model.generate_content(full_prompt)
                     if response and response.text:
                         return response.text
-                except Exception:
+                except Exception as inner_e:
                     continue
-                    
-            # Check for Hugging Face fallback before giving up
-            from apps.production.hf_service import get_hf_api_key, generate_hf_chat_fallback
-            if get_hf_api_key():
-                hf_res = generate_hf_chat_fallback(prompt_text, system_context, user_language)
-                if hf_res:
-                    return hf_res
-                    
-            return "⚠️ **AI Assistant Notice**\n\nThe AI model is temporarily rate-limited or busy. Please try asking again in a few moments."
-            
-    except Exception as e:
+        except Exception:
+            pass
+
+    # Fallback to Hugging Face if Gemini is unreachable
+    try:
         from apps.production.hf_service import get_hf_api_key, generate_hf_chat_fallback
         if get_hf_api_key():
             hf_res = generate_hf_chat_fallback(prompt_text, system_context, user_language)
             if hf_res:
                 return hf_res
-        return f"AI Error: Unable to process request. Details: {str(e)}"
+    except Exception:
+        pass
+
+    # Graceful localized fallback message
+    if user_language == 'mr':
+        return (
+            "⚠️ **एआय सहाय्यक सूचना**\n\n"
+            "सध्या एआय सर्व्हरशी तात्पुरता संपर्क होऊ शकला नाही. कृपया थोड्या वेळाने पुन्हा विचारून पहा, "
+            "किंवा Render डॅशबोर्डमध्ये `GEMINI_API_KEY` बरोबर कॉन्फिगर असल्याची खात्री करा."
+        )
+    elif user_language == 'hi':
+        return (
+            "⚠️ **एआई सहायक सूचना**\n\n"
+            "वर्तमान में एआई सर्वर के साथ अस्थायी नेटवर्क समस्या है। कृपया कुछ पलों बाद पुनः प्रयास करें।"
+        )
+    else:
+        return (
+            "⚠️ **AI Assistant Notice**\n\n"
+            "External AI network request temporarily timed out. Please try again in a few moments."
+        )
+
 
 def generate_ai_audio(text):
     """Uses available TTS or returns None so browser speech synthesis takes over seamlessly."""
