@@ -74,7 +74,13 @@ def get_factory_context(user_language='en'):
 def generate_ai_response(prompt_text, user_language='en', model_choice='gemini-3.5-flash', chat_history=None):
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
-        return "ERROR: GEMINI_API_KEY environment variable not set."
+        from apps.production.hf_service import get_hf_api_key, generate_hf_chat_fallback
+        if get_hf_api_key():
+            system_context = get_factory_context(user_language)
+            hf_res = generate_hf_chat_fallback(prompt_text, system_context, user_language)
+            if hf_res:
+                return hf_res
+        return "ERROR: GEMINI_API_KEY (or HUGGINGFACE_API_KEY / HF_TOKEN) environment variable not set."
         
     try:
         genai.configure(api_key=api_key)
@@ -96,8 +102,7 @@ def generate_ai_response(prompt_text, user_language='en', model_choice='gemini-3
         except Exception as inner_e:
             error_msg = str(inner_e)
             if '429' in error_msg or 'Quota exceeded' in error_msg:
-                # The user's bucket for this specific model is dead. 
-                # Let's dynamically hunt for a fresh bucket across other available models!
+                # Attempt with backup Gemini models
                 backup_models = ['gemini-3.5-flash-lite', 'gemini-3.6-flash', 'gemini-3.7-flash', 'gemini-flash-lite-latest']
                 for m in backup_models:
                     try:
@@ -107,12 +112,24 @@ def generate_ai_response(prompt_text, user_language='en', model_choice='gemini-3
                     except Exception:
                         continue
                         
+                # Check for Hugging Face fallback before giving up
+                from apps.production.hf_service import get_hf_api_key, generate_hf_chat_fallback
+                if get_hf_api_key():
+                    hf_res = generate_hf_chat_fallback(prompt_text, system_context, user_language)
+                    if hf_res:
+                        return hf_res
+                        
                 return "⚠️ **API Limit Reached!**\n\nYou have exhausted the free-tier requests across all available fallback models. Please try again tomorrow!"
             raise inner_e
             
     except Exception as e:
         error_str = str(e)
         if '429' in error_str or 'Quota exceeded' in error_str:
+            from apps.production.hf_service import get_hf_api_key, generate_hf_chat_fallback
+            if get_hf_api_key():
+                hf_res = generate_hf_chat_fallback(prompt_text, system_context, user_language)
+                if hf_res:
+                    return hf_res
             return "⚠️ **API Limit Reached!**\n\nYou have exhausted the free-tier requests. Please try again tomorrow!"
         return f"AI Error: Unable to process request. Details: {error_str}"
 

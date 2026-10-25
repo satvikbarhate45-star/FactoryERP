@@ -202,14 +202,42 @@ Edit `.env` to configure your settings:
 ```ini
 # Django Secret Key & Debug Mode
 SECRET_KEY=your-secure-secret-key-here
-DEBUG=True
+DEBUG=False
+ALLOWED_HOSTS=.onrender.com,localhost,127.0.0.1
 
-# Database (Leave commented out to use local SQLite, or configure Supabase PostgreSQL):
-# DATABASE_URL=postgresql://postgres.[REF]:[PASS]@aws-0-[REGION].pooler.supabase.com:6543/postgres?sslmode=require
+# Database (Supabase PostgreSQL pooler string):
+DATABASE_URL=postgresql://postgres.[REF]:[PASS]@aws-0-[REGION].pooler.supabase.com:6543/postgres?sslmode=require
+
+# Hugging Face ML Pipeline (Anomaly Detection & Root-Cause Analysis)
+HUGGINGFACE_API_KEY=hf_your_token_here
 
 # AI Chatbot & Voice Synthesis (Google Gemini)
 GEMINI_API_KEY=your_gemini_api_key_here
 ```
+
+---
+
+## 🚀 Deployment on Render
+
+### Render Web Service Configuration:
+1. **Repository**: Link `https://github.com/satvikbarhate45-star/FactoryERP.git`
+2. **Environment**: `Python`
+3. **Build Command**:
+   ```bash
+   ./build.sh
+   # (or: pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate)
+   ```
+4. **Start Command**:
+   ```bash
+   gunicorn pharma_erp.wsgi:application
+   ```
+5. **Environment Variables on Render Dashboard**:
+   - `DATABASE_URL`: `postgresql://postgres.[REF]:[PASS]@aws-0-[REGION].pooler.supabase.com:6543/postgres?sslmode=require`
+   - `HUGGINGFACE_API_KEY`: `hf_...` (or `HF_TOKEN`)
+   - `SECRET_KEY`: `your-secure-django-secret-key`
+   - `DEBUG`: `False`
+   - `ALLOWED_HOSTS`: `.onrender.com`
+
 
 ---
 

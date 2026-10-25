@@ -159,7 +159,9 @@ def run_daily_predictions(target_date=None):
                 machine.save()
 
             if not active_ticket:
-                ticket_cause = f"[CRITICAL FAILURE] AI Predicted Extreme Telemetry (Vib: {predicted_vibration:.2f} mm/s, Temp: {predicted_temp:.2f}°C). Emergency Halt & Repair Required."
+                from apps.production.hf_service import analyze_machine_telemetry_hf
+                hf_diag = analyze_machine_telemetry_hf(machine.code, predicted_vibration, predicted_temp, slope)
+                ticket_cause = f"[CRITICAL FAILURE] Extreme Telemetry (Vib: {predicted_vibration:.2f} mm/s, Temp: {predicted_temp:.2f}°C). Emergency Halt Required. | Diagnostic: {hf_diag}"
                 MaintenanceTicket.objects.create(
                     machine=machine, 
                     cause=ticket_cause, 
@@ -179,7 +181,9 @@ def run_daily_predictions(target_date=None):
                     machine.save()
 
                 if not active_ticket:
-                    ticket_cause = f"[WARNING / INSPECTION REQUIRED] AI Analytics detected sustained telemetry deviation (Vib: {predicted_vibration:.2f} mm/s, Temp: {predicted_temp:.2f}°C). Scheduled preventative maintenance."
+                    from apps.production.hf_service import analyze_machine_telemetry_hf
+                    hf_diag = analyze_machine_telemetry_hf(machine.code, predicted_vibration, predicted_temp, slope)
+                    ticket_cause = f"[WARNING / INSPECTION REQUIRED] Sustained telemetry deviation (Vib: {predicted_vibration:.2f} mm/s, Temp: {predicted_temp:.2f}°C). | Diagnostic: {hf_diag}"
                     MaintenanceTicket.objects.create(
                         machine=machine, 
                         cause=ticket_cause, 
