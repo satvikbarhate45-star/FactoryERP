@@ -1,4 +1,5 @@
 import os
+import urllib.parse
 from pathlib import Path
 from dotenv import load_dotenv
 import dj_database_url
@@ -42,7 +43,9 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'pharma_erp.middleware.NetworkResilienceMiddleware',
 ]
+
 
 ROOT_URLCONF = 'pharma_erp.urls'
 
@@ -64,8 +67,29 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'pharma_erp.wsgi.application'
 
+def _sanitize_database_url(url):
+    """
+    Sanitizes DATABASE_URL by URL-encoding special characters in username/password
+    (such as '@' or '/') that would otherwise break standard URI parsing.
+    """
+    if not url:
+        return url
+    url = url.strip()
+    if '://' in url and '@' in url:
+        scheme, rest = url.split('://', 1)
+        last_at = rest.rfind('@')
+        if last_at != -1:
+            user_pass = rest[:last_at]
+            host_path = rest[last_at + 1:]
+            if ':' in user_pass:
+                u, p = user_pass.split(':', 1)
+                enc_user = urllib.parse.quote(urllib.parse.unquote(u), safe='')
+                enc_pass = urllib.parse.quote(urllib.parse.unquote(p), safe='')
+                return f"{scheme}://{enc_user}:{enc_pass}@{host_path}"
+    return url
+
 # Database Configuration: Supabase PostgreSQL (via DATABASE_URL) with SQLite Fallback
-DATABASE_URL = os.environ.get('DATABASE_URL')
+DATABASE_URL = _sanitize_database_url(os.environ.get('DATABASE_URL'))
 
 if DATABASE_URL:
     DATABASES = {
