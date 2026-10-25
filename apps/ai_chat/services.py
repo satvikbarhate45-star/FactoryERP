@@ -71,7 +71,17 @@ def get_factory_context(user_language='en'):
     )
     return context_str
 
-def generate_ai_response(prompt_text, user_language='en', model_choice='gemini-3.5-flash', chat_history=None):
+def generate_ai_response(prompt_text, user_language='en', model_choice='gemini-1.5-flash', chat_history=None):
+    # Normalize model selection to valid production Gemini model names
+    model_mapping = {
+        'gemini-latest': 'gemini-1.5-flash',
+        'gemini-1.5-flash': 'gemini-1.5-flash',
+        'gemini-3.5-flash': 'gemini-1.5-flash',
+        'gemini-pro-latest': 'gemini-1.5-pro',
+        'gemini-1.5-pro': 'gemini-1.5-pro',
+    }
+    model_choice = model_mapping.get(model_choice, model_choice or 'gemini-1.5-flash')
+
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
         from apps.production.hf_service import get_hf_api_key, generate_hf_chat_fallback
@@ -83,7 +93,7 @@ def generate_ai_response(prompt_text, user_language='en', model_choice='gemini-3
         return "ERROR: GEMINI_API_KEY (or HUGGINGFACE_API_KEY / HF_TOKEN) environment variable not set."
         
     try:
-        genai.configure(api_key=api_key)
+        genai.configure(api_key=api_key, transport='rest')
         system_context = get_factory_context(user_language)
         
         history_text = ""
@@ -94,66 +104,57 @@ def generate_ai_response(prompt_text, user_language='en', model_choice='gemini-3
                 
         full_prompt = f"{system_context}{history_text}\n\nUSER QUESTION: {prompt_text}"
         
+        # Primary attempt with chosen model
         try:
-            # Attempt with user selected model
             model = genai.GenerativeModel(model_choice)
             response = model.generate_content(full_prompt)
-            return response.text
+            if response and response.text:
+                return response.text
         except Exception as inner_e:
-            error_msg = str(inner_e)
-            if '429' in error_msg or 'Quota exceeded' in error_msg:
-                # Attempt with backup Gemini models
-                backup_models = ['gemini-3.5-flash-lite', 'gemini-3.6-flash', 'gemini-3.7-flash', 'gemini-flash-lite-latest']
-                for m in backup_models:
-                    try:
-                        fallback_model = genai.GenerativeModel(m)
-                        response = fallback_model.generate_content(full_prompt)
+            # Fallback ladder across available production models
+            backup_models = ['gemini-1.5-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-pro', 'gemini-pro', 'gemini-2.0-flash-exp', 'gemini-flash-latest']
+            for m in backup_models:
+                if m == model_choice:
+                    continue
+                try:
+                    fallback_model = genai.GenerativeModel(m)
+                    response = fallback_model.generate_content(full_prompt)
+                    if response and response.text:
                         return response.text
-                    except Exception:
-                        continue
-                        
-                # Check for Hugging Face fallback before giving up
-                from apps.production.hf_service import get_hf_api_key, generate_hf_chat_fallback
-                if get_hf_api_key():
-                    hf_res = generate_hf_chat_fallback(prompt_text, system_context, user_language)
-                    if hf_res:
-                        return hf_res
-                        
-                return "⚠️ **API Limit Reached!**\n\nYou have exhausted the free-tier requests across all available fallback models. Please try again tomorrow!"
-            raise inner_e
-            
-    except Exception as e:
-        error_str = str(e)
-        if '429' in error_str or 'Quota exceeded' in error_str:
+                except Exception:
+                    continue
+                    
+            # Check for Hugging Face fallback before giving up
             from apps.production.hf_service import get_hf_api_key, generate_hf_chat_fallback
             if get_hf_api_key():
                 hf_res = generate_hf_chat_fallback(prompt_text, system_context, user_language)
                 if hf_res:
                     return hf_res
-            return "⚠️ **API Limit Reached!**\n\nYou have exhausted the free-tier requests. Please try again tomorrow!"
-        return f"AI Error: Unable to process request. Details: {error_str}"
+                    
+            return "⚠️ **AI Assistant Notice**\n\nThe AI model is temporarily rate-limited or busy. Please try asking again in a few moments."
+            
+    except Exception as e:
+        from apps.production.hf_service import get_hf_api_key, generate_hf_chat_fallback
+        if get_hf_api_key():
+            hf_res = generate_hf_chat_fallback(prompt_text, system_context, user_language)
+            if hf_res:
+                return hf_res
+        return f"AI Error: Unable to process request. Details: {str(e)}"
 
 def generate_ai_audio(text):
-    """Uses Gemini native TTS model to generate audio from text."""
+    """Uses available TTS or returns None so browser speech synthesis takes over seamlessly."""
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
         return None
         
-    # Fix for TTS mispronouncing currency: explicitly replace ₹ with "Rupees"
     text = text.replace("₹", "Rupees ")
-        
+    tts_models = [
+        'models/gemini-2.5-flash-preview-tts',
+        'models/gemini-2.0-flash-exp'
+    ]
     try:
-        genai.configure(api_key=api_key)
-        tts_models = [
-            'models/gemini-3.8-flash-lite-tts',
-            'models/gemini-3.8-flash-tts',
-            'models/gemini-3.1-flash-tts-preview',
-            'models/gemini-2.5-flash-preview-tts'
-        ]
-        
-        # Enforce a warm, friendly, and highly empathetic female voice
-        voice_prompt = f"Read the following text aloud in a very warm, friendly, comforting, and empathetic female English voice. Speak gently and naturally with excellent human-like pronunciation. Do not change the voice or language. Text:\n{text}"
-        
+        genai.configure(api_key=api_key, transport='rest')
+        voice_prompt = f"Read the following text aloud in a very warm, friendly, comforting, and empathetic female English voice:\n{text}"
         for m in tts_models:
             try:
                 model = genai.GenerativeModel(m)
@@ -162,11 +163,9 @@ def generate_ai_audio(text):
                     for part in candidate.content.parts:
                         if hasattr(part, 'inline_data') and part.inline_data:
                             return part.inline_data.data
-            except Exception as inner_e:
-                # If this model hits 429 quota, try the next one in the list
+            except Exception:
                 continue
-                
-        return None
-    except Exception as e:
-        print(f"TTS Error: {e}")
-        return None
+    except Exception:
+        pass
+    return None
+
