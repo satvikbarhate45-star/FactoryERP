@@ -973,10 +973,14 @@ def supervisor_dashboard_view(request):
             emp_id = request.POST.get('employee_id')
             shift_id = request.POST.get('shift_id')
             machine_id = request.POST.get('machine_id')
+            supervisor_id = request.POST.get('supervisor_id')
             if emp_id:
                 try:
                     with transaction.atomic():
-                        emp = User.objects.get(id=int(emp_id))
+                        emp = User.objects.filter(id=int(emp_id)).first()
+                        if not emp:
+                            messages.error(request, f"Employee #{emp_id} not found.")
+                            return redirect('supervisor_portal')
                         if shift_id and shift_id.isdigit():
                             try:
                                 emp.shift = Shift.objects.get(id=int(shift_id))
@@ -987,11 +991,16 @@ def supervisor_dashboard_view(request):
                                 emp.machine = Machine.objects.get(id=int(machine_id))
                             except Machine.DoesNotExist:
                                 pass
+                        if supervisor_id and supervisor_id.isdigit():
+                            try:
+                                emp.supervisor = User.objects.get(id=int(supervisor_id))
+                            except User.DoesNotExist:
+                                pass
                         emp.save()
+                    cache.delete(f'supervisor_portal_context_{today}')
+                    cache.delete(f'master_sup_timeline_{today}')
                     logger.info("Supervisor %s reassigned employee %s", request.user.username, emp.username)
                     messages.success(request, f"Successfully updated assignments for {emp.username}.")
-                except User.DoesNotExist:
-                    messages.error(request, "Employee not found.")
                 except Exception as e:
                     logger.exception("Error reassigning employee #%s:", emp_id)
                     messages.error(request, f"Failed to reassign employee: {str(e)}")

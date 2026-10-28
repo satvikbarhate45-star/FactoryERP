@@ -120,13 +120,32 @@ def signup_view(request):
                 new_user.is_active = False # Default: Requires Admin KYC approval
                 if photo:
                     new_user.photo = photo
+
+                # Dynamic Employee Allocation Sync:
+                if user_role == 'EM':
+                    active_sup = User.objects.filter(role='SU', is_active=True).first()
+                    if active_sup:
+                        new_user.supervisor = active_sup
+                    default_shift = Shift.objects.first()
+                    if default_shift:
+                        new_user.shift = default_shift
+                    default_mach = Machine.objects.first()
+                    if default_mach:
+                        new_user.machine = default_mach
+
                 new_user.save()
+                cache.clear()
 
                 logger.info("New employee KYC registration created: username=%s, role=%s, kyc=PENDING", username, user_role)
                 messages.success(request, "KYC Submitted! Your account status is 'Pending' Admin verification. Once approved, you can log in with your credentials.")
                 return redirect('login')
         except Exception as exc:
             logger.exception("Error creating user during signup: %s", exc)
+            try:
+                from .schema_guard import ensure_runtime_schema_integrity
+                ensure_runtime_schema_integrity(force=True)
+            except Exception:
+                pass
             messages.error(request, f"Registration failed due to server error: {exc}")
             return redirect('signup')
 
@@ -147,17 +166,31 @@ def user_management_view(request):
             if user_id:
                 try:
                     with transaction.atomic():
-                        u = User.objects.get(id=int(user_id))
+                        u = User.objects.filter(id=int(user_id)).first()
+                        if not u:
+                            messages.error(request, f"Employee #{user_id} not found.")
+                            return redirect(redirect_url)
                         u.kyc_status = User.KYCStatus.APPROVED
                         u.is_active = True
                         u.rejection_reason = None
                         u.kyc_reviewed_by = request.user
                         u.kyc_reviewed_at = timezone.now()
+
+                        # Dynamic allocation synchronization:
+                        if u.role == 'EM':
+                            if not u.supervisor:
+                                sup = User.objects.filter(role='SU', is_active=True).first()
+                                if sup:
+                                    u.supervisor = sup
+                            if not u.shift:
+                                u.shift = Shift.objects.first()
+                            if not u.machine:
+                                u.machine = Machine.objects.first()
+
                         u.save()
+                        cache.clear()
                         logger.info("KYC Approved by Admin %s for employee %s", request.user.username, u.username)
                         messages.success(request, f"KYC Approved! Employee {u.username} has been verified and granted active access.")
-                except User.DoesNotExist:
-                    messages.error(request, "Employee not found.")
                 except Exception as exc:
                     logger.exception("Error approving KYC for user_id %s: %s", user_id, exc)
                     messages.error(request, f"Error saving KYC approval: {exc}")
@@ -175,17 +208,19 @@ def user_management_view(request):
             if user_id:
                 try:
                     with transaction.atomic():
-                        u = User.objects.get(id=int(user_id))
+                        u = User.objects.filter(id=int(user_id)).first()
+                        if not u:
+                            messages.error(request, f"Employee #{user_id} not found.")
+                            return redirect(redirect_url)
                         u.kyc_status = User.KYCStatus.REJECTED
                         u.is_active = False
                         u.rejection_reason = rejection_reason
                         u.kyc_reviewed_by = request.user
                         u.kyc_reviewed_at = timezone.now()
                         u.save()
+                        cache.clear()
                         logger.warning("KYC Rejected by Admin %s for employee %s. Reason: %s", request.user.username, u.username, rejection_reason)
                         messages.success(request, f"KYC Rejected for {u.username}. Rejection reason securely stored.")
-                except User.DoesNotExist:
-                    messages.error(request, "Employee not found.")
                 except Exception as exc:
                     logger.exception("Error rejecting KYC for user_id %s: %s", user_id, exc)
                     messages.error(request, f"Error saving KYC rejection: {exc}")
@@ -200,6 +235,7 @@ def user_management_view(request):
             phone = (request.POST.get('phone') or '').strip()
             shift_id = (request.POST.get('shift_id') or '').strip()
             machine_id = (request.POST.get('machine_id') or '').strip()
+            supervisor_id = (request.POST.get('supervisor_id') or '').strip()
             initial_status = (request.POST.get('kyc_status') or 'PENDING').strip().upper()
 
             if not username or not password:
@@ -232,6 +268,13 @@ def user_management_view(request):
                             new_user.machine = Machine.objects.get(id=int(machine_id))
                         except Machine.DoesNotExist:
                             pass
+                    if supervisor_id and supervisor_id.isdigit():
+                        try:
+                            new_user.supervisor = User.objects.get(id=int(supervisor_id))
+                        except User.DoesNotExist:
+                            pass
+                    elif role == 'EM' and not new_user.supervisor:
+                        new_user.supervisor = User.objects.filter(role='SU', is_active=True).first()
 
                     if initial_status == 'APPROVED':
                         new_user.kyc_status = User.KYCStatus.APPROVED
@@ -243,10 +286,16 @@ def user_management_view(request):
                         new_user.is_active = False
 
                     new_user.save()
+                    cache.clear()
                     logger.info("Admin %s created user %s with KYC status %s", request.user.username, username, new_user.kyc_status)
                     messages.success(request, f"User {username} successfully registered with KYC status '{new_user.get_kyc_status_display()}'!")
             except Exception as exc:
                 logger.exception("Failed to create user in user_management_view: %s", exc)
+                try:
+                    from .schema_guard import ensure_runtime_schema_integrity
+                    ensure_runtime_schema_integrity(force=True)
+                except Exception:
+                    pass
                 messages.error(request, f"Database error creating user: {exc}")
             return redirect(redirect_url)
 
@@ -255,12 +304,16 @@ def user_management_view(request):
             role = (request.POST.get('role') or '').strip()
             shift_id = (request.POST.get('shift_id') or '').strip()
             machine_id = (request.POST.get('machine_id') or '').strip()
+            supervisor_id = (request.POST.get('supervisor_id') or '').strip()
             phone = (request.POST.get('phone') or '').strip()
 
             if user_id:
                 try:
                     with transaction.atomic():
-                        u = User.objects.get(id=int(user_id))
+                        u = User.objects.filter(id=int(user_id)).first()
+                        if not u:
+                            messages.error(request, f"Employee #{user_id} not found.")
+                            return redirect(redirect_url)
                         if role:
                             u.role = role
                         if shift_id and shift_id.isdigit():
@@ -279,9 +332,18 @@ def user_management_view(request):
                         elif not machine_id:
                             u.machine = None
 
+                        if supervisor_id and supervisor_id.isdigit():
+                            try:
+                                u.supervisor = User.objects.get(id=int(supervisor_id))
+                            except User.DoesNotExist:
+                                u.supervisor = None
+                        elif 'supervisor_id' in request.POST and not supervisor_id:
+                            u.supervisor = None
+
                         if phone:
                             u.phone = phone
                         u.save()
+                        cache.clear()
                         logger.info("Admin %s updated user %s", request.user.username, u.username)
                         messages.success(request, f"Updated profile & assignments for {u.username}!")
                 except Exception as exc:
@@ -289,7 +351,7 @@ def user_management_view(request):
                     messages.error(request, f"Failed to update user: {exc}")
             return redirect(redirect_url)
 
-    all_users = list(User.objects.select_related('shift', 'machine', 'kyc_reviewed_by').order_by('-date_joined'))
+    all_users = list(User.objects.select_related('shift', 'machine', 'supervisor', 'kyc_reviewed_by').order_by('-date_joined'))
     total_count = len(all_users)
     pending_count = sum(1 for u in all_users if u.kyc_status == User.KYCStatus.PENDING)
     approved_count = sum(1 for u in all_users if u.kyc_status == User.KYCStatus.APPROVED)
@@ -304,6 +366,7 @@ def user_management_view(request):
         'roles': User.Role.choices,
         'shifts': list(Shift.objects.all()),
         'machines': list(Machine.objects.all()),
+        'supervisors': list(User.objects.filter(role='SU', is_active=True)),
     }
     return render(request, 'workmanagement.html', context)
 

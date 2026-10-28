@@ -186,7 +186,7 @@
                             </span>
                         </td>
 
-                        <!-- Shift / Machine -->
+                        <!-- Shift / Machine / Supervisor -->
                         <td class="px-5 sm:px-6 py-4">
                             <div class="text-xs space-y-1">
                                 <div class="font-medium text-slate-700 dark:text-slate-300">
@@ -195,6 +195,11 @@
                                 <div class="font-medium text-slate-700 dark:text-slate-300">
                                     <span class="text-slate-400 font-bold">Line:</span> {{ u.machine.code|default:"None" }}
                                 </div>
+                                {% if u.supervisor %}
+                                <div class="font-medium text-indigo-600 dark:text-indigo-400">
+                                    <span class="text-slate-400 font-bold">Supervisor:</span> @{{ u.supervisor.username }}
+                                </div>
+                                {% endif %}
                             </div>
                         </td>
 
@@ -301,7 +306,7 @@
                                 {% else %}
                                 <!-- Edit User Assignments -->
                                 <button type="button"
-                                    onclick="openEditUserModal('{{ u.id }}', '{{ u.username|escapejs }}', '{{ u.role }}', '{{ u.shift.id|default:'' }}', '{{ u.machine.id|default:'' }}', '{{ u.phone|default:''|escapejs }}')"
+                                    onclick="openEditUserModal('{{ u.id }}', '{{ u.username|escapejs }}', '{{ u.role }}', '{{ u.shift.id|default:'' }}', '{{ u.machine.id|default:'' }}', '{{ u.phone|default:''|escapejs }}', '{{ u.supervisor.id|default:'' }}')"
                                     class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900 text-xs px-2.5 py-1.5 rounded-lg font-bold transition">
                                     <i class="fa-solid fa-pen-to-square mr-1"></i> Edit
                                 </button>
@@ -512,7 +517,7 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                     <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">Assign Shift (Optional)</label>
                     <select name="shift_id" class="w-full border border-slate-300 dark:border-slate-600 rounded-xl p-2 bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-indigo-500 outline-none text-slate-800 dark:text-white">
@@ -521,10 +526,17 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">Assign Machine (Optional)</label>
+                    <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">Assign Line (Optional)</label>
                     <select name="machine_id" class="w-full border border-slate-300 dark:border-slate-600 rounded-xl p-2 bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-indigo-500 outline-none text-slate-800 dark:text-white">
                         <option value="">None</option>
                         {% for machine in machines %}<option value="{{ machine.id }}">{{ machine.code }}: {{ machine.name }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">Supervisor (Optional)</label>
+                    <select name="supervisor_id" class="w-full border border-slate-300 dark:border-slate-600 rounded-xl p-2 bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-indigo-500 outline-none text-slate-800 dark:text-white">
+                        <option value="">Auto-Assign Active</option>
+                        {% for sup in supervisors %}<option value="{{ sup.id }}">{{ sup.username }}</option>{% endfor %}
                     </select>
                 </div>
             </div>
@@ -570,7 +582,7 @@
                 </select>
             </div>
 
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-3 gap-3">
                 <div>
                     <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">Shift</label>
                     <select id="editShiftSelect" name="shift_id" class="w-full border border-slate-300 dark:border-slate-600 rounded-xl p-2 bg-slate-50 dark:bg-slate-900 text-xs text-slate-800 dark:text-white outline-none">
@@ -583,6 +595,13 @@
                     <select id="editMachineSelect" name="machine_id" class="w-full border border-slate-300 dark:border-slate-600 rounded-xl p-2 bg-slate-50 dark:bg-slate-900 text-xs text-slate-800 dark:text-white outline-none">
                         <option value="">None</option>
                         {% for machine in machines %}<option value="{{ machine.id }}">{{ machine.code }}: {{ machine.name }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">Supervisor</label>
+                    <select id="editSupervisorSelect" name="supervisor_id" class="w-full border border-slate-300 dark:border-slate-600 rounded-xl p-2 bg-slate-50 dark:bg-slate-900 text-xs text-slate-800 dark:text-white outline-none">
+                        <option value="">None</option>
+                        {% for sup in supervisors %}<option value="{{ sup.id }}">{{ sup.username }}</option>{% endfor %}
                     </select>
                 </div>
             </div>
@@ -705,12 +724,13 @@
         document.getElementById('create-user-modal').classList.add('hidden');
     }
 
-    function openEditUserModal(userId, username, role, shiftId, machineId, phone) {
+    function openEditUserModal(userId, username, role, shiftId, machineId, phone, supervisorId) {
         document.getElementById('editUserId').value = userId;
         document.getElementById('editUsernameDisplay').textContent = '@' + username;
         document.getElementById('editRoleSelect').value = role;
         document.getElementById('editShiftSelect').value = shiftId || '';
         document.getElementById('editMachineSelect').value = machineId || '';
+        document.getElementById('editSupervisorSelect').value = supervisorId || '';
         document.getElementById('editPhoneInput').value = phone || '';
         document.getElementById('edit-user-modal').classList.remove('hidden');
     }

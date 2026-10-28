@@ -54,3 +54,8 @@ class User(AbstractUser):
         related_name='reviewed_kycs'
     )
 
+    def save(self, *args, **kwargs):
+        if not self.kyc_status:
+            self.kyc_status = self.KYCStatus.PENDING
+        super().save(*args, **kwargs)
+

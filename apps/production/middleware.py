@@ -14,6 +14,13 @@ def _run_background_checks():
     to guarantee that the main HTTP request thread is NEVER blocked.
     """
     try:
+        # 0. Autonomous runtime schema & table integrity check
+        try:
+            from apps.accounts.schema_guard import ensure_runtime_schema_integrity
+            ensure_runtime_schema_integrity()
+        except Exception as sg_err:
+            logger.warning("[BACKGROUND ML RUNNER] Schema guard notice: %s", sg_err)
+
         today = timezone.localdate()
         yesterday = today - timedelta(days=1)
         from apps.production.models import SystemOverview
