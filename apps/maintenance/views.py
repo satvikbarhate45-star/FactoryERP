@@ -57,7 +57,11 @@ def equipment_view(request):
         elif action == 'run_automation':
             try:
                 cycle_type = request.POST.get('cycle_type', 'full')
+                from apps.accounts.schema_guard import ensure_runtime_schema_integrity
+                ensure_runtime_schema_integrity(force=True)
                 result = run_closed_loop_automation_cycle(action=cycle_type)
+                cache.delete('equipment_overview_data')
+                cache.delete('work_orders_overview_data')
                 from django.contrib import messages
                 messages.success(
                     request, 
@@ -77,19 +81,39 @@ def equipment_view(request):
     machines = list(Machine.objects.all().order_by('code'))
     machine_ids = [m.id for m in machines]
 
-    # Bulk fetch latest prediction, metrics, and active tickets (1 query each instead of 72 sequential queries)
-    latest_predictions = {
-        p.machine_id: p for p in
-        MachinePrediction.objects.filter(machine_id__in=machine_ids).order_by('machine_id', '-date', '-created_at').distinct('machine_id')
-    }
-    latest_metrics = {
-        m.machine_id: m for m in
-        MachineHistoricalMetrics.objects.filter(machine_id__in=machine_ids).order_by('machine_id', '-date').distinct('machine_id')
-    }
-    open_tickets = {
-        t.machine_id: t for t in
-        MaintenanceTicket.objects.filter(machine_id__in=machine_ids, status__in=['O', 'I']).order_by('machine_id', '-opened_at').distinct('machine_id')
-    }
+    # Bulk fetch latest prediction, metrics, and active tickets with resilient fallback
+    try:
+        latest_predictions = {
+            p.machine_id: p for p in
+            MachinePrediction.objects.filter(machine_id__in=machine_ids).order_by('machine_id', '-date', '-created_at').distinct('machine_id')
+        }
+    except Exception:
+        latest_predictions = {}
+        for p in MachinePrediction.objects.filter(machine_id__in=machine_ids).order_by('-date', '-created_at'):
+            if p.machine_id not in latest_predictions:
+                latest_predictions[p.machine_id] = p
+
+    try:
+        latest_metrics = {
+            m.machine_id: m for m in
+            MachineHistoricalMetrics.objects.filter(machine_id__in=machine_ids).order_by('machine_id', '-date').distinct('machine_id')
+        }
+    except Exception:
+        latest_metrics = {}
+        for m in MachineHistoricalMetrics.objects.filter(machine_id__in=machine_ids).order_by('-date'):
+            if m.machine_id not in latest_metrics:
+                latest_metrics[m.machine_id] = m
+
+    try:
+        open_tickets = {
+            t.machine_id: t for t in
+            MaintenanceTicket.objects.filter(machine_id__in=machine_ids, status__in=['O', 'I']).order_by('machine_id', '-opened_at').distinct('machine_id')
+        }
+    except Exception:
+        open_tickets = {}
+        for t in MaintenanceTicket.objects.filter(machine_id__in=machine_ids, status__in=['O', 'I']).order_by('-opened_at'):
+            if t.machine_id not in open_tickets:
+                open_tickets[t.machine_id] = t
     
     equipment_data = []
     op_count = 0
@@ -275,7 +299,11 @@ def work_orders_view(request):
         elif action == 'run_automation':
             try:
                 cycle_type = request.POST.get('cycle_type', 'full')
+                from apps.accounts.schema_guard import ensure_runtime_schema_integrity
+                ensure_runtime_schema_integrity(force=True)
                 result = run_closed_loop_automation_cycle(action=cycle_type)
+                cache.delete('equipment_overview_data')
+                cache.delete('work_orders_overview_data')
                 messages.success(
                     request, 
                     f"Autonomous Maintenance Cycle ({cycle_type}) completed. Dispatched: {result.get('dispatched_count', 0)}, Resolved: {result.get('resolved_count', 0)}."
@@ -311,12 +339,16 @@ def work_orders_view(request):
 def trigger_predictions(request):
     """API endpoint to manually trigger all ML predictive engines with full exception safety."""
     try:
+        from apps.accounts.schema_guard import ensure_runtime_schema_integrity
+        ensure_runtime_schema_integrity(force=True)
         from apps.production.services import predict_factory_production
         from apps.logistics.services import predict_logistics_demand
         
         maintenance_results = run_daily_predictions()
         factory_production_results = predict_factory_production()
         logistics_results = predict_logistics_demand()
+        cache.delete('equipment_overview_data')
+        cache.delete('work_orders_overview_data')
         
         return JsonResponse({
             "status": "success", 
@@ -342,7 +374,11 @@ def generate_work_orders_api(request):
     API endpoint to dynamically scan for telemetry warnings and generate tickets.
     """
     try:
+        from apps.accounts.schema_guard import ensure_runtime_schema_integrity
+        ensure_runtime_schema_integrity(force=False)
         generated_tickets = create_tickets_from_warnings()
+        cache.delete('equipment_overview_data')
+        cache.delete('work_orders_overview_data')
         
         tickets_data = []
         for ticket in generated_tickets:
@@ -375,8 +411,12 @@ def closed_loop_sync_api(request):
     Supports action: 'full', 'dispatch', 'resolve', 'predict'
     """
     try:
+        from apps.accounts.schema_guard import ensure_runtime_schema_integrity
+        ensure_runtime_schema_integrity(force=True)
         action = request.GET.get('action') or request.POST.get('action') or 'full'
         result = run_closed_loop_automation_cycle(action=action)
+        cache.delete('equipment_overview_data')
+        cache.delete('work_orders_overview_data')
         
         return JsonResponse({
             "status": "success",

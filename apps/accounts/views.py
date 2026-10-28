@@ -66,6 +66,12 @@ def logout_view(request):
 
 def signup_view(request):
     if request.method == 'POST':
+        try:
+            from .schema_guard import ensure_runtime_schema_integrity
+            ensure_runtime_schema_integrity(force=False)
+        except Exception as sg_err:
+            logger.warning("Schema guard notice in signup: %s", sg_err)
+
         work_email = (request.POST.get('work_email') or '').strip()
         full_name = (request.POST.get('full_name') or '').strip()
         selected_role = (request.POST.get('role') or '').strip()
@@ -159,6 +165,12 @@ def user_management_view(request):
     redirect_url = request.path or 'user_management'
 
     if request.method == 'POST':
+        try:
+            from .schema_guard import ensure_runtime_schema_integrity
+            ensure_runtime_schema_integrity(force=False)
+        except Exception as sg_err:
+            logger.warning("Schema guard notice in user_management: %s", sg_err)
+
         action = request.POST.get('action')
 
         if action == 'approve_kyc':

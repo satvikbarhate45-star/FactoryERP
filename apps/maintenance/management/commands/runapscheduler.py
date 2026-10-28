@@ -63,7 +63,7 @@ def predict_machine_failures():
                 if predicted_vib > 5.0:
                     m.status = 'PI' # Pending Inspection
                     m.save()
-                    if not MaintenanceTicket.objects.filter(machine=m, status__in=['O', 'IP']).exists():
+                    if not MaintenanceTicket.objects.filter(machine=m, status__in=['O', 'I']).exists():
                         MaintenanceTicket.objects.create(
                             machine=m,
                             cause='Predicted High Vibration (>5.0 mm/s)',
@@ -161,6 +161,12 @@ def auto_fill_missing_data():
 class Command(BaseCommand):
     help = "Runs APScheduler."
     def handle(self, *args, **options):
+        try:
+            from apps.accounts.schema_guard import ensure_runtime_schema_integrity
+            ensure_runtime_schema_integrity(force=True)
+        except Exception as sg_err:
+            logger.warning("Runtime schema check error in runapscheduler: %s", sg_err)
+
         scheduler = BlockingScheduler(timezone=settings.TIME_ZONE)
         scheduler.add_jobstore(DjangoJobStore(), "default")
 

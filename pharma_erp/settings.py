@@ -44,6 +44,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'pharma_erp.middleware.NetworkResilienceMiddleware',
+    'apps.accounts.schema_guard.RuntimeSchemaSyncMiddleware',
     'apps.production.middleware.DailyImputationMiddleware',
 ]
 

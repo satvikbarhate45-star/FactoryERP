@@ -56,6 +56,7 @@ def normalize_machine_telemetry(machine, target_date=None):
                 date=today,
                 predicted_temp=64.0,
                 predicted_vibration=1.85,
+                is_auto_predicted=True,
                 reason="AI Post-Maintenance Sync: Equipment returned to optimal operational baseline."
             )
 
@@ -142,6 +143,7 @@ def run_daily_predictions(target_date=None):
                         date=today,
                         predicted_temp=round(predicted_temp, 2),
                         predicted_vibration=round(predicted_vibration, 2),
+                        is_auto_predicted=True,
                         reason=f"ML Predicted Output: {predicted_output:.1f}kg. Trend Slope: {slope:.2f}. Variance R²: {r_squared:.2f}"
                     )
 
@@ -388,6 +390,13 @@ def run_closed_loop_automation_cycle(action='full'):
     - 'predict': Runs scikit-learn ML predictions and syncs today's telemetry.
     """
     try:
+        # Programmatic schema synchronization before running predictions
+        try:
+            from apps.accounts.schema_guard import ensure_runtime_schema_integrity
+            ensure_runtime_schema_integrity(force=False)
+        except Exception as sg_err:
+            logger.warning("Runtime schema check error in closed-loop cycle: %s", sg_err)
+
         today = timezone.localdate()
         logger.info("Executing closed-loop automation cycle (action=%s) on %s", action, today)
         

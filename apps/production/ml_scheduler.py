@@ -10,6 +10,12 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 def generate_missing_production_data():
+    try:
+        from apps.accounts.schema_guard import ensure_runtime_schema_integrity
+        ensure_runtime_schema_integrity(force=False)
+    except Exception as sg_err:
+        logger.warning("Runtime schema check error in generate_missing_production_data: %s", sg_err)
+
     from apps.production.models import ProductionLog
     from apps.maintenance.models import Machine, MaintenanceTicket, MachineHistoricalMetrics
     from apps.accounts.models import User
@@ -96,7 +102,8 @@ def generate_missing_production_data():
                             employee_id=most_frequent_employee_id,
                             machine=machine,
                             output_kg=round(pred_output, 2),
-                            material_used=round(pred_material, 2)
+                            material_used=round(pred_material, 2),
+                            is_auto_predicted=True
                         )
                     logger.info(f"Successfully generated ML data for {machine.name} on {yesterday}.")
 
@@ -292,6 +299,12 @@ def autonomous_gap_detection_and_imputation(days_back=14):
     from apps.accounts.models import User
     
     try:
+        from apps.accounts.schema_guard import ensure_runtime_schema_integrity
+        ensure_runtime_schema_integrity(force=True)
+    except Exception as sg_err:
+        logger.warning("Runtime schema check error in ML imputation: %s", sg_err)
+
+    try:
         today = timezone.localdate()
         logger.info(f"Running autonomous gap detection pipeline for past {days_back} days up to {today}...")
         
@@ -466,6 +479,12 @@ def autonomous_gap_detection_and_imputation(days_back=14):
 
 
 def start_scheduler():
+    try:
+        from apps.accounts.schema_guard import ensure_runtime_schema_integrity
+        ensure_runtime_schema_integrity(force=True)
+    except Exception as sg_err:
+        logger.warning("Runtime schema check error in start_scheduler: %s", sg_err)
+
     scheduler = BackgroundScheduler()
     
     # Schedule data generation at midnight

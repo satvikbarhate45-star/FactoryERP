@@ -31,6 +31,7 @@ class MachinePrediction(models.Model):
     predicted_temp = models.DecimalField(max_digits=6, decimal_places=2)
     predicted_vibration = models.DecimalField(max_digits=6, decimal_places=2)
     reason = models.TextField(blank=True)
+    is_auto_predicted = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
 class MaintenanceTicket(models.Model):
