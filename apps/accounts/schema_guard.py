@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 _guard_lock = threading.Lock()
 _schema_verified = False
 _last_verified_at = 0.0
+_last_migration_at = 0.0
 
 
 def ensure_runtime_schema_integrity(force=False, max_age_seconds=60):
@@ -18,27 +19,32 @@ def ensure_runtime_schema_integrity(force=False, max_age_seconds=60):
     Dynamically verifies and synchronizes database schema, running migrations
     and ensuring all required columns exist in Supabase PostgreSQL / SQLite
     without requiring manual terminal access on Render.
+    High-performance: batches introspection into a single query to eliminate round-trip latency.
     """
-    global _schema_verified, _last_verified_at
+    global _schema_verified, _last_verified_at, _last_migration_at
     now = time.time()
-    if _schema_verified and not force and (now - _last_verified_at < max_age_seconds):
+
+    # Short debounce: if verified in last 15 seconds, skip even if force=True
+    if _schema_verified and (now - _last_verified_at < (15.0 if force else max_age_seconds)):
         return True
 
     with _guard_lock:
         now = time.time()
-        if _schema_verified and not force and (now - _last_verified_at < max_age_seconds):
+        if _schema_verified and (now - _last_verified_at < (15.0 if force else max_age_seconds)):
             return True
 
-        logger.info("[SCHEMA GUARD] Initializing autonomous runtime schema verification (force=%s)...", force)
+        logger.info("[SCHEMA GUARD] Running autonomous schema verification (force=%s)...", force)
 
-        # 1. Run standard Django unapplied migrations programmatically
-        try:
-            call_command('migrate', interactive=False, verbosity=0)
-            logger.info("[SCHEMA GUARD] Automated Django migrations executed successfully.")
-        except Exception as mig_err:
-            logger.warning("[SCHEMA GUARD] Non-fatal migration call notice: %s", mig_err)
+        # 1. Run standard Django unapplied migrations programmatically (debounced by 30s)
+        if force or (now - _last_migration_at > 30.0):
+            try:
+                call_command('migrate', interactive=False, verbosity=0)
+                _last_migration_at = time.time()
+                logger.info("[SCHEMA GUARD] Automated Django migrations executed successfully.")
+            except Exception as mig_err:
+                logger.warning("[SCHEMA GUARD] Non-fatal migration call notice: %s", mig_err)
 
-        # 2. Verify and self-heal critical table columns dynamically
+        # 2. Verify and self-heal critical table columns dynamically (Single-Query Introspection)
         try:
             vendor = connection.vendor
             with connection.cursor() as cursor:
@@ -84,36 +90,51 @@ def ensure_runtime_schema_integrity(force=False, max_age_seconds=60):
                     ("maintenance_maintenanceticket", "downtime_min", "integer DEFAULT 0", "integer DEFAULT 0"),
                 ]
 
-                # Get existing tables
-                existing_tables = set(connection.introspection.table_names(cursor))
+                # High-speed introspection: batch load all table and column names in ONE query
+                existing_columns = set()
+                try:
+                    if vendor == 'postgresql':
+                        cursor.execute("""
+                            SELECT lower(table_name), lower(column_name) 
+                            FROM information_schema.columns 
+                            WHERE table_schema = current_schema();
+                        """)
+                        existing_columns = {(r[0], r[1]) for r in cursor.fetchall()}
+                    elif vendor == 'sqlite':
+                        existing_tables = set(connection.introspection.table_names(cursor))
+                        for tbl in existing_tables:
+                            cursor.execute(f"PRAGMA table_info({tbl});")
+                            for row in cursor.fetchall():
+                                existing_columns.add((tbl.lower(), row[1].lower()))
+                    else:
+                        existing_tables = set(connection.introspection.table_names(cursor))
+                        for tbl in existing_tables:
+                            for col in connection.introspection.get_table_description(cursor, tbl):
+                                existing_columns.add((tbl.lower(), col.name.lower()))
+                except Exception as intro_err:
+                    logger.warning("[SCHEMA GUARD] Fast introspection notice: %s. Using safe fallback.", intro_err)
 
                 for table_name, col_name, pg_def, sqlite_def in critical_columns:
-                    if table_name not in existing_tables:
+                    col_key = (table_name.lower(), col_name.lower())
+                    if existing_columns and col_key in existing_columns:
                         continue
 
-                    # Introspect columns of this table
+                    # If not found in existing columns, patch dynamically
+                    logger.info(f"[SCHEMA GUARD] Column '{col_name}' missing from '{table_name}'. Applying dynamic DDL patch...")
                     try:
-                        table_desc = connection.introspection.get_table_description(cursor, table_name)
-                        col_names = {col.name.lower() for col in table_desc}
-                    except Exception:
-                        col_names = set()
-
-                    if col_name.lower() not in col_names:
-                        logger.info(f"[SCHEMA GUARD] Column '{col_name}' missing from '{table_name}'. Applying dynamic DDL patch...")
-                        try:
-                            if vendor == 'postgresql':
-                                cursor.execute(f"ALTER TABLE {table_name} ADD COLUMN IF NOT EXISTS {col_name} {pg_def};")
-                            elif vendor == 'sqlite':
-                                cursor.execute(f"ALTER TABLE {table_name} ADD COLUMN {col_name} {sqlite_def};")
-                            else:
-                                cursor.execute(f"ALTER TABLE {table_name} ADD COLUMN {col_name} {pg_def};")
-                            logger.info(f"[SCHEMA GUARD] Successfully patched column '{col_name}' on table '{table_name}'.")
-                        except Exception as ddl_err:
-                            logger.warning(f"[SCHEMA GUARD] Handled non-fatal DDL patch notice for {table_name}.{col_name}: {ddl_err}")
+                        if vendor == 'postgresql':
+                            cursor.execute(f"ALTER TABLE {table_name} ADD COLUMN IF NOT EXISTS {col_name} {pg_def};")
+                        elif vendor == 'sqlite':
+                            cursor.execute(f"ALTER TABLE {table_name} ADD COLUMN {col_name} {sqlite_def};")
+                        else:
+                            cursor.execute(f"ALTER TABLE {table_name} ADD COLUMN {col_name} {pg_def};")
+                        logger.info(f"[SCHEMA GUARD] Successfully patched column '{col_name}' on table '{table_name}'.")
+                    except Exception as ddl_err:
+                        logger.warning(f"[SCHEMA GUARD] Handled non-fatal DDL patch notice for {table_name}.{col_name}: {ddl_err}")
 
             _last_verified_at = time.time()
             _schema_verified = True
-            logger.info("[SCHEMA GUARD] Autonomous runtime schema verification complete. Supabase integrity locked in.")
+            logger.info("[SCHEMA GUARD] Schema verification complete. Supabase integrity locked in.")
             return True
         except Exception as exc:
             logger.warning("[SCHEMA GUARD] Unexpected schema guard check exception: %s", exc)
@@ -142,9 +163,7 @@ class RuntimeSchemaSyncMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        # Programmatically sync on mutation actions or critical paths
         if request.method in ('POST', 'PUT', 'DELETE'):
-            # Force verification on automation/closed-loop or user creation
             is_critical_action = (
                 request.POST.get('action') in ('run_automation', 'create_user', 'edit_user', 'approve_kyc') or
                 'sync-loop' in request.path or
@@ -169,7 +188,6 @@ class RuntimeSchemaSyncMiddleware:
                     ensure_runtime_schema_integrity(force=True)
                     connections.close_all()
                     time.sleep(0.2)
-                    # Retry view execution
                     return self.get_response(request)
                 except Exception as retry_err:
                     logger.error("[SCHEMA GUARD] Runtime healing retry failed: %s", retry_err)
