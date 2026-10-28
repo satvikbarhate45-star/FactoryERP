@@ -351,6 +351,14 @@
 
                 <div class="form-area">
 
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="bg-red-50 text-red-700 p-4 rounded-md mb-6 text-sm font-medium border border-red-200 flex items-start" style="border-radius:10px; margin-bottom:1.5rem; background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; padding:12px 16px;">
+                                <span class="mr-2" style="margin-right:8px;">⚠️</span> {{ message }}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
 
                     <!-- =================================================
                          STEP 1

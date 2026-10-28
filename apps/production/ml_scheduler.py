@@ -356,30 +356,40 @@ def autonomous_gap_detection_and_imputation(days_back=14):
                     emp = employees[idx % len(employees)] if employees else None
                     if emp:
                         # Production Log
-                        ProductionLog.objects.update_or_create(
-                            date=target_date, machine=m, employee=emp,
-                            defaults={
-                                'output_kg': round(per_machine_out, 2),
-                                'material_used': round(per_machine_mat, 2)
-                            }
-                        )
+                        existing_p_log = ProductionLog.objects.filter(date=target_date, machine=m, employee=emp).first()
+                        if existing_p_log:
+                            existing_p_log.output_kg = round(per_machine_out, 2)
+                            existing_p_log.material_used = round(per_machine_mat, 2)
+                            existing_p_log.save()
+                        else:
+                            ProductionLog.objects.create(
+                                date=target_date, machine=m, employee=emp,
+                                output_kg=round(per_machine_out, 2),
+                                material_used=round(per_machine_mat, 2)
+                            )
+
                         # Production Target
-                        ProductionTarget.objects.get_or_create(
-                            date=target_date, employee=emp,
-                            defaults={'target_kg': 165.0, 'is_rollover': False}
-                        )
+                        if not ProductionTarget.objects.filter(date=target_date, employee=emp).exists():
+                            ProductionTarget.objects.create(
+                                date=target_date, employee=emp,
+                                target_kg=165.0, is_rollover=False
+                            )
                     
                     # Machine Telemetrics
                     vib = round(1.8 + float(np.random.uniform(0.1, 0.9)), 2)
                     temp = round(62.0 + float(np.random.uniform(1.0, 5.0)), 2)
-                    MachineHistoricalMetrics.objects.update_or_create(
-                        date=target_date, machine=m,
-                        defaults={
-                            'temperature': temp,
-                            'vibration': vib,
-                            'output': round(per_machine_out, 2)
-                        }
-                    )
+                    existing_metric = MachineHistoricalMetrics.objects.filter(date=target_date, machine=m).first()
+                    if existing_metric:
+                        existing_metric.temperature = temp
+                        existing_metric.vibration = vib
+                        existing_metric.output = round(per_machine_out, 2)
+                        existing_metric.save()
+                    else:
+                        MachineHistoricalMetrics.objects.create(
+                            date=target_date, machine=m,
+                            temperature=temp, vibration=vib,
+                            output=round(per_machine_out, 2)
+                        )
 
                 # Backfill SalaryPayroll for employees on this working date
                 for emp in employees:
@@ -388,18 +398,24 @@ def autonomous_gap_detection_and_imputation(days_back=14):
                     comp_pct = round((actual_out / target_kg) * 100, 1) if target_kg > 0 else 100.0
                     base_pay = 450.0
                     adj_pay = round(base_pay * 1.10, 2) if comp_pct >= 95.0 else base_pay
-                    SalaryPayroll.objects.update_or_create(
-                        employee=emp, payout_date=target_date,
-                        defaults={
-                            'base_salary': base_pay,
-                            'target_assigned': target_kg,
-                            'actual_output': actual_out,
-                            'completion_percentage': comp_pct,
-                            'salary_adjusted': adj_pay,
-                            'is_incremented': (comp_pct >= 95.0),
-                            'is_auto_predicted': True
-                        }
-                    )
+                    existing_pr = SalaryPayroll.objects.filter(employee=emp, payout_date=target_date).first()
+                    if existing_pr:
+                        existing_pr.base_salary = base_pay
+                        existing_pr.target_assigned = target_kg
+                        existing_pr.actual_output = actual_out
+                        existing_pr.completion_percentage = comp_pct
+                        existing_pr.salary_adjusted = adj_pay
+                        existing_pr.is_incremented = (comp_pct >= 95.0)
+                        existing_pr.is_auto_predicted = True
+                        existing_pr.save()
+                    else:
+                        SalaryPayroll.objects.create(
+                            employee=emp, payout_date=target_date,
+                            base_salary=base_pay, target_assigned=target_kg,
+                            actual_output=actual_out, completion_percentage=comp_pct,
+                            salary_adjusted=adj_pay, is_incremented=(comp_pct >= 95.0),
+                            is_auto_predicted=True
+                        )
 
                 logger.info(f"[SUCCESS] Autonomously imputed missing data for {target_date} ({target_date.strftime('%A')}). Output: {imputed_out} kg.")
             else:

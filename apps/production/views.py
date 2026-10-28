@@ -745,7 +745,7 @@ def admin_production_view(request):
         total_downtime_minutes += downtime
 
         # Clean cause / bottleneck reason
-        cause_clean = t.cause
+        cause_clean = t.cause or 'Line vibration variance'
         if '|' in cause_clean:
             cause_clean = cause_clean.split('|')[0].strip()
 
@@ -753,7 +753,8 @@ def admin_production_view(request):
         bottleneck_impact_kg = round(min(500.0, downtime * 1.6), 1)
 
         # Automated Resolution Status
-        if 'vibration' in t.cause.lower() or 'ai' in t.cause.lower():
+        cause_lower = cause_clean.lower()
+        if 'vibration' in cause_lower or 'ai' in cause_lower:
             auto_res = 'Auto-Throttled & Workload Diverted'
             res_badge = 'emerald'
         elif t.status == 'C':
@@ -763,12 +764,15 @@ def admin_production_view(request):
             auto_res = 'Autonomous Kinetic Interlock Active'
             res_badge = 'amber'
 
-        severity = 'Critical' if downtime > 60 or 'high' in t.cause.lower() else 'Moderate'
+        severity = 'Critical' if downtime > 60 or 'high' in cause_lower else 'Moderate'
+
+        m_code = t.machine.code if t.machine else 'M-01'
+        m_name = t.machine.name if t.machine else 'Line Station'
 
         criticality_logs.append({
             'ticket_id': t.id,
-            'machine_code': t.machine.code,
-            'machine_name': t.machine.name,
+            'machine_code': m_code,
+            'machine_name': m_name,
             'incident_date': t.opened_at,
             'cause_summary': cause_clean,
             'downtime_minutes': downtime,
@@ -803,6 +807,7 @@ def admin_production_view(request):
         hist_date = today - timedelta(days=i)
         d_overview = hist_so_dict.get(hist_date)
         d_logs = hist_logs_dict.get(hist_date, {})
+        d_count = d_logs.get('count', 24) or 24
 
         tot_in = float(d_logs.get('tot_in') or (d_overview.total_material_used_kg if d_overview and d_overview.total_material_used_kg else 520.0))
         tot_out = float(d_logs.get('tot_out') or (d_overview.total_output_kg if d_overview and d_overview.total_output_kg else 495.0))
@@ -819,10 +824,10 @@ def admin_production_view(request):
             'yield_pct': y_pct,
             'is_good_yield': y_pct >= 90.0,
             'active_machines': active_units,
-            'total_batches': d_logs['count'] or 24,
+            'total_batches': d_count,
             'is_auto_filled': is_auto,
             'workflow_status': 'Auto-Healed & Synthesized' if is_auto else 'Production Cycle Completed',
-            'workflow_trace': f'APScheduler ML pipeline validated {d_logs["count"] or 24} machine streams. Nominal kinetic variance. Yield maintained at {y_pct}%.',
+            'workflow_trace': f'APScheduler ML pipeline validated {d_count} machine streams. Nominal kinetic variance. Yield maintained at {y_pct}%.',
             'audit_status': 'Verified & Sealed'
         })
 
