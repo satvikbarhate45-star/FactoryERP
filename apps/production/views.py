@@ -2,6 +2,8 @@ from django.shortcuts import render, redirect
 from django.utils import timezone
 from django.contrib.auth.decorators import login_required
 from apps.accounts.decorators import role_required
+from django.contrib import messages
+from django.db import transaction
 from .models import (
     ProductionLog, ProductionTarget, MonthlyTarget, Bonus,
     WarningLetter, MaterialRequest, SystemOverview, SystemAlert,
@@ -493,32 +495,72 @@ def admin_production_view(request):
         action = request.POST.get('action')
 
         if action == 'production':
-            machine_id = request.POST.get('machine_id')
-            raw_material = float(request.POST.get('raw_material', 0))
-            finished_output = float(request.POST.get('finished_output', 0))
-            if machine_id and raw_material and finished_output:
-                ProductionLog.objects.create(
-                    date=today, employee=user, machine_id=machine_id,
-                    material_used=raw_material, output_kg=finished_output
-                )
+            try:
+                machine_id = (request.POST.get('machine_id') or '').strip()
+                raw_mat_str = (request.POST.get('raw_material') or '0').strip()
+                fin_out_str = (request.POST.get('finished_output') or '0').strip()
+                raw_material = float(raw_mat_str or 0)
+                finished_output = float(fin_out_str or 0)
+
+                if not machine_id:
+                    messages.error(request, "Please select an operational line station machine.")
+                elif raw_material <= 0 or finished_output <= 0:
+                    messages.error(request, "Material consumed and finished output must both be greater than zero.")
+                else:
+                    machine = Machine.objects.filter(id=machine_id).first()
+                    if not machine:
+                        messages.error(request, f"Machine ID {machine_id} does not exist in registry.")
+                    else:
+                        with transaction.atomic():
+                            ProductionLog.objects.create(
+                                date=today,
+                                employee=user,
+                                machine=machine,
+                                material_used=raw_material,
+                                output_kg=finished_output
+                            )
+                        logger.info("User %s successfully logged %.1f kg output on %s", user.username, finished_output, machine.code)
+                        messages.success(request, f"Production log of {finished_output} kg on {machine.code} recorded successfully.")
+            except ValueError as ve:
+                logger.warning("Numeric parse error during production logging by %s: %s", user.username, ve)
+                messages.error(request, "Please provide valid numeric values for material and output.")
+            except Exception as e:
+                logger.exception("Failed to create production log for user %s:", user.username)
+                messages.error(request, f"Unable to save production record: {str(e)}")
             return redirect('production_dashboard')
 
         elif action == 'set_target':
-            target_kg = request.POST.get('target_kg')
-            bonus_val = request.POST.get('bonus_amount', 4500.0)
-            if target_kg:
-                mt, _ = MonthlyTarget.objects.get_or_create(month=start_of_month)
-                mt.factory_target_kg = target_kg
-                mt.bonus_amount = bonus_val
-                mt.save()
+            try:
+                target_kg_str = (request.POST.get('target_kg') or '').strip()
+                bonus_val_str = (request.POST.get('bonus_amount') or '4500.0').strip()
+                if not target_kg_str:
+                    messages.error(request, "Monthly target quota is required.")
+                else:
+                    target_kg = float(target_kg_str)
+                    bonus_val = float(bonus_val_str or 4500.0)
+                    with transaction.atomic():
+                        mt, _ = MonthlyTarget.objects.get_or_create(month=start_of_month)
+                        mt.factory_target_kg = target_kg
+                        mt.bonus_amount = bonus_val
+                        mt.save()
+                    logger.info("Admin %s updated monthly factory target to %.1f kg", user.username, target_kg)
+                    messages.success(request, f"Monthly target updated to {target_kg} kg with ₹{bonus_val:,.0f} bonus incentive pool.")
+            except ValueError:
+                messages.error(request, "Target quota and bonus values must be valid numeric amounts.")
+            except Exception as e:
+                logger.exception("Failed to update monthly factory target:")
+                messages.error(request, f"Target update failed: {str(e)}")
             return redirect('production_dashboard')
 
         elif action == 'trigger_imputation':
             try:
                 from .ml_scheduler import autonomous_gap_detection_and_imputation
-                autonomous_gap_detection_and_imputation()
+                autonomous_gap_detection_and_imputation(days_back=14)
+                logger.info("Autonomous gap detection manually triggered by %s", user.username)
+                messages.success(request, "Autonomous gap detection completed: Historical operational gaps scanned and backfilled.")
             except Exception as e:
-                logger.error(f"Error triggering autonomous imputation: {e}")
+                logger.exception("Error triggering autonomous imputation:")
+                messages.error(request, f"Imputation trigger failed: {str(e)}")
             return redirect('production_dashboard')
 
     cache_key = f'admin_production_page_context_{today}'
@@ -866,38 +908,60 @@ def supervisor_dashboard_view(request):
             status = request.POST.get('status')
             if leave_id and status:
                 try:
-                    leave = LeaveRequest.objects.get(id=leave_id)
-                    leave.status = status
-                    leave.reviewed_by = request.user
-                    leave.save()
+                    with transaction.atomic():
+                        leave = LeaveRequest.objects.get(id=int(leave_id))
+                        leave.status = status
+                        leave.reviewed_by = request.user
+                        leave.save()
+                    status_lbl = "Approved" if status == 'A' else "Rejected"
+                    logger.info("Leave request #%s marked as %s by supervisor %s", leave_id, status_lbl, request.user.username)
+                    messages.success(request, f"Leave application for {leave.employee.username} has been {status_lbl}.")
                 except LeaveRequest.DoesNotExist:
-                    pass
+                    messages.error(request, "Leave request not found.")
+                except Exception as e:
+                    logger.exception("Error updating leave request #%s:", leave_id)
+                    messages.error(request, f"Failed to update leave request: {str(e)}")
             return redirect('supervisor_portal')
 
         elif action == 'complaint_action':
             complaint_id = request.POST.get('complaint_id')
             if complaint_id:
                 try:
-                    comp = Complaint.objects.get(id=complaint_id)
-                    comp.status = 'R'
-                    comp.save()
+                    with transaction.atomic():
+                        comp = Complaint.objects.get(id=int(complaint_id))
+                        comp.status = 'R'
+                        comp.save()
+                    logger.info("Equipment ticket #%s marked as resolved by supervisor %s", complaint_id, request.user.username)
+                    messages.success(request, f"Equipment ticket #{complaint_id} marked as Resolved.")
                 except Complaint.DoesNotExist:
-                    pass
+                    messages.error(request, "Equipment ticket not found.")
+                except Exception as e:
+                    logger.exception("Error resolving equipment ticket #%s:", complaint_id)
+                    messages.error(request, f"Failed to resolve ticket: {str(e)}")
             return redirect('supervisor_portal')
 
         elif action == 'auto_approve_eligible':
-            pending = LeaveRequest.objects.filter(status='P')
-            for l in pending:
-                l.status = 'A'
-                l.reviewed_by = request.user
-                l.save()
-                SystemAlert.objects.create(
-                    alert_type='LOW_EFFICIENCY',
-                    message=f"Autonomous leave approval granted for {l.employee.username} ({l.start_date} to {l.end_date}).",
-                    decision_taken="Autonomous Supervisor logic confirmed adequate floor staffing buffer.",
-                    is_autonomous=True,
-                    is_resolved=True
-                )
+            try:
+                with transaction.atomic():
+                    pending = LeaveRequest.objects.filter(status='P')
+                    approved_count = 0
+                    for l in pending:
+                        l.status = 'A'
+                        l.reviewed_by = request.user
+                        l.save()
+                        approved_count += 1
+                        SystemAlert.objects.create(
+                            alert_type='LOW_EFFICIENCY',
+                            message=f"Autonomous leave approval granted for {l.employee.username} ({l.start_date} to {l.end_date}).",
+                            decision_taken="Autonomous Supervisor logic confirmed adequate floor staffing buffer.",
+                            is_autonomous=True,
+                            is_resolved=True
+                        )
+                logger.info("Autonomous batch approved %d leaves by %s", approved_count, request.user.username)
+                messages.success(request, f"Autonomous batch approval granted for {approved_count} leave applications.")
+            except Exception as e:
+                logger.exception("Error during batch leave auto-approval:")
+                messages.error(request, f"Autonomous batch approval failed: {str(e)}")
             return redirect('supervisor_portal')
 
         elif action == 'reassign_employee':
@@ -906,14 +970,26 @@ def supervisor_dashboard_view(request):
             machine_id = request.POST.get('machine_id')
             if emp_id:
                 try:
-                    emp = User.objects.get(id=emp_id)
-                    if shift_id:
-                        emp.shift_id = shift_id
-                    if machine_id:
-                        emp.machine_id = machine_id
-                    emp.save()
+                    with transaction.atomic():
+                        emp = User.objects.get(id=int(emp_id))
+                        if shift_id and shift_id.isdigit():
+                            try:
+                                emp.shift = Shift.objects.get(id=int(shift_id))
+                            except Shift.DoesNotExist:
+                                pass
+                        if machine_id and machine_id.isdigit():
+                            try:
+                                emp.machine = Machine.objects.get(id=int(machine_id))
+                            except Machine.DoesNotExist:
+                                pass
+                        emp.save()
+                    logger.info("Supervisor %s reassigned employee %s", request.user.username, emp.username)
+                    messages.success(request, f"Successfully updated assignments for {emp.username}.")
                 except User.DoesNotExist:
-                    pass
+                    messages.error(request, "Employee not found.")
+                except Exception as e:
+                    logger.exception("Error reassigning employee #%s:", emp_id)
+                    messages.error(request, f"Failed to reassign employee: {str(e)}")
             return redirect('supervisor_portal')
 
     cache_key = f'supervisor_portal_context_{today}'

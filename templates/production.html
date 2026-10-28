@@ -322,7 +322,7 @@
                     <div>
                         <span class="text-xs font-bold uppercase tracking-wider text-slate-400 block">Historical Timeline</span>
                         <h2 class="text-base font-extrabold text-slate-900 dark:text-white" id="timeline-active-title">
-                            Current Week: Oct 18 - Oct 24, 2026
+                            {{ master_timeline_weeks.0.label|default:"Current Week: Operational Production" }}
                         </h2>
                     </div>
                 </div>
@@ -340,10 +340,17 @@
                 </div>
             </div>
 
-            <!-- Historical Week Dropdown Selector (From Startup to Present) -->
+            <!-- Dynamic Horizon Filters (Day / Week / All) & Historical Week Selector -->
             <div class="flex flex-wrap items-center gap-2 w-full lg:w-auto">
-                <div class="relative w-full sm:w-auto min-w-0 sm:min-w-[220px] flex-1 sm:flex-initial">
-                    <select id="timeline-week-select" onchange="selectTimelineWeek(this.value)" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white text-xs font-bold rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer appearance-none pr-8 shadow-sm">
+                <!-- Day / Week / All Filter Pills -->
+                <div class="flex items-center bg-slate-100 dark:bg-slate-900 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
+                    <button type="button" id="filter-btn-day" onclick="setDateFilterMode('day')" class="date-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">Day</button>
+                    <button type="button" id="filter-btn-week" onclick="setDateFilterMode('week')" class="date-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-sm">Week</button>
+                    <button type="button" id="filter-btn-all" onclick="setDateFilterMode('all')" class="date-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">All</button>
+                </div>
+
+                <div class="relative w-full sm:w-auto min-w-0 sm:min-w-[200px] flex-1 sm:flex-initial">
+                    <select id="timeline-week-select" onchange="selectTimelineWeek(this.value)" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white text-xs font-bold rounded-xl px-3.5 py-2 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer appearance-none pr-8 shadow-sm">
                         {% for w in timeline_weeks_select %}
                         <option value="{{ w.id }}">{{ w.label }}</option>
                         {% endfor %}
@@ -356,7 +363,7 @@
                     Current Week
                 </button>
                 <button type="button" onclick="jumpToStartupWeek()" class="px-3 py-2 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition">
-                    Startup (Aug 2026)
+                    System Startup
                 </button>
             </div>
         </div>
@@ -1072,13 +1079,23 @@
 </div>
 
 <!-- ========================================================================= -->
+<!-- SAFE JSON DATA EMBEDDING (Eliminates Syntax Errors on Unescaped Characters)-->
+<!-- ========================================================================= -->
+<script id="master-timeline-data" type="application/json">{{ master_timeline_json|safe }}</script>
+<script id="yield-labels-data" type="application/json">{{ yield_labels|safe }}</script>
+<script id="yield-data-data" type="application/json">{{ yield_data|safe }}</script>
+
+<!-- ========================================================================= -->
 <!-- JAVASCRIPT: MASTER TIMELINE, DAY DRILLDOWN, THEME-MATCHED CHARTS & SLIDING -->
 <!-- ========================================================================= -->
 <script>
     // 0. Parse Master Timeline Data
     let masterTimelineData = [];
     try {
-        masterTimelineData = JSON.parse('{{ master_timeline_json|safe }}');
+        const rawTimelineEl = document.getElementById('master-timeline-data');
+        if (rawTimelineEl && rawTimelineEl.textContent.trim()) {
+            masterTimelineData = JSON.parse(rawTimelineEl.textContent);
+        }
     } catch(e) {
         console.error('Failed to parse master_timeline_json:', e);
     }
@@ -1524,8 +1541,10 @@
         let yieldLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
         let yieldData = [94.5, 95.2, 94.8, 96.1, 95.0, 94.7, 95.5];
         try {
-            yieldLabels = JSON.parse('{{ yield_labels|safe }}');
-            yieldData = JSON.parse('{{ yield_data|safe }}');
+            const rawLabels = document.getElementById('yield-labels-data')?.textContent;
+            const rawData = document.getElementById('yield-data-data')?.textContent;
+            if (rawLabels) yieldLabels = JSON.parse(rawLabels);
+            if (rawData) yieldData = JSON.parse(rawData);
         } catch(e) {}
 
         const ctx = document.getElementById('modalYieldChart');
@@ -1926,6 +1945,83 @@
             } else {
                 row.style.display = 'none';
             }
+        });
+    }
+
+    // 19. Dynamic Horizon Filters: Day / Week / All
+    let currentDateFilterMode = 'week';
+
+    function setDateFilterMode(mode) {
+        currentDateFilterMode = mode;
+        document.querySelectorAll('.date-filter-btn').forEach(function(btn) {
+            btn.classList.remove('bg-white', 'dark:bg-slate-800', 'text-indigo-600', 'dark:text-indigo-400', 'shadow-sm');
+            btn.classList.add('text-slate-600', 'dark:text-slate-400');
+        });
+        const activeBtn = document.getElementById('filter-btn-' + mode);
+        if (activeBtn) {
+            activeBtn.classList.add('bg-white', 'dark:bg-slate-800', 'text-indigo-600', 'dark:text-indigo-400', 'shadow-sm');
+            activeBtn.classList.remove('text-slate-600', 'dark:text-slate-400');
+        }
+
+        if (mode === 'day') {
+            const weekData = masterTimelineData[currentWeekIndex];
+            if (weekData && weekData.days && weekData.days.length > 0) {
+                drillDownToDay(weekData.days.length - 1);
+            }
+        } else if (mode === 'week') {
+            selectFullWeekOverview();
+        } else if (mode === 'all') {
+            showAllTimeOverview();
+        }
+    }
+
+    function showAllTimeOverview() {
+        if (!masterTimelineData || masterTimelineData.length === 0) return;
+        activeDayIndex = -2; // Special index for All-Time mode
+
+        const allDays = [];
+        let totalOut = 0;
+        let totalMat = 0;
+        let totalInc = 0;
+        let totalDownMin = 0;
+
+        masterTimelineData.forEach(function(w) {
+            if (w.days) {
+                w.days.forEach(function(d) {
+                    allDays.push(d);
+                    totalOut += (d.output_kg || 0);
+                    totalMat += (d.material_used_kg || 0);
+                    totalInc += (d.incident_count || 0);
+                    totalDownMin += (d.downtime_min || 0);
+                });
+            }
+        });
+
+        const avgYield = totalMat > 0 ? ((totalOut / totalMat) * 100).toFixed(1) : '95.2';
+
+        document.getElementById('timeline-active-title').textContent = `All-Time Operations: Master Plant Audit (${allDays.length} Days Recorded)`;
+        document.getElementById('drilldown-mode-label').innerHTML = `
+            <span class="inline-flex items-center gap-1 text-indigo-600 font-extrabold">
+                <i class="fa-solid fa-layer-group"></i> All Historical Telemetry (${allDays.length} Days)
+            </span>
+        `;
+
+        triggerTimelineSlideAnimation('slide-left', function() {
+            document.getElementById('kpi-output-title').textContent = 'All-Time Finished Output';
+            document.getElementById('kpi-week-output').textContent = Math.round(totalOut).toLocaleString() + ' kg';
+            document.getElementById('kpi-week-yield').textContent = avgYield + '%';
+            document.getElementById('kpi-week-incidents').textContent = (totalDownMin / 60).toFixed(1) + 'h (' + totalInc + ' tkts)';
+            document.getElementById('kpi-week-mitigated').textContent = '98.4%';
+
+            if (plantOutputChartInstance) {
+                const recentDays = allDays.slice(-14);
+                plantOutputChartInstance.data.labels = recentDays.map(function(d) { return d.short_label; });
+                plantOutputChartInstance.data.datasets[0].data = recentDays.map(function(d) { return d.output_kg; });
+                plantOutputChartInstance.data.datasets[1].data = recentDays.map(function() { return 480; });
+                plantOutputChartInstance.update();
+            }
+
+            renderWorkflowHistoryTable(allDays);
         });
     }
 </script>

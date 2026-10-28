@@ -44,6 +44,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'pharma_erp.middleware.NetworkResilienceMiddleware',
+    'apps.production.middleware.DailyImputationMiddleware',
 ]
 
 
@@ -91,28 +92,83 @@ def _sanitize_database_url(url):
 # Database Configuration: Supabase PostgreSQL (via DATABASE_URL) with SQLite Fallback
 DATABASE_URL = _sanitize_database_url(os.environ.get('DATABASE_URL'))
 
+# Supabase PgBouncer pooler recommendation: set conn_max_age to 0 (or short duration)
+# to avoid using stale, closed server connections.
+db_conn_max_age = int(os.environ.get('DB_CONN_MAX_AGE', 0))
+
 if DATABASE_URL:
     DATABASES = {
         'default': dj_database_url.config(
             default=DATABASE_URL,
-            conn_max_age=600,
+            conn_max_age=db_conn_max_age,
             ssl_require=True
         )
     }
-    # Ensure persistent connection and SSL options for PostgreSQL on Render / Supabase
+    # Ensure health checks, persistent options and SSL for PostgreSQL on Render / Supabase
+    DATABASES['default']['CONN_HEALTH_CHECKS'] = True
     if 'OPTIONS' not in DATABASES['default']:
         DATABASES['default']['OPTIONS'] = {}
     DATABASES['default']['OPTIONS']['sslmode'] = 'require'
     DATABASES['default']['OPTIONS'].setdefault('connect_timeout', 10)
+    DATABASES['default']['OPTIONS'].setdefault('keepalives', 1)
+    DATABASES['default']['OPTIONS'].setdefault('keepalives_idle', 30)
+    DATABASES['default']['OPTIONS'].setdefault('keepalives_interval', 10)
+    DATABASES['default']['OPTIONS'].setdefault('keepalives_count', 5)
 else:
     # Development fallback to local SQLite when DATABASE_URL is not set
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': BASE_DIR / 'db.sqlite3',
-            'CONN_MAX_AGE': 600,
+            'CONN_MAX_AGE': 60,
         }
     }
+
+# Robust Python Logging for Production Debugging
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '[{asctime}] {levelname} [{name}:{lineno}] {message}',
+            'style': '{',
+            'datefmt': '%Y-%m-%d %H:%M:%S',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': os.environ.get('LOG_LEVEL', 'INFO'),
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+        'apps': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'pharma_erp': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+    },
+}
+
 
 CACHES = {
     'default': {

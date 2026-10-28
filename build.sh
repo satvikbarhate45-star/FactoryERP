@@ -10,3 +10,6 @@ python manage.py collectstatic --noinput
 
 # Apply database schema migrations
 python manage.py migrate
+
+# Execute autonomous ML gap detection and backfill missing operational days (Monday, Tuesday, etc.)
+python manage.py daily_imputation --days 14

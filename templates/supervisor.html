@@ -1328,13 +1328,32 @@
 <!-- =========================================================================
      7. JAVASCRIPT LOGIC: TIMELINE ENGINE, SLIDING TABS & THEME-MATCHED CHARTS
      ========================================================================= -->
+<script id="master-supervisor-timeline-data" type="application/json">{{ master_supervisor_timeline_json|safe }}</script>
+<script id="payroll-trend-data" type="application/json">{{ payroll_trend_chart_json|safe }}</script>
+<script id="performance-tiers-data" type="application/json">{{ performance_tiers_chart_json|safe }}</script>
+
 <script>
     // -------------------------------------------------------------------------
     // A. MASTER DATA INGESTION FROM BACKEND
     // -------------------------------------------------------------------------
-    const MASTER_SUPERVISOR_TIMELINE = {{ master_supervisor_timeline_json|safe }};
-    const PAYROLL_TREND_DATA = {{ payroll_trend_chart_json|safe }};
-    const PERFORMANCE_TIERS_DATA = {{ performance_tiers_chart_json|safe }};
+    let MASTER_SUPERVISOR_TIMELINE = [];
+    let PAYROLL_TREND_DATA = { labels: [], disbursed: [], base: [], auto_counts: [] };
+    let PERFORMANCE_TIERS_DATA = { labels: ['Top Performers', 'On Track', 'Needs Attention'], counts: [0, 0, 0] };
+
+    try {
+        const rawTimeline = document.getElementById('master-supervisor-timeline-data')?.textContent;
+        if (rawTimeline && rawTimeline.trim()) MASTER_SUPERVISOR_TIMELINE = JSON.parse(rawTimeline);
+    } catch(e) { console.error('Failed to parse master_supervisor_timeline_json:', e); }
+
+    try {
+        const rawPayroll = document.getElementById('payroll-trend-data')?.textContent;
+        if (rawPayroll && rawPayroll.trim()) PAYROLL_TREND_DATA = JSON.parse(rawPayroll);
+    } catch(e) { console.error('Failed to parse payroll_trend_chart_json:', e); }
+
+    try {
+        const rawTiers = document.getElementById('performance-tiers-data')?.textContent;
+        if (rawTiers && rawTiers.trim()) PERFORMANCE_TIERS_DATA = JSON.parse(rawTiers);
+    } catch(e) { console.error('Failed to parse performance_tiers_chart_json:', e); }
 
     let currentSelectedWeekIndex = 0;
     let currentSelectedDate = null;

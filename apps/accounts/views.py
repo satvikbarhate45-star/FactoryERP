@@ -3,6 +3,7 @@ from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.contrib.auth.decorators import login_required
 from .decorators import role_required
 from django.contrib import messages
+from django.db import transaction
 from django.db.models import Sum, Avg, Count, Q
 from django.utils import timezone
 from datetime import timedelta, datetime
@@ -10,13 +11,15 @@ from apps.maintenance.models import Machine, MachineHistoricalMetrics, Maintenan
 from apps.production.models import ProductionLog
 from django.core.cache import cache
 import json
+import logging
 
+logger = logging.getLogger(__name__)
 User = get_user_model()
 
 def login_view(request):
     if request.method == 'POST':
-        u = request.POST.get('username')
-        p = request.POST.get('password')
+        u = (request.POST.get('username') or '').strip()
+        p = request.POST.get('password') or ''
         
         # FR-1.1: Support both username and email for login
         if '@' in u:
@@ -28,11 +31,18 @@ def login_view(request):
                 
         user = authenticate(request, username=u, password=p)
         if user is not None:
-            if not user.is_active:
+            # Check KYC Status and Active state
+            kyc_stat = getattr(user, 'kyc_status', None)
+            if kyc_stat == User.KYCStatus.REJECTED:
+                reason = user.rejection_reason or "Verification criteria not met."
+                messages.error(request, f"Your KYC registration was rejected by Admin. Reason: {reason}")
+                return redirect('login')
+            elif kyc_stat == User.KYCStatus.PENDING or not user.is_active:
                 messages.error(request, "Your account is pending Admin KYC approval. You cannot access the portal yet.")
                 return redirect('login')
                 
             login(request, user)
+            logger.info("User %s successfully logged in with role %s", user.username, user.role)
             # FR-1.1: Redirect to the role's dashboard
             if user.role == 'AD':
                 return redirect('dashboard')
@@ -56,16 +66,31 @@ def logout_view(request):
 
 def signup_view(request):
     if request.method == 'POST':
-        work_email = request.POST.get('work_email')
-        full_name = request.POST.get('full_name')
-        selected_role = request.POST.get('role')
-        username = request.POST.get('username')
-        password = request.POST.get('password')
-        
+        work_email = (request.POST.get('work_email') or '').strip()
+        full_name = (request.POST.get('full_name') or '').strip()
+        selected_role = (request.POST.get('role') or '').strip()
+        username = (request.POST.get('username') or '').strip()
+        password = request.POST.get('password') or ''
+        phone = (request.POST.get('phone') or '').strip()
+        whatsapp = (request.POST.get('whatsapp') or '').strip()
+        pan = (request.POST.get('pan') or '').strip()
+        government_id = (request.POST.get('government_id') or '').strip()
+        account_number = (request.POST.get('account_number') or '').strip()
+        ifsc = (request.POST.get('ifsc') or '').strip()
+        photo = request.FILES.get('photo')
+
+        if not username or not password:
+            messages.error(request, "Username and password are required.")
+            return redirect('signup')
+
         if User.objects.filter(username=username).exists():
             messages.error(request, "Username already exists. Please choose another one.")
             return redirect('signup')
-            
+
+        if work_email and User.objects.filter(email=work_email).exists():
+            messages.error(request, "An account with this work email already exists.")
+            return redirect('signup')
+
         role_map = {
             "Maintenance Tech": "MA",
             "Equipments Manager": "MA",
@@ -74,62 +99,214 @@ def signup_view(request):
             "Local Operator": "EM",
             "Logistics": "LO"
         }
-        
         user_role = role_map.get(selected_role, "EM")
-        
-        new_user = User.objects.create_user(username=username, password=password, email=work_email, role=user_role)
-        new_user.first_name = full_name
-        new_user.is_active = False # Requires Admin KYC approval
-        new_user.save()
-        
-        messages.success(request, "KYC Submitted! Your account is pending Admin verification. Once approved, you can log in with your chosen password.")
-        return redirect('login')
-        
+
+        try:
+            with transaction.atomic():
+                new_user = User.objects.create_user(
+                    username=username,
+                    password=password,
+                    email=work_email,
+                    role=user_role
+                )
+                new_user.first_name = full_name
+                new_user.phone = phone
+                new_user.whatsapp = whatsapp
+                new_user.pan = pan
+                new_user.government_id = government_id
+                new_user.account_number = account_number
+                new_user.ifsc = ifsc
+                new_user.kyc_status = User.KYCStatus.PENDING
+                new_user.is_active = False # Default: Requires Admin KYC approval
+                if photo:
+                    new_user.photo = photo
+                new_user.save()
+
+                logger.info("New employee KYC registration created: username=%s, role=%s, kyc=PENDING", username, user_role)
+                messages.success(request, "KYC Submitted! Your account status is 'Pending' Admin verification. Once approved, you can log in with your credentials.")
+                return redirect('login')
+        except Exception as exc:
+            logger.exception("Error creating user during signup: %s", exc)
+            messages.error(request, f"Registration failed due to server error: {exc}")
+            return redirect('signup')
+
     return render(request, 'signup.html')
 
 @login_required(login_url='/login/')
 @role_required('AD')
 def user_management_view(request):
     from apps.accounts.models import Shift
-    
+
+    redirect_url = request.path or 'user_management'
+
     if request.method == 'POST':
         action = request.POST.get('action')
-        
+
         if action == 'approve_kyc':
             user_id = request.POST.get('user_id')
             if user_id:
-                u = User.objects.get(id=user_id)
-                u.is_active = True
-                u.save()
-                messages.success(request, f"KYC Approved for {u.username}!")
-            return redirect('user_management')
-            
+                try:
+                    with transaction.atomic():
+                        u = User.objects.get(id=int(user_id))
+                        u.kyc_status = User.KYCStatus.APPROVED
+                        u.is_active = True
+                        u.rejection_reason = None
+                        u.kyc_reviewed_by = request.user
+                        u.kyc_reviewed_at = timezone.now()
+                        u.save()
+                        logger.info("KYC Approved by Admin %s for employee %s", request.user.username, u.username)
+                        messages.success(request, f"KYC Approved! Employee {u.username} has been verified and granted active access.")
+                except User.DoesNotExist:
+                    messages.error(request, "Employee not found.")
+                except Exception as exc:
+                    logger.exception("Error approving KYC for user_id %s: %s", user_id, exc)
+                    messages.error(request, f"Error saving KYC approval: {exc}")
+            return redirect(redirect_url)
+
+        elif action == 'reject_kyc':
+            user_id = request.POST.get('user_id')
+            rejection_reason = (request.POST.get('rejection_reason') or '').strip()
+
+            # MANDATORY REJECTION REASON CHECK
+            if not rejection_reason:
+                messages.error(request, "Rejection reason is mandatory when rejecting employee KYC verification.")
+                return redirect(redirect_url)
+
+            if user_id:
+                try:
+                    with transaction.atomic():
+                        u = User.objects.get(id=int(user_id))
+                        u.kyc_status = User.KYCStatus.REJECTED
+                        u.is_active = False
+                        u.rejection_reason = rejection_reason
+                        u.kyc_reviewed_by = request.user
+                        u.kyc_reviewed_at = timezone.now()
+                        u.save()
+                        logger.warning("KYC Rejected by Admin %s for employee %s. Reason: %s", request.user.username, u.username, rejection_reason)
+                        messages.success(request, f"KYC Rejected for {u.username}. Rejection reason securely stored.")
+                except User.DoesNotExist:
+                    messages.error(request, "Employee not found.")
+                except Exception as exc:
+                    logger.exception("Error rejecting KYC for user_id %s: %s", user_id, exc)
+                    messages.error(request, f"Error saving KYC rejection: {exc}")
+            return redirect(redirect_url)
+
         elif action == 'create_user':
-            username = request.POST.get('username')
-            password = request.POST.get('password')
-            role = request.POST.get('role')
-            shift_id = request.POST.get('shift_id')
-            machine_id = request.POST.get('machine_id')
-            
-            if not User.objects.filter(username=username).exists():
-                new_user = User.objects.create_user(username=username, password=password, role=role)
-                if shift_id:
-                    new_user.shift = Shift.objects.get(id=shift_id)
-                if machine_id:
-                    new_user.machine = Machine.objects.get(id=machine_id)
-                new_user.save()
-                messages.success(request, f"User {username} successfully registered!")
-            else:
-                messages.error(request, f"User {username} already exists.")
-            return redirect('user_management')
-            
+            username = (request.POST.get('username') or '').strip()
+            password = request.POST.get('password') or ''
+            role = (request.POST.get('role') or 'EM').strip()
+            email = (request.POST.get('email') or '').strip()
+            full_name = (request.POST.get('full_name') or '').strip()
+            phone = (request.POST.get('phone') or '').strip()
+            shift_id = (request.POST.get('shift_id') or '').strip()
+            machine_id = (request.POST.get('machine_id') or '').strip()
+            initial_status = (request.POST.get('kyc_status') or 'PENDING').strip().upper()
+
+            if not username or not password:
+                messages.error(request, "Username and temporary password are required.")
+                return redirect(redirect_url)
+
+            if User.objects.filter(username=username).exists():
+                messages.error(request, f"User '{username}' already exists.")
+                return redirect(redirect_url)
+
+            try:
+                with transaction.atomic():
+                    new_user = User.objects.create_user(
+                        username=username,
+                        password=password,
+                        email=email,
+                        role=role
+                    )
+                    if full_name:
+                        new_user.first_name = full_name
+                    if phone:
+                        new_user.phone = phone
+                    if shift_id and shift_id.isdigit():
+                        try:
+                            new_user.shift = Shift.objects.get(id=int(shift_id))
+                        except Shift.DoesNotExist:
+                            pass
+                    if machine_id and machine_id.isdigit():
+                        try:
+                            new_user.machine = Machine.objects.get(id=int(machine_id))
+                        except Machine.DoesNotExist:
+                            pass
+
+                    if initial_status == 'APPROVED':
+                        new_user.kyc_status = User.KYCStatus.APPROVED
+                        new_user.is_active = True
+                        new_user.kyc_reviewed_by = request.user
+                        new_user.kyc_reviewed_at = timezone.now()
+                    else:
+                        new_user.kyc_status = User.KYCStatus.PENDING
+                        new_user.is_active = False
+
+                    new_user.save()
+                    logger.info("Admin %s created user %s with KYC status %s", request.user.username, username, new_user.kyc_status)
+                    messages.success(request, f"User {username} successfully registered with KYC status '{new_user.get_kyc_status_display()}'!")
+            except Exception as exc:
+                logger.exception("Failed to create user in user_management_view: %s", exc)
+                messages.error(request, f"Database error creating user: {exc}")
+            return redirect(redirect_url)
+
+        elif action == 'edit_user':
+            user_id = request.POST.get('user_id')
+            role = (request.POST.get('role') or '').strip()
+            shift_id = (request.POST.get('shift_id') or '').strip()
+            machine_id = (request.POST.get('machine_id') or '').strip()
+            phone = (request.POST.get('phone') or '').strip()
+
+            if user_id:
+                try:
+                    with transaction.atomic():
+                        u = User.objects.get(id=int(user_id))
+                        if role:
+                            u.role = role
+                        if shift_id and shift_id.isdigit():
+                            try:
+                                u.shift = Shift.objects.get(id=int(shift_id))
+                            except Shift.DoesNotExist:
+                                u.shift = None
+                        elif not shift_id:
+                            u.shift = None
+
+                        if machine_id and machine_id.isdigit():
+                            try:
+                                u.machine = Machine.objects.get(id=int(machine_id))
+                            except Machine.DoesNotExist:
+                                u.machine = None
+                        elif not machine_id:
+                            u.machine = None
+
+                        if phone:
+                            u.phone = phone
+                        u.save()
+                        logger.info("Admin %s updated user %s", request.user.username, u.username)
+                        messages.success(request, f"Updated profile & assignments for {u.username}!")
+                except Exception as exc:
+                    logger.exception("Failed to edit user %s: %s", user_id, exc)
+                    messages.error(request, f"Failed to update user: {exc}")
+            return redirect(redirect_url)
+
+    all_users = list(User.objects.select_related('shift', 'machine', 'kyc_reviewed_by').order_by('-date_joined'))
+    total_count = len(all_users)
+    pending_count = sum(1 for u in all_users if u.kyc_status == User.KYCStatus.PENDING)
+    approved_count = sum(1 for u in all_users if u.kyc_status == User.KYCStatus.APPROVED)
+    rejected_count = sum(1 for u in all_users if u.kyc_status == User.KYCStatus.REJECTED)
+
     context = {
-        'all_users': list(User.objects.select_related('shift', 'machine').order_by('-date_joined')),
+        'all_users': all_users,
+        'total_count': total_count,
+        'pending_count': pending_count,
+        'approved_count': approved_count,
+        'rejected_count': rejected_count,
         'roles': User.Role.choices,
         'shifts': list(Shift.objects.all()),
-        'machines': list(Machine.objects.all())
+        'machines': list(Machine.objects.all()),
     }
-    return render(request, 'user_management.html', context)
+    return render(request, 'workmanagement.html', context)
+
 
 @login_required(login_url='/login/')
 def dashboard_view(request):

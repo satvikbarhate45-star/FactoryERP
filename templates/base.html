@@ -566,11 +566,11 @@
             </a>
             {% endif %}
             
-            <!-- Users & Reports -->
+            <!-- Users, KYC & Work Management -->
             {% if user.role == 'AD' %}
-            <a href="/users/" class="sidebar-link {% if '/users/' in request.path %}active{% endif %}" title="Manage Users" data-title="Manage Users">
+            <a href="/workmanagement/" class="sidebar-link {% if '/users/' in request.path or '/workmanagement/' in request.path %}active{% endif %}" title="Personnel & KYC Management" data-title="Work Management">
                 <i class="fa-solid fa-users-gear sidebar-icon"></i>
-                <span class="sidebar-text font-medium text-sm">Manage Users</span>
+                <span class="sidebar-text font-medium text-sm">Work Management</span>
             </a>
             <a href="/reports/" class="sidebar-link {% if '/reports/' in request.path %}active{% endif %}" title="ML Reports" data-title="ML Reports">
                 <i class="fa-solid fa-file-waveform sidebar-icon"></i>

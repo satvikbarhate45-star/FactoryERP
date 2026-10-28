@@ -23,20 +23,32 @@ from django.shortcuts import render
 logger = logging.getLogger(__name__)
 
 # Primary Supabase host and fallback DNS probe
-SUPABASE_HOST = 'db.mnlzpgdeaqmzitcgvzqh.supabase.co'
-SUPABASE_PORT = 5432
+def get_db_host_port():
+    try:
+        from django.conf import settings
+        db_config = settings.DATABASES.get('default', {})
+        host = db_config.get('HOST') or 'db.mnlzpgdeaqmzitcgvzqh.supabase.co'
+        port = int(db_config.get('PORT') or 5432)
+        return host, port
+    except Exception:
+        return 'db.mnlzpgdeaqmzitcgvzqh.supabase.co', 5432
 
 
-def is_internet_reachable(timeout=2.0):
+def is_internet_reachable(timeout=1.5):
     """
     Fast, non-blocking network probe.
-    Checks reachability to Supabase or DNS root within 2 seconds.
+    Checks reachability to configured Supabase host or public DNS root.
     """
-    for host, port in [(SUPABASE_HOST, SUPABASE_PORT), ('8.8.8.8', 53), ('1.1.1.1', 53)]:
+    host, port = get_db_host_port()
+    if not host or 'sqlite' in str(host).lower():
+        return True
+
+    targets = [(host, port), ('1.1.1.1', 53), ('8.8.8.8', 53)]
+    for h, p in targets:
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.settimeout(timeout)
-            s.connect((host, port))
+            s.connect((h, p))
             s.close()
             return True
         except (socket.timeout, OSError):
@@ -75,15 +87,18 @@ class NetworkResilienceMiddleware:
         logger.warning(f"[NETWORK RESILIENCE] Database query interrupted: {exc}")
 
         # Check if internet/Supabase is reachable (avoid false positive)
-        if is_internet_reachable(timeout=2.0):
-            logger.info("[NETWORK RESILIENCE] Network is active. Transient query lag or connection reset detected. Gracefully retrying...")
+        if is_internet_reachable(timeout=1.5):
+            logger.info("[NETWORK RESILIENCE] Network is active. Stale connection or pooler drop detected. Resetting connection...")
             try:
-                # Reset stale connections
+                # Reset stale connections cleanly
                 connections.close_all()
-                time.sleep(0.3)
-                return self.get_response(request)
+                time.sleep(0.2)
+                # Only re-execute GET requests safely (idempotent); for POST requests let caller see clean error
+                if request.method == 'GET':
+                    return self.get_response(request)
             except Exception as retry_exc:
-                logger.error(f"[NETWORK RESILIENCE] Retry after reconnection failed: {retry_exc}")
+                logger.error(f"[NETWORK RESILIENCE] Reconnection retry failed: {retry_exc}")
+
 
         # Genuine disconnect or hard timeout reached
         logger.error("[NETWORK RESILIENCE] Internet connection lost or server unreachable. Rendering clean offline interface.")
