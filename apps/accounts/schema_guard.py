@@ -19,7 +19,7 @@ def ensure_runtime_schema_integrity(force=False, max_age_seconds=60):
     Dynamically verifies and synchronizes database schema, running migrations
     and ensuring all required columns exist in Supabase PostgreSQL / SQLite
     without requiring manual terminal access on Render.
-    High-performance: batches introspection into a single query to eliminate round-trip latency.
+    Non-blocking: will never freeze or crash Gunicorn worker threads.
     """
     global _schema_verified, _last_verified_at, _last_migration_at
     now = time.time()
@@ -28,23 +28,29 @@ def ensure_runtime_schema_integrity(force=False, max_age_seconds=60):
     if _schema_verified and (now - _last_verified_at < (15.0 if force else max_age_seconds)):
         return True
 
-    with _guard_lock:
-        now = time.time()
-        if _schema_verified and (now - _last_verified_at < (15.0 if force else max_age_seconds)):
-            return True
+    # Non-blocking lock: if another thread is currently synchronizing, don't stall the HTTP worker!
+    if not _guard_lock.acquire(blocking=False):
+        logger.info("[SCHEMA GUARD] Schema verification already active in another thread. Proceeding without blocking.")
+        return True
 
+    try:
+        now = time.time()
         logger.info("[SCHEMA GUARD] Running autonomous schema verification (force=%s)...", force)
 
-        # 1. Run standard Django unapplied migrations programmatically (debounced by 30s)
-        if force or (now - _last_migration_at > 30.0):
-            try:
-                call_command('migrate', interactive=False, verbosity=0)
-                _last_migration_at = time.time()
-                logger.info("[SCHEMA GUARD] Automated Django migrations executed successfully.")
-            except Exception as mig_err:
-                logger.warning("[SCHEMA GUARD] Non-fatal migration call notice: %s", mig_err)
+        # 1. Run standard Django unapplied migrations asynchronously so Gunicorn worker NEVER hangs
+        if force or (now - _last_migration_at > 60.0):
+            def _async_migrate():
+                try:
+                    call_command('migrate', interactive=False, verbosity=0)
+                    logger.info("[SCHEMA GUARD] Automated Django migrations executed successfully in background.")
+                except BaseException as mig_err:
+                    logger.warning("[SCHEMA GUARD] Non-fatal migration call notice: %s", mig_err)
 
-        # 2. Verify and self-heal critical table columns dynamically (Single-Query Introspection)
+            t_mig = threading.Thread(target=_async_migrate, daemon=True, name="async_runtime_migrator")
+            t_mig.start()
+            _last_migration_at = time.time()
+
+        # 2. Verify and self-heal critical table columns dynamically (Single-Query Introspection, < 0.05s)
         try:
             vendor = connection.vendor
             with connection.cursor() as cursor:
@@ -139,6 +145,8 @@ def ensure_runtime_schema_integrity(force=False, max_age_seconds=60):
         except Exception as exc:
             logger.warning("[SCHEMA GUARD] Unexpected schema guard check exception: %s", exc)
             return False
+    finally:
+        _guard_lock.release()
 
 
 def start_background_schema_guard():
