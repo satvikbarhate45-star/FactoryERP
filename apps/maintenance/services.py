@@ -31,17 +31,17 @@ def normalize_machine_telemetry(machine, target_date=None):
                 output=240.0
             )
             
-        # Also heal recent anomaly metrics if any exist in the last 2 days
-        recent_anomalies = MachineHistoricalMetrics.objects.filter(
+        # Also heal recent anomaly metrics if any exist in the last 2 days via fast bulk updates
+        MachineHistoricalMetrics.objects.filter(
             machine=machine,
-            date__gte=today - timedelta(days=2)
-        )
-        for m in recent_anomalies:
-            if float(m.vibration or 0) > 3.0:
-                m.vibration = 1.90
-            if float(m.temperature or 0) > 72.0:
-                m.temperature = 65.0
-            m.save()
+            date__gte=today - timedelta(days=2),
+            vibration__gt=3.0
+        ).update(vibration=1.90)
+        MachineHistoricalMetrics.objects.filter(
+            machine=machine,
+            date__gte=today - timedelta(days=2),
+            temperature__gt=72.0
+        ).update(temperature=65.0)
 
         # 2. Normalize AI Predictions for today
         pred = MachinePrediction.objects.filter(machine=machine, date=today).first()
@@ -306,9 +306,11 @@ def dispatch_tickets_to_in_progress(ticket_ids=None):
     """
     dispatched = []
     try:
-        queryset = MaintenanceTicket.objects.filter(status=MaintenanceTicket.Status.OPEN)
+        queryset = MaintenanceTicket.objects.filter(status=MaintenanceTicket.Status.OPEN).select_related('machine')
         if ticket_ids:
-            queryset = queryset.filter(id__in=ticket_ids)
+            queryset = list(queryset.filter(id__in=ticket_ids))
+        else:
+            queryset = list(queryset[:20])
 
         for ticket in queryset:
             try:
@@ -341,11 +343,14 @@ def resolve_in_progress_tickets(ticket_ids=None):
     """
     resolved = []
     try:
-        queryset = MaintenanceTicket.objects.filter(status=MaintenanceTicket.Status.IN_PROGRESS)
+        queryset = MaintenanceTicket.objects.filter(status=MaintenanceTicket.Status.IN_PROGRESS).select_related('machine')
         if ticket_ids:
-            queryset = queryset.filter(id__in=ticket_ids)
+            queryset = list(queryset.filter(id__in=ticket_ids))
+        else:
+            queryset = list(queryset[:20])
 
         now = timezone.now()
+        normalized_machine_ids = set()
 
         for ticket in queryset:
             try:
@@ -366,8 +371,11 @@ def resolve_in_progress_tickets(ticket_ids=None):
 
                 ticket.save()
 
-                # Database State Sync: Heal machine telemetry and restore machine to OP
-                normalize_machine_telemetry(ticket.machine)
+                # Database State Sync: Heal machine telemetry only once per machine per cycle
+                if ticket.machine_id not in normalized_machine_ids:
+                    normalize_machine_telemetry(ticket.machine)
+                    normalized_machine_ids.add(ticket.machine_id)
+
                 resolved.append(ticket)
                 logger.info(f"Ticket #{ticket.id} ({ticket.machine.code}) resolved and machine restored to OPERATIONAL.")
             except Exception as t_err:
