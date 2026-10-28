@@ -29,6 +29,11 @@ FALLBACK_LLM_MODEL = "google/flan-t5-large"
 CLASSIFICATION_MODEL = "facebook/bart-large-mnli"
 
 
+import time
+
+_hf_cooldown_until = 0.0
+
+
 def get_hf_api_key():
     """
     Securely fetches the Hugging Face API key from environment variables.
@@ -37,15 +42,19 @@ def get_hf_api_key():
     return os.environ.get("HUGGINGFACE_API_KEY") or os.environ.get("HF_TOKEN")
 
 
-def query_hf_api(payload, model=DEFAULT_LLM_MODEL, timeout=(3.0, 8.0)):
+def query_hf_api(payload, model=DEFAULT_LLM_MODEL, timeout=(1.0, 2.0)):
     """
     Executes a synchronous HTTP POST call to Hugging Face Inference API
-    with strict connect and read timeouts.
+    with strict connect and read timeouts and circuit breaker to prevent worker timeouts.
     Returns parsed JSON response, or None on any failure/timeout.
     """
+    global _hf_cooldown_until
+    now = time.time()
+    if now < _hf_cooldown_until:
+        return None
+
     api_key = get_hf_api_key()
     if not api_key:
-        logger.debug("Hugging Face API key (HUGGINGFACE_API_KEY or HF_TOKEN) is not configured.")
         return None
 
     api_url = f"https://api-inference.huggingface.co/models/{model}"
@@ -59,23 +68,23 @@ def query_hf_api(payload, model=DEFAULT_LLM_MODEL, timeout=(3.0, 8.0)):
         if response.status_code == 200:
             return response.json()
         elif response.status_code == 503:
-            # Hugging Face serverless cold start: model is currently loading
-            logger.info(f"Hugging Face model '{model}' is warming up (503). Using deterministic fallback.")
+            _hf_cooldown_until = time.time() + 60.0
+            logger.info(f"Hugging Face model '{model}' warming up (503). 60s cooldown engaged.")
             return None
         elif response.status_code in (401, 403):
-            logger.error(f"Hugging Face API Authentication failed ({response.status_code}). Check your HUGGINGFACE_API_KEY.")
+            _hf_cooldown_until = time.time() + 300.0
+            logger.error(f"Hugging Face API Authentication failed ({response.status_code}). Cooldown engaged.")
             return None
         else:
-            logger.warning(f"Hugging Face API responded with status {response.status_code}: {response.text[:200]}")
+            _hf_cooldown_until = time.time() + 60.0
             return None
     except requests.exceptions.Timeout:
-        logger.warning(f"Hugging Face API timed out after {timeout} seconds. Non-blocking fallback activated.")
+        _hf_cooldown_until = time.time() + 60.0
+        logger.warning(f"Hugging Face API timed out after {timeout} seconds. 60s cooldown engaged.")
         return None
-    except requests.exceptions.RequestException as exc:
-        logger.warning(f"Hugging Face API request failed: {exc}")
-        return None
-    except Exception as general_err:
-        logger.error(f"Unexpected error during Hugging Face call: {general_err}")
+    except Exception as exc:
+        _hf_cooldown_until = time.time() + 60.0
+        logger.warning(f"Hugging Face API error: {exc}. 60s cooldown engaged.")
         return None
 
 
