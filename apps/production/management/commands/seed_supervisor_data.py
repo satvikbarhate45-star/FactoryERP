@@ -37,7 +37,7 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(f'Allocated {employees.count()} employees to Master Supervisor'))
 
         # 3. Seed historical auto-imputation and payroll
-        today = timezone.now().date()
+        today = timezone.localdate()
         base_salary_per_day = 500.0  # arbitrary daily wage
         bonus_increment = 100.0
 

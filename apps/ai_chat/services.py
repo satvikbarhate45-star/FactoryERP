@@ -18,7 +18,7 @@ def get_factory_context(user_language='en'):
     if cached_ctx:
         return cached_ctx
         
-    today = timezone.now().date()
+    today = timezone.localdate()
     
     # 1. Quick aggregate metrics
     machines_down = Machine.objects.filter(status='UM').count()

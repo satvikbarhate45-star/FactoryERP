@@ -326,7 +326,7 @@ def dashboard_view(request):
     except ValueError:
         week_offset = 0
         
-    today = timezone.now().date()
+    today = timezone.localdate()
     cache_key = f'admin_dashboard_stats_{week_offset}_{today}'
     cached_context = cache.get(cache_key)
     if cached_context is not None:
@@ -433,9 +433,9 @@ def reports_view(request):
         try:
             target_date = datetime.strptime(target_date_str, '%Y-%m-%d').date()
         except ValueError:
-            target_date = timezone.now().date()
+            target_date = timezone.localdate()
     else:
-        target_date = timezone.now().date()
+        target_date = timezone.localdate()
         
     cache_key = f'reports_view_{target_date}'
     cached_context = cache.get(cache_key)

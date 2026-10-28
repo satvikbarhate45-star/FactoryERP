@@ -11,204 +11,233 @@ logger = logging.getLogger(__name__)
 
 def generate_missing_production_data():
     from apps.production.models import ProductionLog
-    from apps.maintenance.models import Machine
+    from apps.maintenance.models import Machine, MaintenanceTicket, MachineHistoricalMetrics
+    from apps.accounts.models import User
     
-    today = timezone.now().date()
-    yesterday = today - timedelta(days=1)
-    
-    machines = Machine.objects.all()
-    for machine in machines:
-        # Check if there is data for yesterday
-        if not ProductionLog.objects.filter(machine=machine, date=yesterday).exists():
-            logger.info(f"Missing ProductionLog for {machine.name} on {yesterday}. Generating via ML...")
-            
-            # Fetch historical data
-            past_logs = ProductionLog.objects.filter(machine=machine, date__lt=yesterday).order_by('date')
-            if past_logs.count() < 3:
-                logger.warning(f"Not enough data for {machine.name} to train ML. Skipping...")
-                continue
-            
-            # Prepare data for ML model
-            # We will use the day number as X, and output_kg/material_used as Y
-            start_date = past_logs.first().date
-            
-            data = []
-            for log in past_logs:
-                day_num = (log.date - start_date).days
-                data.append({
-                    'day_num': day_num,
-                    'output_kg': float(log.output_kg),
-                    'material_used': float(log.material_used),
-                    'employee_id': log.employee_id
-                })
-                
-            df = pd.DataFrame(data)
-            
-            # Features and target
-            X = df[['day_num']]
-            y_output = df['output_kg']
-            y_material = df['material_used']
-            
-            # Train Linear Regression model for output_kg
-            model_output = LinearRegression()
-            model_output.fit(X, y_output)
-            
-            # Train Linear Regression model for material_used
-            model_material = LinearRegression()
-            model_material.fit(X, y_material)
-            
-            # Predict for yesterday
-            target_day_num = (yesterday - start_date).days
-            X_pred = pd.DataFrame({'day_num': [target_day_num]})
-            
-            pred_output = max(0, model_output.predict(X_pred)[0]) # Ensure no negative predictions
-            pred_material = max(0, model_material.predict(X_pred)[0])
-            
-            from apps.maintenance.models import MaintenanceTicket
-            has_open_ticket = MaintenanceTicket.objects.filter(machine=machine, status__in=['O', 'I']).exists()
-            
-            if machine.status == 'UM' and has_open_ticket:
-                pred_output = 0.0
-                pred_material = 0.0
-            elif machine.status == 'PI' and has_open_ticket:
-                pred_output *= 0.8
-                pred_material *= 0.9
-            
-            # Add some slight variation (noise) so it's not perfectly linear
-            pred_output += np.random.normal(0, pred_output * 0.05)
-            pred_material += np.random.normal(0, pred_material * 0.05)
-            
-            # Find the most frequent employee for this machine
-            most_frequent_employee_id = df['employee_id'].mode()[0]
-            
-            ProductionLog.objects.create(
-                date=yesterday,
-                employee_id=most_frequent_employee_id,
-                machine=machine,
-                output_kg=round(pred_output, 2),
-                material_used=round(pred_material, 2)
-            )
-            logger.info(f"Successfully generated ML data for {machine.name} on {yesterday}.")
+    try:
+        today = timezone.localdate()
+        yesterday = today - timedelta(days=1)
+        
+        machines = Machine.objects.all()
+        for machine in machines:
+            try:
+                has_open_ticket = MaintenanceTicket.objects.filter(machine=machine, status__in=['O', 'I']).exists()
 
-        # Check if there is data for yesterday in MachineHistoricalMetrics
-        from apps.maintenance.models import MachineHistoricalMetrics
-        if not MachineHistoricalMetrics.objects.filter(machine=machine, date=yesterday).exists():
-            logger.info(f"Missing MachineHistoricalMetrics for {machine.name} on {yesterday}. Generating via ML...")
-            
-            past_metrics = MachineHistoricalMetrics.objects.filter(machine=machine, date__lt=yesterday).order_by('date')
-            if past_metrics.count() >= 3:
-                start_date_m = past_metrics.first().date
-                m_data = []
-                for m_log in past_metrics:
-                    m_data.append({
-                        'day_num': (m_log.date - start_date_m).days,
-                        'temp': float(m_log.temperature),
-                        'vib': float(m_log.vibration),
-                        'out': float(m_log.output)
-                    })
-                m_df = pd.DataFrame(m_data)
-                
-                X_m = m_df[['day_num']]
-                
-                model_temp = LinearRegression().fit(X_m, m_df['temp'])
-                model_vib = LinearRegression().fit(X_m, m_df['vib'])
-                model_out = LinearRegression().fit(X_m, m_df['out'])
-                
-                target_day_num_m = (yesterday - start_date_m).days
-                X_pred_m = pd.DataFrame({'day_num': [target_day_num_m]})
-                
-                pred_temp = max(0, model_temp.predict(X_pred_m)[0])
-                pred_vib = max(0, model_vib.predict(X_pred_m)[0])
-                pred_out = max(0, model_out.predict(X_pred_m)[0])
-                
-                if machine.status == 'UM' and has_open_ticket:
-                    pred_temp = 25.0 + np.random.normal(0, 1.0) # Ambient temp
-                    pred_vib = 0.0
-                    pred_out = 0.0
-                elif machine.status == 'PI' and has_open_ticket:
-                    pred_temp *= 1.15 # Escalating temp
-                    pred_vib *= 1.20 # Escalating vibration
-                    pred_out *= 0.8
-                
-                # Add noise
-                pred_temp += np.random.normal(0, pred_temp * 0.02)
-                pred_vib += np.random.normal(0, pred_vib * 0.05)
-                pred_out += np.random.normal(0, pred_out * 0.05)
-                
-                MachineHistoricalMetrics.objects.create(
-                    machine=machine,
-                    date=yesterday,
-                    temperature=round(pred_temp, 2),
-                    vibration=round(pred_vib, 2),
-                    output=round(pred_out, 2)
-                )
-                logger.info(f"Successfully generated ML metrics for {machine.name} on {yesterday}.")
-            else:
-                logger.warning(f"Not enough metric data for {machine.name} to train ML. Skipping...")
+                # Check if there is data for yesterday in ProductionLog
+                if not ProductionLog.objects.filter(machine=machine, date=yesterday).exists():
+                    logger.info(f"Missing ProductionLog for {machine.name} on {yesterday}. Generating via ML...")
+                    
+                    past_logs = ProductionLog.objects.filter(machine=machine, date__lt=yesterday).order_by('date')
+                    if past_logs.count() >= 3:
+                        start_date = past_logs.first().date
+                        data = []
+                        for log in past_logs:
+                            day_num = (log.date - start_date).days
+                            data.append({
+                                'day_num': day_num,
+                                'output_kg': float(log.output_kg or 0.0),
+                                'material_used': float(log.material_used or 0.0),
+                                'employee_id': log.employee_id
+                            })
+                            
+                        df = pd.DataFrame(data)
+                        X = df[['day_num']]
+                        
+                        try:
+                            model_output = LinearRegression().fit(X, df['output_kg'])
+                            model_material = LinearRegression().fit(X, df['material_used'])
+                            
+                            target_day_num = (yesterday - start_date).days
+                            X_pred = pd.DataFrame({'day_num': [target_day_num]})
+                            
+                            pred_output = max(0.0, float(model_output.predict(X_pred)[0]))
+                            pred_material = max(0.0, float(model_material.predict(X_pred)[0]))
+                        except Exception as lr_err:
+                            logger.warning("LinearRegression fallback for %s: %s", machine.code, lr_err)
+                            pred_output = 220.0
+                            pred_material = 235.0
+                    else:
+                        pred_output = 220.0
+                        pred_material = 235.0
+                        df = pd.DataFrame()
+                    
+                    if machine.status == 'UM' and has_open_ticket:
+                        pred_output = 0.0
+                        pred_material = 0.0
+                    elif machine.status == 'PI' and has_open_ticket:
+                        pred_output *= 0.8
+                        pred_material *= 0.9
+                    
+                    pred_output += float(np.random.normal(0, max(1.0, pred_output * 0.04)))
+                    pred_material += float(np.random.normal(0, max(1.0, pred_material * 0.04)))
+                    pred_output = max(0.0, pred_output)
+                    pred_material = max(0.0, pred_material)
+                    
+                    # Safe employee assignment
+                    most_frequent_employee_id = None
+                    if not df.empty and 'employee_id' in df.columns and not df['employee_id'].dropna().empty:
+                        modes = df['employee_id'].dropna().mode()
+                        if not modes.empty:
+                            most_frequent_employee_id = int(modes.iloc[0])
+                    
+                    if not most_frequent_employee_id:
+                        em_user = User.objects.filter(role='EM').first() or User.objects.first()
+                        most_frequent_employee_id = em_user.id if em_user else None
+
+                    # Safe upsert
+                    p_log = ProductionLog.objects.filter(date=yesterday, machine=machine).first()
+                    if p_log:
+                        p_log.output_kg = round(pred_output, 2)
+                        p_log.material_used = round(pred_material, 2)
+                        p_log.save()
+                    else:
+                        ProductionLog.objects.create(
+                            date=yesterday,
+                            employee_id=most_frequent_employee_id,
+                            machine=machine,
+                            output_kg=round(pred_output, 2),
+                            material_used=round(pred_material, 2)
+                        )
+                    logger.info(f"Successfully generated ML data for {machine.name} on {yesterday}.")
+
+                # Check if there is data for yesterday in MachineHistoricalMetrics
+                if not MachineHistoricalMetrics.objects.filter(machine=machine, date=yesterday).exists():
+                    logger.info(f"Missing MachineHistoricalMetrics for {machine.name} on {yesterday}. Generating via ML...")
+                    
+                    past_metrics = MachineHistoricalMetrics.objects.filter(machine=machine, date__lt=yesterday).order_by('date')
+                    if past_metrics.count() >= 3:
+                        start_date_m = past_metrics.first().date
+                        m_data = []
+                        for m_log in past_metrics:
+                            m_data.append({
+                                'day_num': (m_log.date - start_date_m).days,
+                                'temp': float(m_log.temperature or 64.0),
+                                'vib': float(m_log.vibration or 1.85),
+                                'out': float(m_log.output or 220.0)
+                            })
+                        m_df = pd.DataFrame(m_data)
+                        X_m = m_df[['day_num']]
+                        
+                        try:
+                            model_temp = LinearRegression().fit(X_m, m_df['temp'])
+                            model_vib = LinearRegression().fit(X_m, m_df['vib'])
+                            model_out = LinearRegression().fit(X_m, m_df['out'])
+                            
+                            target_day_num_m = (yesterday - start_date_m).days
+                            X_pred_m = pd.DataFrame({'day_num': [target_day_num_m]})
+                            
+                            pred_temp = max(50.0, float(model_temp.predict(X_pred_m)[0]))
+                            pred_vib = max(1.2, float(model_vib.predict(X_pred_m)[0]))
+                            pred_out = max(0.0, float(model_out.predict(X_pred_m)[0]))
+                        except Exception as m_lr_err:
+                            logger.warning("Metrics LinearRegression fallback for %s: %s", machine.code, m_lr_err)
+                            pred_temp, pred_vib, pred_out = 64.0, 1.85, 220.0
+                    else:
+                        pred_temp, pred_vib, pred_out = 64.0, 1.85, 220.0
+                    
+                    if machine.status == 'UM' and has_open_ticket:
+                        pred_temp = 25.0 + float(np.random.normal(0, 0.5))
+                        pred_vib = 0.0
+                        pred_out = 0.0
+                    elif machine.status == 'PI' and has_open_ticket:
+                        pred_temp *= 1.12
+                        pred_vib *= 1.15
+                        pred_out *= 0.8
+                    
+                    pred_temp = max(20.0, min(95.0, pred_temp + float(np.random.normal(0, max(0.5, pred_temp * 0.02)))))
+                    pred_vib = max(0.0, min(10.0, pred_vib + float(np.random.normal(0, max(0.1, pred_vib * 0.04)))))
+                    pred_out = max(0.0, pred_out)
+                    
+                    # Safe upsert
+                    m_met = MachineHistoricalMetrics.objects.filter(machine=machine, date=yesterday).first()
+                    if m_met:
+                        m_met.temperature = round(pred_temp, 2)
+                        m_met.vibration = round(pred_vib, 2)
+                        m_met.output = round(pred_out, 2)
+                        m_met.save()
+                    else:
+                        MachineHistoricalMetrics.objects.create(
+                            machine=machine,
+                            date=yesterday,
+                            temperature=round(pred_temp, 2),
+                            vibration=round(pred_vib, 2),
+                            output=round(pred_out, 2)
+                        )
+                    logger.info(f"Successfully generated ML metrics for {machine.name} on {yesterday}.")
+
+            except Exception as m_loop_err:
+                logger.warning(f"Non-fatal error in generate_missing_production_data for {machine.code}: {m_loop_err}")
+
+    except Exception as exc:
+        logger.error(f"Error in generate_missing_production_data: {exc}")
+
 
 def evaluate_machine_health():
     from apps.maintenance.models import Machine, MachineHistoricalMetrics, MaintenanceTicket
     from sklearn.ensemble import IsolationForest
     
-    machines = Machine.objects.all()
-    for machine in machines:
-        metrics = MachineHistoricalMetrics.objects.filter(machine=machine).order_by('date')
-        if metrics.count() < 10:
-            continue
-            
-        df = pd.DataFrame(list(metrics.values('temperature', 'vibration')))
-        df['temperature'] = df['temperature'].astype(float)
-        df['vibration'] = df['vibration'].astype(float)
-        
-        # Train IsolationForest to detect anomalies
-        clf = IsolationForest(contamination=0.10, random_state=42)
-        clf.fit(df)
-        
-        latest_metric = metrics.last()
-        latest_data = pd.DataFrame([{
-            'temperature': float(latest_metric.temperature), 
-            'vibration': float(latest_metric.vibration)
-        }])
-        
-        # Predict anomaly: -1 for outlier, 1 for inlier
-        prediction = clf.predict(latest_data)[0]
-        
-        if prediction == -1:
-            mean_temp = df['temperature'].mean()
-            mean_vib = df['vibration'].mean()
-            std_temp = df['temperature'].std()
-            std_vib = df['vibration'].std()
-            
-            temp_diff = abs(float(latest_metric.temperature) - mean_temp)
-            vib_diff = abs(float(latest_metric.vibration) - mean_vib)
-            
-            # If deviation > 2.5 std devs, consider it Critical (Failed/Repair)
-            is_critical = (temp_diff > 2.5 * std_temp) or (vib_diff > 2.5 * std_vib)
-            
-            if is_critical:
-                machine.status = 'UM' # Under Maintenance (Failed)
-                cause = f"ML Critical Alert: Extreme anomaly. Temp: {latest_metric.temperature}°C, Vib: {latest_metric.vibration} mm/s"
-            else:
-                machine.status = 'PI' # Pending Inspection (Warning)
-                cause = f"ML Warning Alert: Moderate anomaly. Temp: {latest_metric.temperature}°C, Vib: {latest_metric.vibration} mm/s"
+    try:
+        machines = Machine.objects.all()
+        for machine in machines:
+            try:
+                metrics = MachineHistoricalMetrics.objects.filter(machine=machine).order_by('date')
+                if metrics.count() < 10:
+                    continue
+                    
+                df = pd.DataFrame(list(metrics.values('temperature', 'vibration')))
+                df['temperature'] = df['temperature'].astype(float).fillna(64.0)
+                df['vibration'] = df['vibration'].astype(float).fillna(1.85)
                 
-            machine.save()
-            
-            # Create a maintenance ticket if one doesn't exist
-            if not MaintenanceTicket.objects.filter(machine=machine, status__in=['O', 'I']).exists():
-                MaintenanceTicket.objects.create(
-                    machine=machine,
-                    cause=cause,
-                    status='O'
-                )
-                logger.warning(f"ML Health evaluation for {machine.name}: {cause}")
-        else:
-            # If it's normal and no open tickets, ensure it is set to Operational
-            if not MaintenanceTicket.objects.filter(machine=machine, status__in=['O', 'I']).exists():
-                if machine.status != 'OP':
-                    machine.status = 'OP'
+                # Train IsolationForest to detect anomalies
+                clf = IsolationForest(contamination=0.10, random_state=42)
+                clf.fit(df)
+                
+                latest_metric = metrics.last()
+                latest_data = pd.DataFrame([{
+                    'temperature': float(latest_metric.temperature or 64.0), 
+                    'vibration': float(latest_metric.vibration or 1.85)
+                }])
+                
+                # Predict anomaly: -1 for outlier, 1 for inlier
+                prediction = clf.predict(latest_data)[0]
+                
+                if prediction == -1:
+                    mean_temp = float(df['temperature'].mean())
+                    mean_vib = float(df['vibration'].mean())
+                    std_temp = float(df['temperature'].std() or 1.0)
+                    std_vib = float(df['vibration'].std() or 0.2)
+                    
+                    temp_diff = abs(float(latest_metric.temperature) - mean_temp)
+                    vib_diff = abs(float(latest_metric.vibration) - mean_vib)
+                    
+                    is_critical = (temp_diff > 2.5 * std_temp) or (vib_diff > 2.5 * std_vib)
+                    
+                    if is_critical:
+                        machine.status = 'UM' # Under Maintenance (Failed)
+                        cause = f"ML Critical Alert: Extreme anomaly. Temp: {latest_metric.temperature}°C, Vib: {latest_metric.vibration} mm/s"
+                    else:
+                        machine.status = 'PI' # Pending Inspection (Warning)
+                        cause = f"ML Warning Alert: Moderate anomaly. Temp: {latest_metric.temperature}°C, Vib: {latest_metric.vibration} mm/s"
+                        
                     machine.save()
-                    logger.info(f"{machine.name} returned to Operational state by ML.")
+                    
+                    if not MaintenanceTicket.objects.filter(machine=machine, status__in=['O', 'I']).exists():
+                        MaintenanceTicket.objects.create(
+                            machine=machine,
+                            cause=cause,
+                            status='O'
+                        )
+                        logger.warning(f"ML Health evaluation for {machine.name}: {cause}")
+                else:
+                    if not MaintenanceTicket.objects.filter(machine=machine, status__in=['O', 'I']).exists():
+                        if machine.status != 'OP':
+                            machine.status = 'OP'
+                            machine.save()
+                            logger.info(f"{machine.name} returned to Operational state by ML.")
+            except Exception as m_health_err:
+                logger.warning("Error evaluating machine health for %s: %s", machine.code, m_health_err)
+    except Exception as exc:
+        logger.error(f"Error in evaluate_machine_health: {exc}")
 
 def start_scheduler():
     scheduler = BackgroundScheduler()
@@ -263,7 +292,7 @@ def autonomous_gap_detection_and_imputation(days_back=14):
     from apps.accounts.models import User
     
     try:
-        today = timezone.now().date()
+        today = timezone.localdate()
         logger.info(f"Running autonomous gap detection pipeline for past {days_back} days up to {today}...")
         
         machines = list(Machine.objects.all())
@@ -277,7 +306,9 @@ def autonomous_gap_detection_and_imputation(days_back=14):
 
         for i in range(1, days_back + 1):
             target_date = today - datetime.timedelta(days=i)
-            record, created = SystemOverview.objects.get_or_create(date=target_date)
+            record = SystemOverview.objects.filter(date=target_date).first()
+            if not record:
+                record = SystemOverview.objects.create(date=target_date)
             
             has_logs = ProductionLog.objects.filter(date=target_date).exists()
             has_metrics = MachineHistoricalMetrics.objects.filter(date=target_date).exists()
@@ -295,14 +326,16 @@ def autonomous_gap_detection_and_imputation(days_back=14):
                     for m in machines:
                         emp = employees[0] if employees else None
                         if emp:
-                            ProductionLog.objects.get_or_create(
-                                date=target_date, machine=m, employee=emp,
-                                defaults={'output_kg': 0, 'material_used': 0}
+                            if not ProductionLog.objects.filter(date=target_date, machine=m, employee=emp).exists():
+                                ProductionLog.objects.create(
+                                    date=target_date, machine=m, employee=emp,
+                                    output_kg=0, material_used=0
+                                )
+                        if not MachineHistoricalMetrics.objects.filter(date=target_date, machine=m).exists():
+                            MachineHistoricalMetrics.objects.create(
+                                date=target_date, machine=m,
+                                temperature=25.0, vibration=0.0, output=0.0
                             )
-                        MachineHistoricalMetrics.objects.get_or_create(
-                            date=target_date, machine=m,
-                            defaults={'temperature': 25.0, 'vibration': 0.0, 'output': 0.0}
-                        )
                     logger.info(f"Sunday rule applied for {target_date}. Safely resolved as zero.")
                 continue
 

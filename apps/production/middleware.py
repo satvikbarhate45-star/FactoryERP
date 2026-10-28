@@ -14,7 +14,8 @@ def _run_background_checks():
     to guarantee that the main HTTP request thread is NEVER blocked.
     """
     try:
-        yesterday = (timezone.now() - timedelta(days=1)).date()
+        today = timezone.localdate()
+        yesterday = today - timedelta(days=1)
         from apps.production.models import SystemOverview
 
         # 1. Gap detection & imputation for yesterday
@@ -27,7 +28,6 @@ def _run_background_checks():
         run_autonomous_decision_engine()
 
         # 3. Machine Telemetry & Predictions for today
-        today = timezone.now().date()
         from apps.maintenance.models import MachinePrediction
         if not MachinePrediction.objects.filter(date=today).exists():
             from apps.maintenance.services import run_daily_predictions

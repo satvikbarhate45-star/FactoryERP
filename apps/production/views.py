@@ -484,7 +484,7 @@ def admin_production_view(request):
     Focused entirely on manufacturing output, shift allocation, employee-shift-machine
     production quantities, and machine criticality & downtime history.
     """
-    today = timezone.now().date()
+    today = timezone.localdate()
     start_of_month = today.replace(day=1)
     user = request.user
 
@@ -899,7 +899,7 @@ def supervisor_dashboard_view(request):
     Automated daily task assignments, employee performance tracking,
     salary/payroll distribution metrics, and autonomous decision-making logs.
     """
-    today = timezone.now().date()
+    today = timezone.localdate()
     start_of_month = today.replace(day=1)
 
     # Handle Floor Approvals & Supervisor Actions
