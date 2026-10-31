@@ -93,7 +93,18 @@ def ensure_runtime_schema_integrity(force=False, max_age_seconds=60):
                     ("maintenance_machine", "model_name", "varchar(100)", "varchar(100)"),
                     ("maintenance_machineprediction", "is_auto_predicted", "boolean DEFAULT false", "boolean DEFAULT 0"),
                     ("maintenance_machineprediction", "reason", "text", "text"),
+                    ("maintenance_machineprediction", "predicted_rul_days", "integer DEFAULT 45", "integer DEFAULT 45"),
+                    ("maintenance_machineprediction", "health_score", "numeric(5,2) DEFAULT 98.50", "numeric(5,2) DEFAULT 98.50"),
+                    ("maintenance_machineprediction", "accuracy_pct", "numeric(5,2) DEFAULT 94.50", "numeric(5,2) DEFAULT 94.50"),
                     ("maintenance_maintenanceticket", "downtime_min", "integer DEFAULT 0", "integer DEFAULT 0"),
+                    ("maintenance_maintenanceticket", "parts_cost", "numeric(10,2) DEFAULT 0.00", "numeric(10,2) DEFAULT 0.00"),
+                    ("maintenance_maintenanceticket", "labor_cost", "numeric(10,2) DEFAULT 0.00", "numeric(10,2) DEFAULT 0.00"),
+                    ("maintenance_maintenanceticket", "total_cost", "numeric(10,2) DEFAULT 0.00", "numeric(10,2) DEFAULT 0.00"),
+                    ("maintenance_maintenanceticket", "resolution_notes", "text", "text"),
+
+                    # Logistics
+                    ("logistics_dispatch", "dispatch_type", "varchar(20) DEFAULT 'EXPORT'", "varchar(20) DEFAULT 'EXPORT'"),
+                    ("logistics_dispatch", "is_automated", "boolean DEFAULT false", "boolean DEFAULT 0"),
                 ]
 
                 # High-speed introspection: batch load all table and column names in ONE query

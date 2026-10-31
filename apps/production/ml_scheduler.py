@@ -474,6 +474,13 @@ def autonomous_gap_detection_and_imputation(days_back=14):
         except Exception as dec_err:
             logger.warning("Decision engine non-critical error during imputation: %s", dec_err)
 
+        # Autonomous Logistics & Warehouse Reorder/Dispatch Automation
+        try:
+            from apps.logistics.services import autonomous_logistics_and_warehouse_automation
+            autonomous_logistics_and_warehouse_automation()
+        except Exception as log_err:
+            logger.warning("Logistics automation non-critical error during imputation: %s", log_err)
+
     except Exception as e:
         logger.error(f"[EMERGENCY] Background gap detection crashed: {e}")
 
@@ -531,6 +538,19 @@ def start_scheduler():
         replace_existing=True,
     )
     
+    # Schedule autonomous logistics & warehouse dispatch at 00:20
+    try:
+        from apps.logistics.services import autonomous_logistics_and_warehouse_automation
+        scheduler.add_job(
+            autonomous_logistics_and_warehouse_automation,
+            trigger=CronTrigger(hour=0, minute=20),
+            id='run_daily_logistics_automation',
+            max_instances=1,
+            replace_existing=True,
+        )
+    except Exception as s_log_err:
+        logger.warning("Could not register logistics job in scheduler: %s", s_log_err)
+
     scheduler.start()
     logger.info("APScheduler started: Autonomous Gap Detection & ML Prediction Loop actively protecting database integrity.")
 

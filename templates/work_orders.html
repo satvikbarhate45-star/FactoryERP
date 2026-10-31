@@ -195,6 +195,13 @@
                 <h3 class="font-bold text-slate-900 text-sm mb-1">{{ ticket.machine.code }}: {{ ticket.machine.name }}</h3>
                 <p class="text-xs text-slate-500 line-clamp-2 mb-2 leading-relaxed">{{ ticket.cause }}</p>
                 
+                {% if ticket.total_cost and ticket.total_cost > 0 %}
+                <div class="mb-2 px-2 py-1 bg-emerald-50 rounded border border-emerald-100 text-[11px] font-bold text-slate-700 flex justify-between items-center">
+                    <span>Total Cost: <span class="text-emerald-800 font-extrabold">₹{{ ticket.total_cost|floatformat:2 }}</span></span>
+                    <span class="text-slate-500 font-semibold">{{ ticket.downtime_min }} min</span>
+                </div>
+                {% endif %}
+
                 <div class="flex justify-between items-center pt-2 border-t border-slate-100 text-[11px] text-slate-400">
                     <span>Closed: {{ ticket.closed_at|date:"M d, H:i" }}</span>
                     <span class="font-semibold text-emerald-600">Telemetry Safe</span>

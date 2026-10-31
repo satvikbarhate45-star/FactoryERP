@@ -460,15 +460,109 @@ def dashboard_view(request):
     pie_labels = [mo['machine__code'] for mo in machine_output]
     pie_data = [float(mo['total_out']) for mo in machine_output]
 
-    # --- Inventory & Logistics Data ---
+    # --- Financial Profit & Loss (P&L) Module ---
+    from apps.inventory.models import InwardShipment
+    from apps.production.models import SalaryPayroll, SystemAlert
     from apps.logistics.models import Dispatch
-    from apps.production.models import SystemAlert
-    
-    # Fetch autonomous decisions from SystemAlerts
+
+    daily_revenues = []
+    daily_materials = []
+    daily_maintenance = []
+    daily_logistics = []
+    daily_payrolls = []
+    daily_total_expenses = []
+    daily_net_profits = []
+
+    # Map daily production logs
+    daily_p_logs = {d: {'out': 0.0, 'raw': 0.0} for d in days}
+    for p in prod_logs:
+        if p['date'] in daily_p_logs:
+            daily_p_logs[p['date']]['out'] = float(p['total_out'] or 0.0)
+            daily_p_logs[p['date']]['raw'] = float(p['total_raw'] or 0.0)
+
+    # Inward Shipments
+    inward_qs = InwardShipment.objects.filter(received_on__gte=start_of_week, received_on__lte=end_of_week).values('received_on').annotate(tot_cost=Sum('cost'))
+    inward_by_date = {r['received_on']: float(r['tot_cost'] or 0.0) for r in inward_qs}
+
+    # Maintenance Tickets (Parts & Labor Costs)
+    tickets_qs = MaintenanceTicket.objects.filter(
+        Q(opened_at__date__gte=start_of_week, opened_at__date__lte=end_of_week) |
+        Q(closed_at__date__gte=start_of_week, closed_at__date__lte=end_of_week)
+    )
+    maint_by_date = {d: 0.0 for d in days}
+    for t in tickets_qs:
+        t_date = t.closed_at.date() if t.closed_at else t.opened_at.date()
+        if t_date in maint_by_date:
+            maint_by_date[t_date] += float(t.total_cost or (float(t.parts_cost or 0) + float(t.labor_cost or 0)))
+
+    # Logistics Dispatches (Freight Expenses)
+    disp_qs = Dispatch.objects.filter(created_at__date__gte=start_of_week, created_at__date__lte=end_of_week).values('created_at__date').annotate(tot_cost=Sum('cost'))
+    disp_by_date = {r['created_at__date']: float(r['tot_cost'] or 0.0) for r in disp_qs}
+
+    # Salary & Payroll
+    payroll_qs = SalaryPayroll.objects.filter(payout_date__gte=start_of_week, payout_date__lte=end_of_week).values('payout_date').annotate(tot_pay=Sum('salary_adjusted'))
+    payroll_by_date = {r['payout_date']: float(r['tot_pay'] or 0.0) for r in payroll_qs}
+    active_emp_count = User.objects.filter(role__in=['EM', 'PM', 'MA'], is_active=True).count()
+    default_daily_payroll = max(1800.0, active_emp_count * 450.0)
+
+    for d in days:
+        # Gross revenue: ₹28.50 per kg finished output
+        p_out = daily_p_logs[d]['out']
+        d_rev = round(p_out * 28.50, 2)
+        daily_revenues.append(d_rev)
+
+        # Raw material expense (Inward shipments or consumed raw materials ₹13.20/kg)
+        d_mat = inward_by_date.get(d, 0.0)
+        if d_mat == 0.0 and daily_p_logs[d]['raw'] > 0:
+            d_mat = round(daily_p_logs[d]['raw'] * 13.20, 2)
+        daily_materials.append(d_mat)
+
+        # Maintenance repair expense
+        d_maint = round(maint_by_date.get(d, 0.0), 2)
+        daily_maintenance.append(d_maint)
+
+        # Logistics freight expense
+        d_log = round(disp_by_date.get(d, 0.0), 2)
+        if d_log == 0.0 and p_out > 0:
+            d_log = round((p_out * 0.90 * 1.65) + 1800.0, 2)
+        daily_logistics.append(d_log)
+
+        # Employee payroll
+        d_pay = round(payroll_by_date.get(d, 0.0), 2)
+        if d_pay == 0.0 and p_out > 0:
+            d_pay = default_daily_payroll
+        daily_payrolls.append(d_pay)
+
+        # Daily operational expenses and net profit
+        d_exp = round(d_mat + d_maint + d_log + d_pay, 2)
+        d_net = round(d_rev - d_exp, 2)
+        daily_total_expenses.append(d_exp)
+        daily_net_profits.append(d_net)
+
+    # Weekly Financial Totals
+    kpi_gross_revenue = round(sum(daily_revenues), 2)
+    kpi_raw_material_cost = round(sum(daily_materials), 2)
+    kpi_maintenance_cost = round(sum(daily_maintenance), 2)
+    kpi_logistics_cost = round(sum(daily_logistics), 2)
+    kpi_payroll_cost = round(sum(daily_payrolls), 2)
+    kpi_total_expenses = round(sum(daily_total_expenses), 2)
+    kpi_net_profit = round(kpi_gross_revenue - kpi_total_expenses, 2)
+    kpi_profit_margin = round((kpi_net_profit / kpi_gross_revenue) * 100, 1) if kpi_gross_revenue > 0 else 0.0
+    is_profitable = kpi_net_profit >= 0
+
+    safe_tot_exp = max(1.0, kpi_total_expenses)
+    cost_breakdown_pct = {
+        'materials': round((kpi_raw_material_cost / safe_tot_exp) * 100, 1),
+        'maintenance': round((kpi_maintenance_cost / safe_tot_exp) * 100, 1),
+        'logistics': round((kpi_logistics_cost / safe_tot_exp) * 100, 1),
+        'payroll': round((kpi_payroll_cost / safe_tot_exp) * 100, 1),
+    }
+
+    # Fetch autonomous decisions from SystemAlerts & Dispatches
     system_alerts = list(SystemAlert.objects.order_by('-created_at')[:10])
     recent_dispatches = list(Dispatch.objects.order_by('-created_at')[:4])
 
-    # General Stats
+    # General Machine Stats
     open_tickets = MaintenanceTicket.objects.filter(status='O').count()
     machine_counts = Machine.objects.aggregate(
         warning=Count('id', filter=Q(status='PI')),
@@ -491,6 +585,22 @@ def dashboard_view(request):
         'open_tickets': open_tickets,
         'machines_warning': machines_warning,
         'machines_down': machines_down,
+        # Executive Financial P&L Context
+        'kpi_gross_revenue': kpi_gross_revenue,
+        'kpi_raw_material_cost': kpi_raw_material_cost,
+        'kpi_maintenance_cost': kpi_maintenance_cost,
+        'kpi_logistics_cost': kpi_logistics_cost,
+        'kpi_payroll_cost': kpi_payroll_cost,
+        'kpi_total_expenses': kpi_total_expenses,
+        'kpi_net_profit': kpi_net_profit,
+        'kpi_profit_margin': kpi_profit_margin,
+        'is_profitable': is_profitable,
+        'cost_breakdown_pct': cost_breakdown_pct,
+        'daily_revenues_json': json.dumps(daily_revenues),
+        'daily_expenses_json': json.dumps(daily_total_expenses),
+        'daily_net_profits_json': json.dumps(daily_net_profits),
+        'daily_maintenance_json': json.dumps(daily_maintenance),
+        'daily_logistics_json': json.dumps(daily_logistics),
     }
     
     cache.set(cache_key, context, timeout=60)

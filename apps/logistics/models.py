@@ -7,4 +7,6 @@ class Dispatch(models.Model):
     transporter = models.CharField(max_length=200)
     maps_location_id = models.CharField(max_length=200)
     cost = models.DecimalField(max_digits=12, decimal_places=2)
+    dispatch_type = models.CharField(max_length=20, default='EXPORT')
+    is_automated = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)

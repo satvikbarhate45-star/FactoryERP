@@ -39,12 +39,17 @@ def inventory_dashboard_view(request):
                             reorder_level=5000,
                             unit='kg'
                         )
-                    stock.quantity += qty
+                    from decimal import Decimal
+                    stock.quantity = stock.quantity + Decimal(str(round(qty, 2)))
                     stock.save()
                     
+                    from django.utils import timezone
                     InwardShipment.objects.create(
-                        warehouse_stock=stock, supplier="Domestic Supplier", 
-                        material=material_name, quantity=qty, cost=cost
+                        material=stock, 
+                        supplier="Domestic Supplier", 
+                        quantity=Decimal(str(round(qty, 2))), 
+                        cost=Decimal(str(round(cost, 2))),
+                        received_on=timezone.localdate()
                     )
                     messages.success(request, f"Inward shipment of {qty:.1f} kg {material_name} recorded.")
                     

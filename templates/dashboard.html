@@ -3,8 +3,10 @@
 {% block content %}
 <div class="mb-6 md:mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
     <div>
-        <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">Factory Dashboard</h1>
-        <p class="text-slate-500 dark:text-slate-400 mt-1 font-medium text-xs sm:text-sm">Weekly operational overview ({{ start_of_week|date:"M d" }} - {{ end_of_week|date:"M d, Y" }})</p>
+        <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">Factory Executive Dashboard</h1>
+        <p class="text-slate-500 dark:text-slate-400 mt-1 font-medium text-xs sm:text-sm">
+            Centralized telemetry, automated logistics & financial P&L overview ({{ start_of_week|date:"M d" }} - {{ end_of_week|date:"M d, Y" }})
+        </p>
     </div>
     <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
         <!-- Week Pagination Controls -->
@@ -26,40 +28,195 @@
     </div>
 </div>
 
-<!-- KPI Cards -->
-<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
+<!-- Operational Status KPI Cards -->
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 mb-6">
     <div class="premium-card p-5 sm:p-6 flex items-center justify-between border-l-4 border-l-blue-500">
         <div>
-            <p class="text-xs sm:text-sm text-slate-500 font-bold uppercase tracking-wider mb-1">Open Tickets</p>
+            <p class="text-xs sm:text-sm text-slate-500 uppercase tracking-wider font-bold mb-1">Open Tickets</p>
             <p class="text-3xl sm:text-4xl font-extrabold text-slate-800 dark:text-white">{{ open_tickets }}</p>
+            <p class="text-[11px] text-blue-600 dark:text-blue-400 font-semibold mt-1">Active Work Orders</p>
         </div>
-        <div class="bg-blue-50 dark:bg-blue-950 p-3 sm:p-4 rounded-2xl">
+        <div class="bg-blue-50 dark:bg-blue-950/60 p-3 sm:p-4 rounded-2xl text-blue-600">
             <span class="text-xl sm:text-2xl">🔧</span>
         </div>
     </div>
     
     <div class="premium-card p-5 sm:p-6 flex items-center justify-between border-l-4 border-l-amber-500">
         <div>
-            <p class="text-xs sm:text-sm text-slate-500 font-bold uppercase tracking-wider mb-1">AI Warnings</p>
+            <p class="text-xs sm:text-sm text-slate-500 uppercase tracking-wider font-bold mb-1">AI Warnings</p>
             <p class="text-3xl sm:text-4xl font-extrabold text-slate-800 dark:text-white">{{ machines_warning }}</p>
+            <p class="text-[11px] text-amber-600 dark:text-amber-400 font-semibold mt-1">Pending Inspection</p>
         </div>
-        <div class="bg-amber-50 dark:bg-amber-950 p-3 sm:p-4 rounded-2xl">
+        <div class="bg-amber-50 dark:bg-amber-950/60 p-3 sm:p-4 rounded-2xl text-amber-600">
             <span class="text-xl sm:text-2xl">⚠️</span>
         </div>
     </div>
     
     <div class="premium-card p-5 sm:p-6 flex items-center justify-between border-l-4 border-l-rose-500">
         <div>
-            <p class="text-xs sm:text-sm text-slate-500 font-bold uppercase tracking-wider mb-1">Machines Down</p>
+            <p class="text-xs sm:text-sm text-slate-500 uppercase tracking-wider font-bold mb-1">Machines Down</p>
             <p class="text-3xl sm:text-4xl font-extrabold text-rose-600 dark:text-rose-400">{{ machines_down }}</p>
+            <p class="text-[11px] text-rose-500 font-semibold mt-1">Under Maintenance</p>
         </div>
-        <div class="bg-rose-50 dark:bg-rose-950 p-3 sm:p-4 rounded-2xl">
+        <div class="bg-rose-50 dark:bg-rose-950/60 p-3 sm:p-4 rounded-2xl text-rose-600">
             <span class="text-xl sm:text-2xl">🛑</span>
         </div>
     </div>
 </div>
 
-<!-- Row 1: Main Analytical Charts -->
+<!-- ========================================== -->
+<!-- EXECUTIVE FINANCIAL PROFIT & LOSS (P&L) BLOCK -->
+<!-- ========================================== -->
+<div class="mb-8">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
+        <div>
+            <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                <span>💼</span> Financial Profit & Loss (P&L) Ledger
+            </h2>
+            <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                Real-time impact of maintenance overhaul, logistics freight, employee payroll, and gross production revenue.
+            </p>
+        </div>
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+            <span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span> Executive Analytics
+        </span>
+    </div>
+
+    <!-- Financial KPI Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <!-- Gross Revenue -->
+        <div class="premium-card p-5 border-l-4 border-l-emerald-500">
+            <p class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Gross Revenue</p>
+            <p class="text-2xl sm:text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">
+                ₹{{ kpi_gross_revenue|floatformat:2 }}
+            </p>
+            <p class="text-[11px] text-slate-400 mt-1 font-semibold">From Finished Goods Yield</p>
+        </div>
+
+        <!-- Total Operational Expenses -->
+        <div class="premium-card p-5 border-l-4 border-l-rose-500">
+            <p class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Total OPEX</p>
+            <p class="text-2xl sm:text-3xl font-extrabold text-rose-600 dark:text-rose-400 mt-1">
+                ₹{{ kpi_total_expenses|floatformat:2 }}
+            </p>
+            <p class="text-[11px] text-slate-400 mt-1 font-semibold">Materials + Repairs + Freight + Payroll</p>
+        </div>
+
+        <!-- Net Profit / Loss -->
+        <div class="premium-card p-5 border-l-4 {% if is_profitable %}border-l-indigo-500{% else %}border-l-rose-600{% endif %}">
+            <p class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Net Profit / Loss</p>
+            <div class="flex items-baseline gap-2 mt-1">
+                <p class="text-2xl sm:text-3xl font-extrabold {% if is_profitable %}text-indigo-600 dark:text-indigo-400{% else %}text-rose-600 dark:text-rose-400{% endif %}">
+                    ₹{{ kpi_net_profit|floatformat:2 }}
+                </p>
+                {% if is_profitable %}
+                <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                    + PROFIT
+                </span>
+                {% else %}
+                <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300">
+                    - DEFICIT
+                </span>
+                {% endif %}
+            </div>
+            <p class="text-[11px] text-slate-400 mt-1 font-semibold">After All Production Overheads</p>
+        </div>
+
+        <!-- Operating Margin -->
+        <div class="premium-card p-5 border-l-4 border-l-amber-500">
+            <p class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Operating Margin</p>
+            <p class="text-2xl sm:text-3xl font-extrabold text-slate-800 dark:text-white mt-1">
+                {{ kpi_profit_margin }}%
+            </p>
+            <p class="text-[11px] text-amber-600 dark:text-amber-400 font-semibold mt-1">
+                {% if kpi_profit_margin >= 20.0 %}Strong Industry Margin{% else %}Moderate Variance{% endif %}
+            </p>
+        </div>
+    </div>
+
+    <!-- P&L Dynamics Chart & Expense Distribution Breakdown -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- P&L Trend Chart -->
+        <div class="premium-card p-6 lg:col-span-2 flex flex-col justify-between">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-slate-800 dark:text-white text-base sm:text-lg flex items-center gap-2">
+                    <span>📊</span> Daily Revenue vs Operational Expenses
+                </h3>
+                <div class="flex items-center gap-3 text-xs font-bold">
+                    <span class="flex items-center gap-1 text-emerald-600"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Revenue</span>
+                    <span class="flex items-center gap-1 text-rose-500"><span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span> OPEX</span>
+                    <span class="flex items-center gap-1 text-indigo-600"><span class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span> Net Profit</span>
+                </div>
+            </div>
+            <div class="relative h-64 sm:h-72 w-full flex-grow">
+                <canvas id="pnlHistoryChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Operational Expense Breakdown Ledger -->
+        <div class="premium-card p-6 flex flex-col justify-between">
+            <div>
+                <h3 class="font-bold text-slate-800 dark:text-white text-base sm:text-lg mb-1 flex items-center justify-between">
+                    <span>📑</span> OPEX Allocation
+                </h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mb-5">Expense composition impacting net margin</p>
+
+                <div class="space-y-4">
+                    <!-- Raw Materials -->
+                    <div>
+                        <div class="flex justify-between text-xs font-bold mb-1">
+                            <span class="text-slate-700 dark:text-slate-300">📦 Raw Materials (Inward)</span>
+                            <span class="text-slate-900 dark:text-white font-extrabold">₹{{ kpi_raw_material_cost|floatformat:0 }} ({{ cost_breakdown_pct.materials }}%)</span>
+                        </div>
+                        <div class="w-full bg-slate-100 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
+                            <div class="bg-blue-500 h-2 rounded-full" style="width: {{ cost_breakdown_pct.materials }}%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Maintenance Costs -->
+                    <div>
+                        <div class="flex justify-between text-xs font-bold mb-1">
+                            <span class="text-slate-700 dark:text-slate-300">🛠️ Equipment Maintenance</span>
+                            <span class="text-amber-600 dark:text-amber-400 font-extrabold">₹{{ kpi_maintenance_cost|floatformat:0 }} ({{ cost_breakdown_pct.maintenance }}%)</span>
+                        </div>
+                        <div class="w-full bg-slate-100 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
+                            <div class="bg-amber-500 h-2 rounded-full" style="width: {{ cost_breakdown_pct.maintenance }}%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Logistics & Transport -->
+                    <div>
+                        <div class="flex justify-between text-xs font-bold mb-1">
+                            <span class="text-slate-700 dark:text-slate-300">🚚 Freight & Logistics</span>
+                            <span class="text-indigo-600 dark:text-indigo-400 font-extrabold">₹{{ kpi_logistics_cost|floatformat:0 }} ({{ cost_breakdown_pct.logistics }}%)</span>
+                        </div>
+                        <div class="w-full bg-slate-100 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
+                            <div class="bg-indigo-500 h-2 rounded-full" style="width: {{ cost_breakdown_pct.logistics }}%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Payroll -->
+                    <div>
+                        <div class="flex justify-between text-xs font-bold mb-1">
+                            <span class="text-slate-700 dark:text-slate-300">👥 Employee Payroll</span>
+                            <span class="text-emerald-600 dark:text-emerald-400 font-extrabold">₹{{ kpi_payroll_cost|floatformat:0 }} ({{ cost_breakdown_pct.payroll }}%)</span>
+                        </div>
+                        <div class="w-full bg-slate-100 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
+                            <div class="bg-emerald-500 h-2 rounded-full" style="width: {{ cost_breakdown_pct.payroll }}%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-6 pt-4 border-t border-slate-100 dark:border-slate-700 flex justify-between items-center text-xs">
+                <span class="font-bold text-slate-500">Total OPEX Tracked:</span>
+                <span class="font-extrabold text-slate-800 dark:text-white text-sm">₹{{ kpi_total_expenses|floatformat:2 }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Row 1: Factory Vibration & Yield Efficiency Charts -->
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-6 md:mb-8">
     <!-- Vibration Chart -->
     <div class="premium-card p-4 sm:p-6">
@@ -86,10 +243,9 @@
 
 <!-- Row 2: Cross-Module Aggregation -->
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    
     <!-- Production Distribution -->
     <div class="premium-card p-6 flex flex-col">
-        <h3 class="font-bold text-slate-800 mb-6 flex items-center justify-between text-lg">
+        <h3 class="font-bold text-slate-800 dark:text-white mb-6 flex items-center justify-between text-lg">
             Output by Machine
         </h3>
         <div class="flex-grow flex items-center justify-center relative min-h-[250px] h-64 w-full">
@@ -99,29 +255,29 @@
 
     <!-- Critical Alerts / Auto-Resolve -->
     <div class="premium-card p-6 flex flex-col">
-        <h3 class="font-bold text-slate-800 mb-6 flex items-center justify-between text-lg">
+        <h3 class="font-bold text-slate-800 dark:text-white mb-6 flex items-center justify-between text-lg">
             Critical Alerts
-            <span class="text-xs text-rose-700 bg-rose-50 px-2.5 py-1 rounded-md font-bold">Autonomous Engine</span>
+            <span class="text-xs text-rose-700 bg-rose-50 dark:bg-rose-950 dark:text-rose-300 px-2.5 py-1 rounded-md font-bold">Autonomous Engine</span>
         </h3>
         <div class="space-y-4 flex-grow overflow-y-auto max-h-[250px] pr-2">
             {% for alert in system_alerts %}
-            <div class="flex justify-between items-center bg-slate-50 p-4 rounded-xl border border-slate-100">
+            <div class="flex justify-between items-center bg-slate-50 dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700">
                 <div class="flex-grow">
-                    <h4 class="font-bold text-slate-800 flex items-center gap-2">
+                    <h4 class="font-bold text-slate-800 dark:text-white flex items-center gap-2">
                         {% if alert.alert_type == 'CRITICAL' %}🔥 High Vibration
                         {% elif alert.alert_type == 'LOW_STOCK' %}📦 Low Stock
                         {% else %}⚠️ Low Efficiency{% endif %}
                     </h4>
                     <p class="text-xs text-rose-500 font-medium mt-1">Issue: {{ alert.message }}</p>
                     {% if alert.is_resolved %}
-                    <div class="mt-2 p-2 bg-emerald-50 rounded-lg border border-emerald-100 shadow-sm">
-                        <p class="text-[11px] text-emerald-800 font-extrabold flex items-center">
+                    <div class="mt-2 p-2 bg-emerald-50 dark:bg-emerald-950/40 rounded-lg border border-emerald-100 dark:border-emerald-800 shadow-sm">
+                        <p class="text-[11px] text-emerald-800 dark:text-emerald-300 font-extrabold flex items-center">
                             <i class="fa-solid fa-robot mr-1"></i> Autonomous Decision Made by System:
                             {% if alert.is_autonomous %}
                             <span class="ml-2 bg-emerald-200 text-emerald-800 px-1.5 py-0.5 rounded text-[9px] uppercase tracking-wider">AI Controlled</span>
                             {% endif %}
                         </p>
-                        <p class="text-xs text-emerald-700 mt-1 font-bold">{{ alert.decision_taken }}</p>
+                        <p class="text-xs text-emerald-700 dark:text-emerald-300 mt-1 font-bold">{{ alert.decision_taken }}</p>
                     </div>
                     {% endif %}
                 </div>
@@ -136,9 +292,9 @@
                 </div>
             </div>
             {% empty %}
-            <div class="text-center text-slate-500 text-sm py-12 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+            <div class="text-center text-slate-500 text-sm py-12 bg-slate-50 dark:bg-slate-800 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">
                 <span class="text-3xl mb-2 block">✅</span>
-                <p class="font-medium text-slate-700">No critical alerts.</p>
+                <p class="font-medium text-slate-700 dark:text-slate-300">No critical alerts.</p>
                 <p class="text-xs mt-1 text-slate-400">All systems optimal.</p>
             </div>
             {% endfor %}
@@ -147,34 +303,35 @@
 
     <!-- Recent Logistics Dispatches -->
     <div class="premium-card p-6 flex flex-col">
-        <h3 class="font-bold text-slate-800 mb-6 flex items-center justify-between text-lg">
+        <h3 class="font-bold text-slate-800 dark:text-white mb-6 flex items-center justify-between text-lg">
             Recent Dispatches
-            <span class="text-xs text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-md font-bold">Logistics</span>
+            <span class="text-xs text-indigo-700 bg-indigo-50 dark:bg-indigo-950 dark:text-indigo-300 px-2.5 py-1 rounded-md font-bold">Logistics</span>
         </h3>
         <div class="space-y-4 flex-grow overflow-y-auto max-h-[250px] pr-2">
             {% for dispatch in recent_dispatches %}
-            <div class="flex items-center space-x-4 bg-slate-50 p-4 rounded-xl border border-slate-100 transition hover:bg-slate-100">
-                <div class="bg-indigo-100 rounded-lg p-2.5">
+            <div class="flex items-center space-x-4 bg-slate-50 dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700 transition hover:bg-slate-100 dark:hover:bg-slate-700">
+                <div class="bg-indigo-100 dark:bg-indigo-950 rounded-lg p-2.5">
                     <span class="text-xl">🚚</span>
                 </div>
                 <div class="flex-grow">
-                    <h4 class="font-bold text-slate-800">{{ dispatch.customer }}</h4>
-                    <p class="text-xs font-semibold text-slate-500 mt-1">{{ dispatch.transport_id }} • {{ dispatch.quantity }} kg</p>
+                    <h4 class="font-bold text-slate-800 dark:text-white">{{ dispatch.customer }}</h4>
+                    <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-1">{{ dispatch.transport_id }} • {{ dispatch.quantity }} kg</p>
                 </div>
-                <div class="text-xs font-bold text-slate-400 bg-white px-2 py-1 rounded shadow-sm border border-slate-100">
+                <div class="text-xs font-bold text-slate-500 dark:text-slate-300 bg-white dark:bg-slate-700 px-2 py-1 rounded shadow-sm border border-slate-100 dark:border-slate-600">
                     {{ dispatch.created_at|date:"M d" }}
                 </div>
             </div>
             {% empty %}
-            <div class="text-center text-slate-500 text-sm py-12 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+            <div class="text-center text-slate-500 text-sm py-12 bg-slate-50 dark:bg-slate-800 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">
                 <span class="text-3xl mb-2 block">📦</span>
-                <p class="font-medium text-slate-700">No recent dispatches.</p>
+                <p class="font-medium text-slate-700 dark:text-slate-300">No recent dispatches.</p>
             </div>
             {% endfor %}
         </div>
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     // Data passed from Django view
     const chartDates = JSON.parse('{{ chart_dates_json|safe }}');
@@ -183,15 +340,90 @@
     const pieLabels = JSON.parse('{{ pie_labels_json|safe }}');
     const pieData = JSON.parse('{{ pie_data_json|safe }}');
 
-    // Chart Configuration defaults for premium look
+    // Financial P&L Data
+    const dailyRevenues = JSON.parse('{{ daily_revenues_json|safe }}');
+    const dailyExpenses = JSON.parse('{{ daily_expenses_json|safe }}');
+    const dailyNetProfits = JSON.parse('{{ daily_net_profits_json|safe }}');
+
+    // Chart Configuration defaults
     Chart.defaults.font.family = "'Inter', sans-serif";
     Chart.defaults.color = '#64748b';
     Chart.defaults.scale.grid.color = '#f1f5f9';
 
+    // Chart 0: Executive Financial P&L History Chart
+    const ctxPnl = document.getElementById('pnlHistoryChart').getContext('2d');
+    new Chart(ctxPnl, {
+        data: {
+            labels: chartDates,
+            datasets: [
+                {
+                    type: 'bar',
+                    label: 'Gross Revenue (₹)',
+                    data: dailyRevenues,
+                    backgroundColor: 'rgba(16, 185, 129, 0.75)',
+                    borderRadius: 4,
+                    barPercentage: 0.6,
+                    categoryPercentage: 0.7,
+                    order: 2
+                },
+                {
+                    type: 'bar',
+                    label: 'Operating OPEX (₹)',
+                    data: dailyExpenses,
+                    backgroundColor: 'rgba(239, 68, 68, 0.7)',
+                    borderRadius: 4,
+                    barPercentage: 0.6,
+                    categoryPercentage: 0.7,
+                    order: 3
+                },
+                {
+                    type: 'line',
+                    label: 'Net Profit / Loss (₹)',
+                    data: dailyNetProfits,
+                    borderColor: '#4f46e5',
+                    backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                    borderWidth: 3,
+                    tension: 0.35,
+                    pointBackgroundColor: '#ffffff',
+                    pointBorderColor: '#4f46e5',
+                    pointBorderWidth: 2,
+                    pointRadius: 4,
+                    fill: false,
+                    order: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: '#1e293b',
+                    padding: 12,
+                    titleFont: { size: 13, weight: 'bold' },
+                    bodyFont: { size: 13 },
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ₹' + Number(context.parsed.y).toLocaleString();
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    border: { display: false },
+                    ticks: {
+                        callback: function(value) { return '₹' + (value / 1000) + 'k'; }
+                    }
+                },
+                x: { border: { display: false }, grid: { display: false } }
+            }
+        }
+    });
+
     // Chart 1: Vibration Chart (Line)
     const ctxUptime = document.getElementById('uptimeChart').getContext('2d');
-    
-    // Create gradient
     const gradientBlue = ctxUptime.createLinearGradient(0, 0, 0, 400);
     gradientBlue.addColorStop(0, 'rgba(79, 70, 229, 0.2)');
     gradientBlue.addColorStop(1, 'rgba(79, 70, 229, 0)');
@@ -203,7 +435,7 @@
             datasets: [{
                 label: 'Avg Vibration (mm/s)',
                 data: uptimeData,
-                borderColor: '#4f46e5', // Indigo-600
+                borderColor: '#4f46e5',
                 backgroundColor: gradientBlue,
                 borderWidth: 3,
                 fill: true,
@@ -246,7 +478,7 @@
                 data: yieldData,
                 backgroundColor: function(context) {
                     const value = context.dataset.data[context.dataIndex];
-                    return value < 90 ? '#f59e0b' : '#10b981'; // Amber if <90%, else Emerald
+                    return value < 90 ? '#f59e0b' : '#10b981';
                 },
                 borderRadius: 6,
                 barThickness: 'flex',
@@ -261,8 +493,6 @@
                 tooltip: {
                     backgroundColor: '#1e293b',
                     padding: 12,
-                    titleFont: { size: 13, weight: 'bold' },
-                    bodyFont: { size: 14, weight: 'bold' },
                     callbacks: { label: function(context) { return context.parsed.y + '%'; } }
                 }
             },
@@ -293,7 +523,7 @@
             plugins: {
                 legend: {
                     position: 'right',
-                    labels: { padding: 20, usePointStyle: true, pointStyle: 'circle', font: { weight: '600' } }
+                    labels: { padding: 16, usePointStyle: true, pointStyle: 'circle', font: { weight: '600' } }
                 },
                 tooltip: {
                     backgroundColor: '#1e293b',

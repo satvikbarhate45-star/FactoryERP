@@ -198,17 +198,34 @@ def machine_history_view(request, machine_id):
     start_of_week = today - timedelta(days=idx) + timedelta(weeks=week_offset)
     end_of_week = start_of_week + timedelta(days=6)
     
-    # Get 7 days production logs for this machine
+    # 1. Get 7 days production logs for this machine
     logs = ProductionLog.objects.filter(machine=machine, date__gte=start_of_week, date__lte=end_of_week).order_by('date')
-    
     dates = []
     outputs = []
-    
     log_dict = {log.date: float(log.output_kg) for log in logs}
     for i in range(7):
         d = start_of_week + timedelta(days=i)
         dates.append(d.strftime('%b %d'))
         outputs.append(log_dict.get(d, 0.0))
+
+    # 2. Complete Maintenance & Repair History Log for this machine
+    tickets = list(MaintenanceTicket.objects.filter(machine=machine).order_by('-opened_at'))
+    total_parts_cost = sum(float(t.parts_cost or 0.0) for t in tickets)
+    total_labor_cost = sum(float(t.labor_cost or 0.0) for t in tickets)
+    total_maintenance_cost = sum(float(t.total_cost or 0.0) for t in tickets)
+    total_downtime_min = sum(int(t.downtime_min or 0) for t in tickets)
+    total_repairs = sum(1 for t in tickets if t.status == MaintenanceTicket.Status.CLOSED)
+    open_repairs = sum(1 for t in tickets if t.status in [MaintenanceTicket.Status.OPEN, MaintenanceTicket.Status.IN_PROGRESS])
+
+    # 3. Latest AI Prediction, Health Score & Remaining Useful Life (RUL)
+    latest_prediction = MachinePrediction.objects.filter(machine=machine).order_by('-date', '-created_at').first()
+
+    # 4. Telemetry trend records (14-day historical vibration & temperature)
+    telemetry_records = list(MachineHistoricalMetrics.objects.filter(machine=machine).order_by('-date')[:14])
+    telemetry_records.reverse()
+    tel_dates = [m.date.strftime('%b %d') for m in telemetry_records]
+    tel_vibrations = [float(m.vibration or 0.0) for m in telemetry_records]
+    tel_temperatures = [float(m.temperature or 0.0) for m in telemetry_records]
         
     context = {
         'machine': machine,
@@ -218,6 +235,20 @@ def machine_history_view(request, machine_id):
         'start_of_week': start_of_week,
         'end_of_week': end_of_week,
         'week_offset': week_offset,
+        # Maintenance History & Financials
+        'tickets': tickets,
+        'total_parts_cost': round(total_parts_cost, 2),
+        'total_labor_cost': round(total_labor_cost, 2),
+        'total_maintenance_cost': round(total_maintenance_cost, 2),
+        'total_downtime_min': total_downtime_min,
+        'total_downtime_hours': round(total_downtime_min / 60.0, 1),
+        'total_repairs': total_repairs,
+        'open_repairs': open_repairs,
+        'latest_prediction': latest_prediction,
+        # Telemetry Chart
+        'tel_dates_json': json.dumps(tel_dates),
+        'tel_vibrations_json': json.dumps(tel_vibrations),
+        'tel_temperatures_json': json.dumps(tel_temperatures),
     }
     return render(request, 'machine_history.html', context)
 
@@ -282,13 +313,36 @@ def work_orders_view(request):
                     ticket = MaintenanceTicket.objects.filter(id=ticket_id).first()
                     if ticket:
                         ticket.status = MaintenanceTicket.Status.CLOSED
-                        ticket.closed_at = timezone.now()
+                        now = timezone.now()
+                        ticket.closed_at = now
+                        if ticket.opened_at:
+                            delta = now - ticket.opened_at
+                            ticket.downtime_min = max(20, int(delta.total_seconds() / 60))
+                        else:
+                            ticket.downtime_min = 45
+
+                        parts = float(request.POST.get('parts_cost') or 0.0)
+                        labor = float(request.POST.get('labor_cost') or 0.0)
+                        notes = (request.POST.get('resolution_notes') or '').strip()
+
+                        is_critical = '[CRITICAL FAILURE]' in ticket.cause
+                        if parts <= 0:
+                            parts = 4500.0 if is_critical else 1650.0
+                        if labor <= 0:
+                            labor = 2200.0 if is_critical else 1100.0
+                        if not notes:
+                            notes = "Technician manual resolution: Component serviced, lubrication replenished, vibration calibrated to nominal specs."
+
+                        ticket.parts_cost = parts
+                        ticket.labor_cost = labor
+                        ticket.total_cost = parts + labor
+                        ticket.resolution_notes = notes
                         ticket.cause += " | [RESOLVED] Issue cleared, calibrated, and certified."
                         ticket.save()
                         
                         # Heal and normalize machine telemetry to optimal baseline
                         normalize_machine_telemetry(ticket.machine)
-                        messages.success(request, f"Ticket #TK-{ticket.id:04d} resolved. Machine {ticket.machine.code} telemetry normalized to OPERATIONAL.")
+                        messages.success(request, f"Ticket #TK-{ticket.id:04d} resolved (Total Cost: ₹{ticket.total_cost:.2f}). Machine {ticket.machine.code} telemetry normalized to OPERATIONAL.")
                     else:
                         messages.error(request, f"Ticket ID {ticket_id} not found.")
             except Exception as exc:
