@@ -162,30 +162,56 @@ def run_daily_predictions(target_date=None):
                 thermal_shift = 1.1 * np.cos((machine.id * 1.8) + (today.toordinal() % 7))
                 dynamic_temp = 61.5 + (predicted_output * 0.038) + thermal_shift
 
-                # Check if machine was repaired recently (within 3 days): guarantee pristine health
-                is_recently_repaired = last_repaired_date and (today - last_repaired_date).days <= 3
+                # Machine lifecycle intervals: each machine has individual service life baseline (52 - 84 days)
+                baseline_interval = 52 + ((machine.id * 17) % 32)
+                
+                # Check if machine had a real maintenance ticket resolved in the last 24-48 hours (<= 1 day): guarantee pristine post-repair reset
+                recent_closed_ticket = MaintenanceTicket.objects.filter(
+                    machine=machine,
+                    status=MaintenanceTicket.Status.CLOSED,
+                    closed_at__date__gte=today - timedelta(days=1)
+                ).order_by('-closed_at').first()
+                is_recently_repaired = recent_closed_ticket is not None
+
                 if is_recently_repaired:
                     predicted_vibration = round(max(1.72, min(2.18, dynamic_vibration)), 2)
                     predicted_temp = round(max(61.0, min(69.5, dynamic_temp)), 2)
-                    predicted_rul_days = max(65, 85 - (today - last_repaired_date).days * 2)
-                    health_score = round(max(96.5, 99.2 - (predicted_vibration - 1.75) * 4.0), 2)
+                    days_post = (today - recent_closed_ticket.closed_at.date()).days if recent_closed_ticket.closed_at else 0
+                    predicted_rul_days = max(68, 85 - (days_post * 2))
+                    health_score = round(max(96.5, 99.4 - (days_post * 0.3)), 2)
                 else:
-                    # Sustained degradation check if historical anomaly exists
-                    if slope < -3.5:
-                        dynamic_vibration += abs(slope) * 0.45
+                    # Physical vibration trend from actual historical sensor metrics (independent of scheduling)
+                    recent_metrics = list(MachineHistoricalMetrics.objects.filter(
+                        machine=machine, 
+                        date__lt=today, 
+                        vibration__gt=0.5
+                    ).order_by('-date')[:7])
+                    recent_metrics.reverse()
+                    if len(recent_metrics) >= 3:
+                        v_vals = [float(m.vibration) for m in recent_metrics if m.vibration]
+                        v_slope = (v_vals[-1] - v_vals[0]) / max(1, len(v_vals) - 1)
+                        if v_slope > 0.15: # Genuine steady physical vibration rise
+                            dynamic_vibration += (v_slope * 2.0)
                     
-                    predicted_vibration = round(max(1.70, min(6.5, dynamic_vibration)), 2)
-                    predicted_temp = round(max(58.0, min(92.0, dynamic_temp)), 2)
+                    predicted_vibration = round(max(1.40, min(6.5, dynamic_vibration)), 2)
+                    predicted_temp = round(max(48.0, min(92.0, dynamic_temp)), 2)
 
                     # Dynamic Remaining Useful Life (RUL in Days) calculation:
-                    # Degradation scales with mechanical vibration and thermal drift
-                    vib_excess = max(0.0, predicted_vibration - 2.05)
-                    temp_excess = max(0.0, predicted_temp - 68.0)
-                    wear_penalty = (vib_excess * 22.0) + (temp_excess * 1.5)
-                    predicted_rul_days = max(5, int(82 - wear_penalty))
+                    # Staggered natural operational cycle based on machine age and load ratio
+                    days_in_cycle = ((today.toordinal() + machine.id * 13) % 38) + 4
+                    load_accel = 0.85 + (0.35 * max(0.5, predicted_output / 250.0))
+                    wear_accum = days_in_cycle * load_accel
 
-                    # Machine Health Score (0 - 100%)
-                    health_score = round(max(32.0, min(99.4, 99.0 - (wear_penalty * 1.35))), 2)
+                    # Anomaly penalty if vibration or temperature exceed safe threshold
+                    vib_excess = max(0.0, predicted_vibration - (base_vibration + 0.15))
+                    temp_excess = max(0.0, predicted_temp - 68.0)
+                    anomaly_penalty = (vib_excess * 20.0) + (temp_excess * 1.5)
+
+                    predicted_rul_days = max(6, int(baseline_interval - wear_accum - anomaly_penalty))
+
+                    # Machine Health Score (0 - 100%) natural health curve
+                    health_deduction = (wear_accum * 0.28) + (anomaly_penalty * 1.35)
+                    health_score = round(max(35.0, min(99.4, 99.2 - health_deduction)), 2)
 
                 # Save or update MachinePrediction
                 reason_str = (

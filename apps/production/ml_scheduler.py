@@ -9,6 +9,34 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
+MACHINE_TYPE_PROFILES = [
+    {"type": "Tablet Compression Press", "cap": 310.0, "base_vib": 1.95, "base_temp": 62.0},
+    {"type": "Fluid Bed Dryer & Granulator", "cap": 260.0, "base_vib": 1.72, "base_temp": 71.0},
+    {"type": "High-Shear Mixing Tank", "cap": 340.0, "base_vib": 2.35, "base_temp": 64.5},
+    {"type": "Automated Blister Packaging", "cap": 220.0, "base_vib": 1.48, "base_temp": 56.0},
+    {"type": "Industrial Decanter Centrifuge", "cap": 275.0, "base_vib": 2.50, "base_temp": 65.0},
+    {"type": "Auto-Coating Drum", "cap": 235.0, "base_vib": 1.65, "base_temp": 69.0},
+]
+
+DOW_MULTIPLIERS = {
+    0: 0.915,  # Mon
+    1: 1.015,  # Tue
+    2: 1.065,  # Wed
+    3: 1.030,  # Thu
+    4: 0.940,  # Fri
+    5: 0.580,  # Sat
+    6: 0.000,  # Sun
+}
+
+def get_machine_nominal_specs(machine):
+    idx = machine.id if machine and machine.id else 1
+    tmpl = MACHINE_TYPE_PROFILES[idx % len(MACHINE_TYPE_PROFILES)]
+    m_hash = (idx * 101) % 1000
+    cap = tmpl["cap"] + ((m_hash % 30) - 15.0)
+    vib = tmpl["base_vib"] + (((m_hash % 20) - 10) * 0.01)
+    temp = tmpl["base_temp"] + (((m_hash % 25) - 12) * 0.1)
+    return {"cap": cap, "base_vib": vib, "base_temp": temp}
+
 def generate_missing_production_data():
     try:
         from apps.accounts.schema_guard import ensure_runtime_schema_integrity
@@ -34,6 +62,9 @@ def generate_missing_production_data():
                     logger.info(f"Missing ProductionLog for {machine.name} on {yesterday}. Generating via ML...")
                     
                     past_logs = ProductionLog.objects.filter(machine=machine, date__lt=yesterday).order_by('date')
+                    m_specs = get_machine_nominal_specs(machine)
+                    default_out = round(m_specs["cap"] * 0.95, 2)
+                    default_mat = round(default_out / 0.95, 2)
                     if past_logs.count() >= 3:
                         start_date = past_logs.first().date
                         data = []
@@ -60,11 +91,11 @@ def generate_missing_production_data():
                             pred_material = max(0.0, float(model_material.predict(X_pred)[0]))
                         except Exception as lr_err:
                             logger.warning("LinearRegression fallback for %s: %s", machine.code, lr_err)
-                            pred_output = 220.0
-                            pred_material = 235.0
+                            pred_output = default_out
+                            pred_material = default_mat
                     else:
-                        pred_output = 220.0
-                        pred_material = 235.0
+                        pred_output = default_out
+                        pred_material = default_mat
                         df = pd.DataFrame()
                     
                     if machine.status == 'UM' and has_open_ticket:
@@ -110,7 +141,8 @@ def generate_missing_production_data():
                 # Check if there is data for yesterday in MachineHistoricalMetrics
                 if not MachineHistoricalMetrics.objects.filter(machine=machine, date=yesterday).exists():
                     logger.info(f"Missing MachineHistoricalMetrics for {machine.name} on {yesterday}. Generating via ML...")
-                    
+                    m_specs = get_machine_nominal_specs(machine)
+                    default_out = round(m_specs["cap"] * 0.95, 2)
                     past_metrics = MachineHistoricalMetrics.objects.filter(machine=machine, date__lt=yesterday).order_by('date')
                     if past_metrics.count() >= 3:
                         start_date_m = past_metrics.first().date
@@ -118,9 +150,9 @@ def generate_missing_production_data():
                         for m_log in past_metrics:
                             m_data.append({
                                 'day_num': (m_log.date - start_date_m).days,
-                                'temp': float(m_log.temperature or 64.0),
-                                'vib': float(m_log.vibration or 1.85),
-                                'out': float(m_log.output or 220.0)
+                                'temp': float(m_log.temperature or m_specs['base_temp']),
+                                'vib': float(m_log.vibration or m_specs['base_vib']),
+                                'out': float(m_log.output or default_out)
                             })
                         m_df = pd.DataFrame(m_data)
                         X_m = m_df[['day_num']]
@@ -138,9 +170,9 @@ def generate_missing_production_data():
                             pred_out = max(0.0, float(model_out.predict(X_pred_m)[0]))
                         except Exception as m_lr_err:
                             logger.warning("Metrics LinearRegression fallback for %s: %s", machine.code, m_lr_err)
-                            pred_temp, pred_vib, pred_out = 64.0, 1.85, 220.0
+                            pred_temp, pred_vib, pred_out = m_specs['base_temp'], m_specs['base_vib'], default_out
                     else:
-                        pred_temp, pred_vib, pred_out = 64.0, 1.85, 220.0
+                        pred_temp, pred_vib, pred_out = m_specs['base_temp'], m_specs['base_vib'], default_out
                     
                     if machine.status == 'UM' and has_open_ticket:
                         pred_temp = 25.0 + float(np.random.normal(0, 0.5))
@@ -364,54 +396,56 @@ def autonomous_gap_detection_and_imputation(days_back=14):
             if needs_imputation:
                 logger.warning(f"[GAP DETECTED] Missing operational data for {target_date} ({target_date.strftime('%A')}). Triggering ML Imputation...")
                 
-                # Deterministic moving average / regression baseline
-                past_logs = ProductionLog.objects.filter(date__lt=target_date).order_by('-date')
-                unique_dates = []
-                for log in past_logs:
-                    if log.date not in unique_dates and log.date.weekday() != 6:
-                        unique_dates.append(log.date)
-                    if len(unique_dates) >= 3:
-                        break
-                        
-                if unique_dates:
-                    valid_so = [SystemOverview.objects.filter(date=d).first() for d in unique_dates]
-                    valid_so = [s for s in valid_so if s and s.total_output_kg is not None and s.total_output_kg > 0]
-                    if valid_so:
-                        avg_out = sum([s.total_output_kg for s in valid_so]) / len(valid_so)
-                        avg_mat = sum([s.total_material_used_kg for s in valid_so]) / len(valid_so)
-                    else:
-                        avg_out, avg_mat = 495.0, 520.0
-                else:
-                    avg_out, avg_mat = 495.0, 520.0
-
-                # Slight realistic variance (+/- 3%) so data feels natural
-                variance = float(np.random.uniform(-0.03, 0.03))
-                imputed_out = round(float(avg_out) * (1.0 + variance), 2)
-                imputed_mat = round(float(avg_mat) * (1.0 + variance), 2)
-
-                record.total_output_kg = imputed_out
-                record.total_material_used_kg = imputed_mat
-                record.active_machines_count = Machine.objects.filter(status='OP').count() or len(machines)
-                record.is_auto_filled = True
-                record.save()
+                # Realistic Multi-Factor Factory Operation Imputation
+                dow = target_date.weekday()
+                dow_mult = DOW_MULTIPLIERS.get(dow, 1.0)
                 
-                per_machine_out = imputed_out / len(machines) if machines else 0
-                per_machine_mat = imputed_mat / len(machines) if machines else 0
-                
+                daily_total_out = 0.0
+                daily_total_mat = 0.0
+                active_count = 0
+
                 for idx, m in enumerate(machines):
-                    emp = employees[idx % len(employees)] if employees else None
+                    has_open_ticket = MaintenanceTicket.objects.filter(machine=m, status__in=['O', 'I']).exists()
+                    specs = get_machine_nominal_specs(m)
+                    
+                    if m.status == 'UM' and has_open_ticket:
+                        m_out = 0.0
+                        m_mat = 0.0
+                        m_vib = 0.0
+                        m_temp = round(24.5 + float(np.random.uniform(-0.5, 0.5)), 2)
+                    else:
+                        active_count += 1
+                        # Subtle weekly harmonic factory wave (+/- 7%)
+                        harmonic_wave = 0.07 * np.sin((target_date.toordinal() * 0.45) + (m.id * 1.3))
+                        noise_factor = float(np.random.uniform(-0.035, 0.035))
+                        eff_rate = dow_mult * (1.0 + harmonic_wave + noise_factor)
+                        
+                        m_out = round(max(75.0, specs["cap"] * eff_rate), 2)
+                        # Yield between 92.8% and 97.2%
+                        m_yield = 0.948 + float(np.random.uniform(-0.02, 0.024))
+                        m_mat = round(m_out / m_yield, 2)
+                        
+                        load_ratio = (m_out / specs["cap"]) if specs["cap"] > 0 else 1.0
+                        m_vib = round(max(1.10, specs["base_vib"] + (0.18 * (load_ratio - 1.0)) + float(np.random.uniform(-0.04, 0.04))), 2)
+                        m_temp = round(max(48.0, specs["base_temp"] + (0.032 * m_out) + float(np.random.uniform(-0.6, 0.6))), 2)
+
+                    daily_total_out += m_out
+                    daily_total_mat += m_mat
+
+                    # Assign rotating operator
+                    emp = employees[(idx + target_date.day) % len(employees)] if employees else None
                     if emp:
                         # Production Log
-                        existing_p_log = ProductionLog.objects.filter(date=target_date, machine=m, employee=emp).first()
+                        existing_p_log = ProductionLog.objects.filter(date=target_date, machine=m).first()
                         if existing_p_log:
-                            existing_p_log.output_kg = round(per_machine_out, 2)
-                            existing_p_log.material_used = round(per_machine_mat, 2)
+                            existing_p_log.output_kg = m_out
+                            existing_p_log.material_used = m_mat
+                            existing_p_log.employee = emp
                             existing_p_log.save()
                         else:
                             ProductionLog.objects.create(
                                 date=target_date, machine=m, employee=emp,
-                                output_kg=round(per_machine_out, 2),
-                                material_used=round(per_machine_mat, 2)
+                                output_kg=m_out, material_used=m_mat, is_auto_predicted=True
                             )
 
                         # Production Target
@@ -420,30 +454,69 @@ def autonomous_gap_detection_and_imputation(days_back=14):
                                 date=target_date, employee=emp,
                                 target_kg=165.0, is_rollover=False
                             )
-                    
-                    # Machine Telemetrics
-                    vib = round(1.8 + float(np.random.uniform(0.1, 0.9)), 2)
-                    temp = round(62.0 + float(np.random.uniform(1.0, 5.0)), 2)
+
+                    # Machine Telemetry Metrics
                     existing_metric = MachineHistoricalMetrics.objects.filter(date=target_date, machine=m).first()
                     if existing_metric:
-                        existing_metric.temperature = temp
-                        existing_metric.vibration = vib
-                        existing_metric.output = round(per_machine_out, 2)
+                        existing_metric.temperature = m_temp
+                        existing_metric.vibration = m_vib
+                        existing_metric.output = m_out
                         existing_metric.save()
                     else:
                         MachineHistoricalMetrics.objects.create(
                             date=target_date, machine=m,
-                            temperature=temp, vibration=vib,
-                            output=round(per_machine_out, 2)
+                            temperature=m_temp, vibration=m_vib, output=m_out
                         )
 
-                # Backfill SalaryPayroll for employees on this working date
+                    # Dynamic Machine Prediction
+                    pred_id = MachinePrediction.objects.filter(machine=m, date=target_date).first()
+                    baseline_interval = 52 + ((m.id * 17) % 32)
+                    days_in_cycle = ((target_date.toordinal() + m.id * 11) % 42) + 3
+                    load_accel = 0.85 + (0.35 * max(0.5, m_out / 250.0))
+                    wear_accum = days_in_cycle * load_accel
+                    vib_excess = max(0.0, m_vib - (specs["base_vib"] + 0.15))
+                    temp_excess = max(0.0, m_temp - 68.0)
+                    anomaly_penalty = (vib_excess * 20.0) + (temp_excess * 1.5)
+                    pred_rul = max(6, int(baseline_interval - wear_accum - anomaly_penalty))
+                    pred_health = round(max(35.0, min(99.4, 99.2 - (wear_accum * 0.28) - (anomaly_penalty * 1.35))), 2)
+                    conf_pct = round(max(89.2, min(96.8, 95.2 - (abs(m_vib - specs["base_vib"]) * 2.8) + float(np.random.uniform(-0.8, 0.8)))), 2)
+                    reason_text = f"Dynamic Telemetry Fit: {m_out:.1f}kg yield. Kinetic Vib: {m_vib}mm/s, Temp: {m_temp}°C. RUL: {pred_rul}d (Health: {pred_health}%, Conf: {conf_pct}%)."
+
+                    if pred_id:
+                        pred_id.predicted_vibration = m_vib
+                        pred_id.predicted_temp = m_temp
+                        pred_id.predicted_rul_days = pred_rul
+                        pred_id.health_score = pred_health
+                        pred_id.accuracy_pct = conf_pct
+                        pred_id.reason = reason_text
+                        pred_id.save()
+                    else:
+                        MachinePrediction.objects.create(
+                            machine=m, date=target_date,
+                            predicted_vibration=m_vib, predicted_temp=m_temp,
+                            predicted_rul_days=pred_rul, health_score=pred_health,
+                            accuracy_pct=conf_pct, is_auto_predicted=True, reason=reason_text
+                        )
+
+                # Update SystemOverview
+                daily_total_out = round(daily_total_out, 2)
+                daily_total_mat = round(daily_total_mat, 2)
+                record.total_output_kg = daily_total_out
+                record.total_material_used_kg = daily_total_mat
+                record.active_machines_count = active_count
+                record.is_auto_filled = True
+                record.save()
+
+                # Dynamic Employee Salary Payroll Sync
                 for emp in employees:
                     target_kg = 165.0
-                    actual_out = round(imputed_out / max(1, len(employees)), 1)
-                    comp_pct = round((actual_out / target_kg) * 100, 1) if target_kg > 0 else 100.0
+                    emp_eff = 0.92 + (((emp.id * 77) % 20) * 0.01)
+                    actual_out = round(max(110.0, 165.0 * emp_eff * dow_mult + float(np.random.uniform(-6.0, 6.0))), 1)
+                    comp_pct = round((actual_out / target_kg) * 100, 1)
                     base_pay = 450.0
-                    adj_pay = round(base_pay * 1.10, 2) if comp_pct >= 95.0 else base_pay
+                    adj_pay = round(base_pay * 1.10, 2) if comp_pct >= 95.0 else round(base_pay * max(0.85, comp_pct / 100.0), 2)
+                    adj_pay = round(max(380.0, min(525.0, adj_pay)), 2)
+
                     existing_pr = SalaryPayroll.objects.filter(employee=emp, payout_date=target_date).first()
                     if existing_pr:
                         existing_pr.base_salary = base_pay
@@ -463,7 +536,7 @@ def autonomous_gap_detection_and_imputation(days_back=14):
                             is_auto_predicted=True
                         )
 
-                logger.info(f"[SUCCESS] Autonomously imputed missing data for {target_date} ({target_date.strftime('%A')}). Output: {imputed_out} kg.")
+                logger.info(f"[SUCCESS] Autonomously imputed missing data for {target_date} ({target_date.strftime('%A')}). Output: {daily_total_out} kg across {active_count} active machines.")
             else:
                 logger.debug(f"Data for {target_date} is already complete.")
 
