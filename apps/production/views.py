@@ -569,10 +569,16 @@ def admin_production_view(request):
         cached_context['has_bonus'] = Bonus.objects.filter(employee=user, month__gte=start_of_month).exists() if user.is_authenticated else False
         return render(request, 'production.html', cached_context)
 
-    # 1. Fetch Factory Target & Monthly Production Analytics
+    # 1. Fetch Factory Target & Monthly Production Analytics (Live Supabase DB Bound)
     mt = MonthlyTarget.objects.filter(month__gte=start_of_month).first()
-    monthly_target_kg = float(mt.factory_target_kg) if mt else 5000.0
-    bonus_amt = float(mt.bonus_amount) if mt else 4500.0
+    if mt and mt.factory_target_kg:
+        monthly_target_kg = float(mt.factory_target_kg)
+        bonus_amt = float(mt.bonus_amount or 4500.0)
+    else:
+        avg_daily = SystemOverview.objects.aggregate(avg=Avg('total_output_kg'))['avg']
+        safe_daily = float(avg_daily) if avg_daily else 5200.0
+        monthly_target_kg = round(safe_daily * 26.0, 1)
+        bonus_amt = 4500.0
 
     has_bonus = False
     if user.is_authenticated:

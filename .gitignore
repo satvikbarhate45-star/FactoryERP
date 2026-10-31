@@ -27,3 +27,6 @@ staticfiles/
 # SQLite databases
 *.sqlite3
 db.sqlite3
+
+# Scratch directory
+scratch/

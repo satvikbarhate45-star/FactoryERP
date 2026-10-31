@@ -11,5 +11,8 @@ python manage.py collectstatic --noinput
 # Apply database schema migrations
 python manage.py migrate
 
+# Execute pharmaceutical historical database overhaul & time-series migration on Supabase PostgreSQL
+python manage.py overhaul_pharma_historical_db
+
 # Execute autonomous ML gap detection and backfill missing operational days (Monday, Tuesday, etc.)
 python manage.py daily_imputation --days 14
