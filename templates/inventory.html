@@ -1,50 +1,44 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="mb-6 flex justify-between items-center">
+<div class="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
     <div>
-        <h1 class="text-2xl font-bold text-gray-800">Logistics & Finance</h1>
-        <p class="text-gray-500">Manage warehouse stock, record dispatches, and track real-time P&L</p>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-800 dark:text-white">Warehouse & Logistics</h1>
+        <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">Real-time inventory levels, automated reordering, and dispatch tracking</p>
     </div>
+    <a href="{% url 'pl_dashboard' %}" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-md shadow-indigo-100 flex items-center gap-2 transition">
+        <span>💼</span> View Financial P&L Ledger &rarr;
+    </a>
 </div>
 
-<!-- Row 1: Finance P&L Dashboard -->
-<div class="bg-white rounded-lg shadow-sm border border-gray-100 p-6 mb-6">
-    <h2 class="font-bold text-gray-800 mb-4 border-b pb-2 flex items-center">
-        <svg class="w-5 h-5 mr-2 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-        Real-Time P&L Dashboard (Current Period)
-    </h2>
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div class="p-4 bg-emerald-50 rounded-lg border border-emerald-100">
-            <p class="text-sm text-emerald-800 font-medium">Total Revenue</p>
-            <p class="text-2xl font-bold text-emerald-700 mt-1">₹ {{ revenue|floatformat:0 }}</p>
-        </div>
-        <div class="p-4 bg-rose-50 rounded-lg border border-rose-100">
-            <p class="text-sm text-rose-800 font-medium">Total Expenses</p>
-            <p class="text-2xl font-bold text-rose-700 mt-1">₹ {{ expenses|floatformat:0 }}</p>
-        </div>
-        <div class="p-4 bg-blue-50 rounded-lg border border-blue-100">
-            <p class="text-sm text-blue-800 font-medium">Net Profit</p>
-            <p class="text-2xl font-bold text-blue-700 mt-1">₹ {{ profit|floatformat:0 }}</p>
-        </div>
-        <div class="p-4 bg-purple-50 rounded-lg border border-purple-100">
-            <p class="text-sm text-purple-800 font-medium">Profit Margin</p>
-            <p class="text-2xl font-bold text-purple-700 mt-1">{{ profit_margin }}%</p>
-        </div>
+<!-- Row 1: Real-Time Warehouse & Logistics KPI Cards -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="premium-card p-5 border-l-4 border-l-blue-500">
+        <p class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Total Stock on Hand</p>
+        <p class="text-2xl sm:text-3xl font-extrabold text-slate-800 dark:text-white mt-1">{{ total_stock_kg }} <span class="text-sm font-semibold text-slate-400">kg</span></p>
+        <p class="text-[11px] text-blue-600 font-semibold mt-1">{{ stock_items|length }} Registered Materials</p>
     </div>
-    
-    <div class="mt-6">
-        <h3 class="text-sm font-bold text-gray-700 mb-2">Cost Breakdown</h3>
-        <div class="flex h-4 rounded-full overflow-hidden w-full">
-            <div class="bg-amber-500" style="width: {% widthratio costs.material expenses 100 %}%" title="Raw Materials"></div>
-            <div class="bg-blue-500" style="width: {% widthratio costs.logistics expenses 100 %}%" title="Logistics & Dispatch"></div>
-            <div class="bg-purple-500" style="width: {% widthratio costs.payroll expenses 100 %}%" title="Payroll & Bonuses"></div>
-        </div>
-        <div class="flex space-x-6 mt-3 text-xs text-gray-500 font-medium">
-            <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-amber-500 mr-2"></span> Materials (₹ {{ costs.material|floatformat:0 }})</div>
-            <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-blue-500 mr-2"></span> Logistics (₹ {{ costs.logistics|floatformat:0 }})</div>
-            <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-purple-500 mr-2"></span> Payroll/Bonuses (₹ {{ costs.payroll|floatformat:0 }})</div>
-        </div>
+
+    <div class="premium-card p-5 border-l-4 {% if low_stock_count > 0 %}border-l-rose-500{% else %}border-l-emerald-500{% endif %}">
+        <p class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Reorder Alerts</p>
+        <p class="text-2xl sm:text-3xl font-extrabold {% if low_stock_count > 0 %}text-rose-600{% else %}text-emerald-600{% endif %} mt-1">
+            {{ low_stock_count }}
+        </p>
+        <p class="text-[11px] {% if low_stock_count > 0 %}text-rose-500 font-bold{% else %}text-emerald-600 font-semibold{% endif %} mt-1">
+            {% if low_stock_count > 0 %}Stock Below Reorder Threshold{% else %}All Inventory Levels Safe{% endif %}
+        </p>
+    </div>
+
+    <div class="premium-card p-5 border-l-4 border-l-indigo-500">
+        <p class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Total Dispatched</p>
+        <p class="text-2xl sm:text-3xl font-extrabold text-indigo-600 dark:text-indigo-400 mt-1">{{ total_dispatched_kg }} <span class="text-sm font-semibold text-slate-400">kg</span></p>
+        <p class="text-[11px] text-slate-400 font-semibold mt-1">{{ dispatches_count }} Completed Shipments</p>
+    </div>
+
+    <div class="premium-card p-5 border-l-4 border-l-purple-500">
+        <p class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Total Freight Outlay</p>
+        <p class="text-2xl sm:text-3xl font-extrabold text-slate-800 dark:text-white mt-1">₹{{ total_freight_cost|floatformat:2 }}</p>
+        <p class="text-[11px] text-purple-600 font-semibold mt-1">Export Logistics & Transit</p>
     </div>
 </div>
 

@@ -87,35 +87,28 @@ def inventory_dashboard_view(request):
     if cached_context is not None:
         return render(request, 'inventory.html', cached_context)
 
-    # Fetch Data
+    # Fetch Real-time Warehouse & Logistics Data (No dummy numbers)
     stock_items = list(WarehouseStock.objects.all().order_by('material'))
-    recent_dispatches = list(Dispatch.objects.all().order_by('-created_at')[:5])
+    recent_dispatches = list(Dispatch.objects.all().order_by('-created_at')[:8])
+    recent_inward = list(InwardShipment.objects.select_related('material').order_by('-created_at')[:8])
     
-    # FR-7.3: P&L Calculation with full null-safety
-    total_prod_vol = float(ProductionLog.objects.aggregate(t=Sum('output_kg'))['t'] or 0.0)
-    total_material_cost = float(InwardShipment.objects.aggregate(t=Sum('cost'))['t'] or 0.0)
-    total_dispatch_cost = float(Dispatch.objects.aggregate(t=Sum('cost'))['t'] or 0.0)
-    total_bonuses = float(Bonus.objects.filter(status='P').aggregate(t=Sum('amount'))['t'] or 0.0)
-    
-    # Base salaries for operational demonstration
-    total_salaries = 50000.0 
-    
-    total_revenue = round(total_prod_vol * 15.5, 2)
-    total_expenses = round(total_material_cost + total_dispatch_cost + total_bonuses + total_salaries, 2)
-    profit = round(total_revenue - total_expenses, 2)
+    total_stock_kg = float(WarehouseStock.objects.aggregate(t=Sum('quantity'))['t'] or 0.0)
+    low_stock_count = sum(1 for s in stock_items if float(s.quantity or 0) <= float(s.reorder_level or 0))
+    total_dispatched_kg = float(Dispatch.objects.aggregate(t=Sum('quantity'))['t'] or 0.0)
+    total_freight_cost = float(Dispatch.objects.aggregate(t=Sum('cost'))['t'] or 0.0)
+    total_procurement_cost = float(InwardShipment.objects.aggregate(t=Sum('cost'))['t'] or 0.0)
     
     context = {
         'stock_items': stock_items,
         'recent_dispatches': recent_dispatches,
-        'revenue': total_revenue,
-        'expenses': total_expenses,
-        'profit': profit,
-        'profit_margin': round((profit/total_revenue)*100, 1) if total_revenue > 0 else 0.0,
-        'costs': {
-            'material': total_material_cost,
-            'logistics': total_dispatch_cost,
-            'payroll': total_salaries + total_bonuses
-        }
+        'recent_inward': recent_inward,
+        'total_stock_kg': round(total_stock_kg, 1),
+        'low_stock_count': low_stock_count,
+        'total_dispatched_kg': round(total_dispatched_kg, 1),
+        'total_freight_cost': round(total_freight_cost, 2),
+        'total_procurement_cost': round(total_procurement_cost, 2),
+        'dispatches_count': Dispatch.objects.count(),
+        'inward_count': InwardShipment.objects.count(),
     }
     
     cache.set(cache_key, context, timeout=60)

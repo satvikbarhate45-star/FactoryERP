@@ -460,103 +460,25 @@ def dashboard_view(request):
     pie_labels = [mo['machine__code'] for mo in machine_output]
     pie_data = [float(mo['total_out']) for mo in machine_output]
 
-    # --- Financial Profit & Loss (P&L) Module ---
+    # --- Executive High-Level Real-Time Summary (Pure Supabase DB Aggregates) ---
     from apps.inventory.models import InwardShipment
     from apps.production.models import SalaryPayroll, SystemAlert
     from apps.logistics.models import Dispatch
 
-    daily_revenues = []
-    daily_materials = []
-    daily_maintenance = []
-    daily_logistics = []
-    daily_payrolls = []
-    daily_total_expenses = []
-    daily_net_profits = []
-
-    # Map daily production logs
-    daily_p_logs = {d: {'out': 0.0, 'raw': 0.0} for d in days}
-    for p in prod_logs:
-        if p['date'] in daily_p_logs:
-            daily_p_logs[p['date']]['out'] = float(p['total_out'] or 0.0)
-            daily_p_logs[p['date']]['raw'] = float(p['total_raw'] or 0.0)
-
-    # Inward Shipments
-    inward_qs = InwardShipment.objects.filter(received_on__gte=start_of_week, received_on__lte=end_of_week).values('received_on').annotate(tot_cost=Sum('cost'))
-    inward_by_date = {r['received_on']: float(r['tot_cost'] or 0.0) for r in inward_qs}
-
-    # Maintenance Tickets (Parts & Labor Costs)
-    tickets_qs = MaintenanceTicket.objects.filter(
+    total_out_kg = float(ProductionLog.objects.filter(date__gte=start_of_week, date__lte=end_of_week).aggregate(s=Sum('output_kg'))['s'] or 0.0)
+    kpi_gross_revenue = round(total_out_kg * 45.0, 2)
+    inward_cost = float(InwardShipment.objects.filter(received_on__gte=start_of_week, received_on__lte=end_of_week).aggregate(s=Sum('cost'))['s'] or 0.0)
+    tickets_cost = float(MaintenanceTicket.objects.filter(
         Q(opened_at__date__gte=start_of_week, opened_at__date__lte=end_of_week) |
         Q(closed_at__date__gte=start_of_week, closed_at__date__lte=end_of_week)
-    )
-    maint_by_date = {d: 0.0 for d in days}
-    for t in tickets_qs:
-        t_date = t.closed_at.date() if t.closed_at else t.opened_at.date()
-        if t_date in maint_by_date:
-            maint_by_date[t_date] += float(t.total_cost or (float(t.parts_cost or 0) + float(t.labor_cost or 0)))
+    ).aggregate(s=Sum('total_cost'))['s'] or 0.0)
+    disp_cost = float(Dispatch.objects.filter(created_at__date__gte=start_of_week, created_at__date__lte=end_of_week).aggregate(s=Sum('cost'))['s'] or 0.0)
+    payroll_cost = float(SalaryPayroll.objects.filter(payout_date__gte=start_of_week, payout_date__lte=end_of_week).aggregate(s=Sum('salary_adjusted'))['s'] or 0.0)
 
-    # Logistics Dispatches (Freight Expenses)
-    disp_qs = Dispatch.objects.filter(created_at__date__gte=start_of_week, created_at__date__lte=end_of_week).values('created_at__date').annotate(tot_cost=Sum('cost'))
-    disp_by_date = {r['created_at__date']: float(r['tot_cost'] or 0.0) for r in disp_qs}
-
-    # Salary & Payroll
-    payroll_qs = SalaryPayroll.objects.filter(payout_date__gte=start_of_week, payout_date__lte=end_of_week).values('payout_date').annotate(tot_pay=Sum('salary_adjusted'))
-    payroll_by_date = {r['payout_date']: float(r['tot_pay'] or 0.0) for r in payroll_qs}
-    active_emp_count = User.objects.filter(role__in=['EM', 'PM', 'MA'], is_active=True).count()
-    default_daily_payroll = max(1800.0, active_emp_count * 450.0)
-
-    for d in days:
-        # Gross revenue: ₹28.50 per kg finished output
-        p_out = daily_p_logs[d]['out']
-        d_rev = round(p_out * 28.50, 2)
-        daily_revenues.append(d_rev)
-
-        # Raw material expense (Inward shipments or consumed raw materials ₹13.20/kg)
-        d_mat = inward_by_date.get(d, 0.0)
-        if d_mat == 0.0 and daily_p_logs[d]['raw'] > 0:
-            d_mat = round(daily_p_logs[d]['raw'] * 13.20, 2)
-        daily_materials.append(d_mat)
-
-        # Maintenance repair expense
-        d_maint = round(maint_by_date.get(d, 0.0), 2)
-        daily_maintenance.append(d_maint)
-
-        # Logistics freight expense
-        d_log = round(disp_by_date.get(d, 0.0), 2)
-        if d_log == 0.0 and p_out > 0:
-            d_log = round((p_out * 0.90 * 1.65) + 1800.0, 2)
-        daily_logistics.append(d_log)
-
-        # Employee payroll
-        d_pay = round(payroll_by_date.get(d, 0.0), 2)
-        if d_pay == 0.0 and p_out > 0:
-            d_pay = default_daily_payroll
-        daily_payrolls.append(d_pay)
-
-        # Daily operational expenses and net profit
-        d_exp = round(d_mat + d_maint + d_log + d_pay, 2)
-        d_net = round(d_rev - d_exp, 2)
-        daily_total_expenses.append(d_exp)
-        daily_net_profits.append(d_net)
-
-    # Weekly Financial Totals
-    kpi_gross_revenue = round(sum(daily_revenues), 2)
-    kpi_raw_material_cost = round(sum(daily_materials), 2)
-    kpi_maintenance_cost = round(sum(daily_maintenance), 2)
-    kpi_logistics_cost = round(sum(daily_logistics), 2)
-    kpi_payroll_cost = round(sum(daily_payrolls), 2)
-    kpi_total_expenses = round(sum(daily_total_expenses), 2)
+    kpi_total_expenses = round(inward_cost + tickets_cost + disp_cost + payroll_cost, 2)
     kpi_net_profit = round(kpi_gross_revenue - kpi_total_expenses, 2)
     kpi_profit_margin = round((kpi_net_profit / kpi_gross_revenue) * 100, 1) if kpi_gross_revenue > 0 else 0.0
     is_profitable = kpi_net_profit >= 0
-
-    safe_tot_exp = max(1.0, kpi_total_expenses)
-    cost_breakdown_pct = {
-        'materials': round((kpi_raw_material_cost / safe_tot_exp) * 100, 1),
-        'maintenance': round((kpi_maintenance_cost / safe_tot_exp) * 100, 1),
-        'logistics': round((kpi_logistics_cost / safe_tot_exp) * 100, 1),
-        'payroll': round((kpi_payroll_cost / safe_tot_exp) * 100, 1),
-    }
 
     # Fetch autonomous decisions from SystemAlerts & Dispatches
     system_alerts = list(SystemAlert.objects.order_by('-created_at')[:10])
@@ -585,26 +507,244 @@ def dashboard_view(request):
         'open_tickets': open_tickets,
         'machines_warning': machines_warning,
         'machines_down': machines_down,
-        # Executive Financial P&L Context
+        'kpi_gross_revenue': kpi_gross_revenue,
+        'kpi_total_expenses': kpi_total_expenses,
+        'kpi_net_profit': kpi_net_profit,
+        'kpi_profit_margin': kpi_profit_margin,
+        'is_profitable': is_profitable,
+    }
+    
+    cache.set(cache_key, context, timeout=60)
+    return render(request, 'dashboard.html', context)
+
+
+@login_required(login_url='/login/')
+@role_required('AD', 'PM', 'LO')
+def pl_dashboard_view(request):
+    try:
+        week_offset = int(request.GET.get('week_offset', 0))
+    except ValueError:
+        week_offset = 0
+
+    today = timezone.localdate()
+    cache_key = f'pl_dashboard_view_{week_offset}_{today}'
+    cached_context = cache.get(cache_key)
+    if cached_context is not None:
+        return render(request, 'pl.html', cached_context)
+
+    from apps.inventory.models import InwardShipment
+    from apps.production.models import SalaryPayroll, ProductionLog
+    from apps.logistics.models import Dispatch
+    from apps.maintenance.models import MaintenanceTicket
+
+    # Sunday-aligned 7-day week
+    idx = (today.weekday() + 1) % 7
+    start_of_week = today - timedelta(days=idx) + timedelta(weeks=week_offset)
+    end_of_week = start_of_week + timedelta(days=6)
+
+    days = [start_of_week + timedelta(days=i) for i in range(7)]
+    chart_dates = [d.strftime('%a, %b %d') for d in days]
+
+    # 1. Gross Revenue from Live Production Yield (Zero dummy numbers)
+    prod_logs = ProductionLog.objects.filter(date__gte=start_of_week, date__lte=end_of_week).values('date').annotate(
+        total_out=Sum('output_kg'), total_raw=Sum('material_used')
+    )
+    daily_prod_map = {p['date']: float(p['total_out'] or 0.0) for p in prod_logs}
+    daily_revenues = [round(daily_prod_map.get(d, 0.0) * 45.0, 2) for d in days]
+
+    # 2. Inward Shipments (Raw Materials Cost)
+    inward_qs = InwardShipment.objects.filter(
+        received_on__gte=start_of_week, received_on__lte=end_of_week
+    ).values('received_on').annotate(tot_cost=Sum('cost'))
+    inward_by_date = {r['received_on']: float(r['tot_cost'] or 0.0) for r in inward_qs}
+    daily_materials = [round(inward_by_date.get(d, 0.0), 2) for d in days]
+
+    # 3. Maintenance Overhaul & Repair Costs
+    tickets_qs = MaintenanceTicket.objects.filter(
+        Q(opened_at__date__gte=start_of_week, opened_at__date__lte=end_of_week) |
+        Q(closed_at__date__gte=start_of_week, closed_at__date__lte=end_of_week)
+    ).select_related('machine')
+    maint_by_date = {d: 0.0 for d in days}
+    for t in tickets_qs:
+        t_date = t.closed_at.date() if t.closed_at else t.opened_at.date()
+        if t_date in maint_by_date:
+            maint_by_date[t_date] += float(t.total_cost or (float(t.parts_cost or 0) + float(t.labor_cost or 0)))
+    daily_maintenance = [round(maint_by_date.get(d, 0.0), 2) for d in days]
+
+    # 4. Logistics Freight Expenses
+    disp_qs = Dispatch.objects.filter(
+        created_at__date__gte=start_of_week, created_at__date__lte=end_of_week
+    ).values('created_at__date').annotate(tot_cost=Sum('cost'))
+    disp_by_date = {r['created_at__date']: float(r['tot_cost'] or 0.0) for r in disp_qs}
+    daily_logistics = [round(disp_by_date.get(d, 0.0), 2) for d in days]
+
+    # 5. Salary & Payroll Outlay
+    payroll_qs = SalaryPayroll.objects.filter(
+        payout_date__gte=start_of_week, payout_date__lte=end_of_week
+    ).values('payout_date').annotate(tot_pay=Sum('salary_adjusted'))
+    payroll_by_date = {r['payout_date']: float(r['tot_pay'] or 0.0) for r in payroll_qs}
+    daily_payrolls = [round(payroll_by_date.get(d, 0.0), 2) for d in days]
+
+    # Daily Aggregates
+    daily_total_opex = []
+    daily_net_profits = []
+    for i in range(7):
+        exp = round(daily_materials[i] + daily_maintenance[i] + daily_logistics[i] + daily_payrolls[i], 2)
+        net = round(daily_revenues[i] - exp, 2)
+        daily_total_opex.append(exp)
+        daily_net_profits.append(net)
+
+    # Weekly Totals
+    kpi_gross_revenue = round(sum(daily_revenues), 2)
+    kpi_raw_material_cost = round(sum(daily_materials), 2)
+    kpi_maintenance_cost = round(sum(daily_maintenance), 2)
+    kpi_logistics_cost = round(sum(daily_logistics), 2)
+    kpi_payroll_cost = round(sum(daily_payrolls), 2)
+    kpi_total_opex = round(sum(daily_total_opex), 2)
+    kpi_net_profit = round(kpi_gross_revenue - kpi_total_opex, 2)
+    kpi_operating_margin = round((kpi_net_profit / kpi_gross_revenue * 100), 1) if kpi_gross_revenue > 0 else 0.0
+    is_profitable = kpi_net_profit >= 0
+
+    safe_tot_exp = max(1.0, kpi_total_opex)
+    cost_breakdown_pct = {
+        'materials': round((kpi_raw_material_cost / safe_tot_exp) * 100, 1) if kpi_total_opex > 0 else 0.0,
+        'maintenance': round((kpi_maintenance_cost / safe_tot_exp) * 100, 1) if kpi_total_opex > 0 else 0.0,
+        'logistics': round((kpi_logistics_cost / safe_tot_exp) * 100, 1) if kpi_total_opex > 0 else 0.0,
+        'payroll': round((kpi_payroll_cost / safe_tot_exp) * 100, 1) if kpi_total_opex > 0 else 0.0,
+    }
+
+    # 6. Real-time Financial Audit Ledger (Transactions)
+    transactions = []
+
+    # Inward Shipments
+    inward_records = InwardShipment.objects.filter(
+        received_on__gte=start_of_week, received_on__lte=end_of_week
+    ).select_related('material')
+    for s in inward_records:
+        cost = float(s.cost or 0.0)
+        transactions.append({
+            'date_obj': s.received_on,
+            'date_str': s.received_on.strftime('%b %d, %Y'),
+            'category': 'Raw Materials',
+            'badge_class': 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border-blue-300 dark:border-blue-800',
+            'type': 'EXPENSE',
+            'reference': f"INW-{s.id:04d}",
+            'description': f"{s.material.material if s.material else 'Stock'} from {s.supplier} ({float(s.quantity):.1f} kg)",
+            'amount': cost,
+            'status': 'Received'
+        })
+
+    # Maintenance Tickets
+    for t in tickets_qs:
+        t_date = t.closed_at.date() if t.closed_at else t.opened_at.date()
+        cost = float(t.total_cost or (float(t.parts_cost or 0) + float(t.labor_cost or 0)))
+        if cost > 0:
+            m_code = t.machine.code if t.machine else 'Machine'
+            parts = float(t.parts_cost or 0.0)
+            labor = float(t.labor_cost or 0.0)
+            transactions.append({
+                'date_obj': t_date,
+                'date_str': t_date.strftime('%b %d, %Y'),
+                'category': 'Maintenance',
+                'badge_class': 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-300 dark:border-amber-800',
+                'type': 'EXPENSE',
+                'reference': f"WO-{t.id:04d}",
+                'description': f"{m_code} Overhaul: {getattr(t, 'cause', None) or 'Equipment Service'} (Parts: ₹{parts:,.0f}, Labor: ₹{labor:,.0f})",
+                'amount': cost,
+                'status': t.get_status_display()
+            })
+
+    # Dispatches
+    dispatches = Dispatch.objects.filter(
+        created_at__date__gte=start_of_week, created_at__date__lte=end_of_week
+    )
+    for d in dispatches:
+        cost = float(d.cost or 0.0)
+        if cost > 0:
+            transactions.append({
+                'date_obj': d.created_at.date(),
+                'date_str': d.created_at.strftime('%b %d, %Y'),
+                'category': 'Logistics Freight',
+                'badge_class': 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300 border-purple-300 dark:border-purple-800',
+                'type': 'EXPENSE',
+                'reference': f"DSP-{d.id:04d}",
+                'description': f"Freight to {d.customer} via {d.transporter} ({d.transport_id}) - {float(d.quantity):.1f} units",
+                'amount': cost,
+                'status': 'Dispatched'
+            })
+
+    # Payroll
+    payrolls = SalaryPayroll.objects.filter(
+        payout_date__gte=start_of_week, payout_date__lte=end_of_week
+    ).select_related('employee')
+    for p in payrolls:
+        amount = float(p.salary_adjusted or 0.0)
+        if amount > 0:
+            emp_name = p.employee.get_full_name() or p.employee.username
+            transactions.append({
+                'date_obj': p.payout_date,
+                'date_str': p.payout_date.strftime('%b %d, %Y'),
+                'category': 'Payroll',
+                'badge_class': 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800',
+                'type': 'EXPENSE',
+                'reference': f"PAY-{p.id:04d}",
+                'description': f"Wages: {emp_name} ({p.employee.get_role_display()}) - Target: {p.target_assigned} kg, Achieved: {p.actual_output} kg",
+                'amount': amount,
+                'status': 'Disbursed'
+            })
+
+    # Production Output Revenue
+    prod_logs_all = ProductionLog.objects.filter(
+        date__gte=start_of_week, date__lte=end_of_week
+    ).select_related('machine', 'employee')
+    for p in prod_logs_all:
+        output_kg = float(p.output_kg or 0.0)
+        if output_kg > 0:
+            rev = round(output_kg * 45.0, 2)
+            m_code = p.machine.code if p.machine else 'Line'
+            transactions.append({
+                'date_obj': p.date,
+                'date_str': p.date.strftime('%b %d, %Y'),
+                'category': 'Gross Revenue',
+                'badge_class': 'bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300 border-teal-300 dark:border-teal-800',
+                'type': 'INCOME',
+                'reference': f"PROD-{p.id:04d}",
+                'description': f"Finished Goods Output: {output_kg:.1f} kg yield from {m_code}",
+                'amount': rev,
+                'status': 'Realized'
+            })
+
+    transactions.sort(key=lambda x: (x['date_obj'], x['amount']), reverse=True)
+
+    context = {
+        'week_offset': week_offset,
+        'start_of_week': start_of_week,
+        'end_of_week': end_of_week,
+        'chart_dates_json': json.dumps(chart_dates),
+        'daily_revenues_json': json.dumps(daily_revenues),
+        'daily_opex_json': json.dumps(daily_total_opex),
+        'daily_net_profits_json': json.dumps(daily_net_profits),
+        'daily_materials_json': json.dumps(daily_materials),
+        'daily_maintenance_json': json.dumps(daily_maintenance),
+        'daily_logistics_json': json.dumps(daily_logistics),
+        'daily_payrolls_json': json.dumps(daily_payrolls),
+        # KPI Totals
         'kpi_gross_revenue': kpi_gross_revenue,
         'kpi_raw_material_cost': kpi_raw_material_cost,
         'kpi_maintenance_cost': kpi_maintenance_cost,
         'kpi_logistics_cost': kpi_logistics_cost,
         'kpi_payroll_cost': kpi_payroll_cost,
-        'kpi_total_expenses': kpi_total_expenses,
+        'kpi_total_opex': kpi_total_opex,
         'kpi_net_profit': kpi_net_profit,
-        'kpi_profit_margin': kpi_profit_margin,
+        'kpi_operating_margin': kpi_operating_margin,
         'is_profitable': is_profitable,
         'cost_breakdown_pct': cost_breakdown_pct,
-        'daily_revenues_json': json.dumps(daily_revenues),
-        'daily_expenses_json': json.dumps(daily_total_expenses),
-        'daily_net_profits_json': json.dumps(daily_net_profits),
-        'daily_maintenance_json': json.dumps(daily_maintenance),
-        'daily_logistics_json': json.dumps(daily_logistics),
+        'transactions': transactions,
+        'transaction_count': len(transactions),
     }
-    
+
     cache.set(cache_key, context, timeout=60)
-    return render(request, 'dashboard.html', context)
+    return render(request, 'pl.html', context)
 
 @login_required(login_url='/login/')
 @role_required('AD')

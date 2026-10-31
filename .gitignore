@@ -23,3 +23,7 @@ Thumbs.db
 
 # Collected static files
 staticfiles/
+
+# SQLite databases
+*.sqlite3
+db.sqlite3

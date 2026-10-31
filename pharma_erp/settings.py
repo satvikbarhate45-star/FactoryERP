@@ -8,7 +8,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / '.env')
 
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-dummy-key-for-scaffolding')
-DEBUG = os.environ.get('DEBUG', 'False').lower() in ('true', '1', 't')
+is_render = bool(os.environ.get('RENDER'))
+DEBUG = os.environ.get('DEBUG', 'False' if is_render else 'True').lower() in ('true', '1', 't')
 
 # ALLOWED_HOSTS configuration for Render and local environments
 allowed_hosts_env = os.environ.get('ALLOWED_HOSTS')
@@ -197,6 +198,7 @@ STORAGES = {
     },
 }
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
+WHITENOISE_USE_FINDERS = True
 WHITENOISE_MANIFEST_STRICT = False
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'accounts.User'

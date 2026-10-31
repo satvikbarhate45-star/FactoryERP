@@ -547,11 +547,15 @@
             </a>
             {% endif %}
             
-            <!-- Logistics / Inventory -->
+            <!-- Logistics / Inventory & Financial P&L -->
             {% if user.role in 'AD,LO,PM' %}
             <a href="/inventory/" class="sidebar-link {% if '/inventory/' in request.path %}active{% endif %}" title="Logistics & Stock" data-title="Logistics">
                 <i class="fa-solid fa-boxes-stacked sidebar-icon"></i>
                 <span class="sidebar-text font-medium text-sm">Logistics</span>
+            </a>
+            <a href="{% url 'pl_dashboard' %}" class="sidebar-link {% if '/pl/' in request.path %}active{% endif %}" title="Financial P&L" data-title="Financial P&L">
+                <i class="fa-solid fa-file-invoice-dollar sidebar-icon"></i>
+                <span class="sidebar-text font-medium text-sm">Financial P&L</span>
             </a>
             {% endif %}
             
@@ -708,6 +712,10 @@
                 <a href="/inventory/" onclick="toggleNavOverlay(false)" class="drawer-link {% if '/inventory/' in request.path %}active{% endif %}">
                     <i class="fa-solid fa-boxes-stacked mr-3 text-lg text-purple-400"></i>
                     <span class="font-medium text-sm">Logistics & Stock</span>
+                </a>
+                <a href="{% url 'pl_dashboard' %}" onclick="toggleNavOverlay(false)" class="drawer-link {% if '/pl/' in request.path %}active{% endif %}">
+                    <i class="fa-solid fa-file-invoice-dollar mr-3 text-lg text-emerald-400"></i>
+                    <span class="font-medium text-sm">Financial P&L</span>
                 </a>
                 {% endif %}
 
