@@ -545,11 +545,17 @@ def pl_dashboard_view(request):
     days = [start_of_week + timedelta(days=i) for i in range(7)]
     chart_dates = [d.strftime('%a, %b %d') for d in days]
 
-    # 1. Gross Revenue from Live Production Yield (Zero dummy numbers)
+    # 1. Gross Revenue from Live Production Yield & Local ML Operational Predictions
+    from apps.production.models import SystemOverview
     prod_logs = ProductionLog.objects.filter(date__gte=start_of_week, date__lte=end_of_week).values('date').annotate(
         total_out=Sum('output_kg'), total_raw=Sum('material_used')
     )
     daily_prod_map = {p['date']: float(p['total_out'] or 0.0) for p in prod_logs}
+    so_logs = SystemOverview.objects.filter(date__gte=start_of_week, date__lte=end_of_week).values('date', 'total_output_kg')
+    so_map = {s['date']: float(s['total_output_kg'] or 0.0) for s in so_logs}
+    for d in days:
+        if daily_prod_map.get(d, 0.0) == 0.0 and d in so_map and so_map[d] > 0.0:
+            daily_prod_map[d] = so_map[d]
     daily_revenues = [round(daily_prod_map.get(d, 0.0) * 45.0, 2) for d in days]
 
     # 2. Inward Shipments (Raw Materials Cost)

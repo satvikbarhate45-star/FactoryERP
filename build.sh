@@ -11,8 +11,12 @@ python manage.py collectstatic --noinput
 # Apply database schema migrations
 python manage.py migrate
 
-# Execute pharmaceutical historical database overhaul & time-series migration on Supabase PostgreSQL
-python manage.py overhaul_pharma_historical_db
+# External REST/IoT API historical ingestion (Strictly-once from company startup to yesterday)
+python manage.py ingest_historical_api --start-date 2026-08-25
+
+# Execute local ML forecasting pipeline for today & upcoming operational days (Zero external API calls)
+python manage.py run_local_ml_pipeline --date today --days-ahead 3
 
 # Execute autonomous ML gap detection and backfill missing operational days (Monday, Tuesday, etc.)
 python manage.py daily_imputation --days 14
+

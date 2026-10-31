@@ -31,7 +31,7 @@ def run_autonomous_decision_engine():
             if alert.alert_type == SystemAlert.AlertType.LOW_STOCK or "stock" in alert.message.lower():
                 # Deliberate Inventory Analysis
                 words = alert.message.replace(':', '').split()
-                material_name = "Eucalyptus Pulp"
+                material_name = "Paracetamol IP/USP Grade API"
                 if "for" in words:
                     try:
                         start_idx = words.index("for") + 1

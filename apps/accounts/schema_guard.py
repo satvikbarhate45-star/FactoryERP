@@ -86,6 +86,9 @@ def ensure_runtime_schema_integrity(force=False, max_age_seconds=60):
                     ("production_systemalert", "is_autonomous", "boolean DEFAULT true", "boolean DEFAULT 1"),
                     ("production_systemalert", "is_resolved", "boolean DEFAULT false", "boolean DEFAULT 0"),
                     ("production_systemalert", "decision_taken", "text", "text"),
+                    ("production_externalapiingestionaudit", "is_sealed", "boolean DEFAULT true", "boolean DEFAULT 1"),
+                    ("production_externalapiingestionaudit", "total_records_ingested", "integer DEFAULT 0", "integer DEFAULT 0"),
+
 
                     # Maintenance
                     ("maintenance_machine", "ai_enabled", "boolean DEFAULT true", "boolean DEFAULT 1"),

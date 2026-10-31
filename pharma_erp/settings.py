@@ -202,3 +202,24 @@ WHITENOISE_USE_FINDERS = True
 WHITENOISE_MANIFEST_STRICT = False
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'accounts.User'
+
+# External Pharmaceutical & IoT REST API Endpoints for Historical Ingestion
+PHARMA_BATCH_API_URL = os.environ.get(
+    'PHARMA_BATCH_API_URL',
+    'https://api.pharma-mes.io/v1/batch-yields'
+)
+PHARMA_CLEANROOM_IOT_API_URL = os.environ.get(
+    'PHARMA_CLEANROOM_IOT_API_URL',
+    'https://iot.cleanroom-monitoring.com/api/v1/telemetry'
+)
+PHARMA_SHIFT_LOGS_API_URL = os.environ.get(
+    'PHARMA_SHIFT_LOGS_API_URL',
+    'https://hr-mes.pharmamfg-cloud.com/api/v1/shift-logs'
+)
+PHARMA_SUPPLY_CHAIN_API_URL = os.environ.get(
+    'PHARMA_SUPPLY_CHAIN_API_URL',
+    'https://scm.pharmamfg-cloud.com/api/v1/shipments'
+)
+PHARMA_API_TIMEOUT = int(os.environ.get('PHARMA_API_TIMEOUT', 4))
+PHARMA_API_BEARER_TOKEN = os.environ.get('PHARMA_API_BEARER_TOKEN', '')
+

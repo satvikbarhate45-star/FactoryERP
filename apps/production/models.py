@@ -115,3 +115,17 @@ class SalaryPayroll(models.Model):
     is_auto_predicted = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
+
+class ExternalApiIngestionAudit(models.Model):
+    batch_endpoint = models.CharField(max_length=255)
+    iot_endpoint = models.CharField(max_length=255)
+    shift_endpoint = models.CharField(max_length=255)
+    start_date = models.DateField()
+    end_date = models.DateField()
+    total_records_ingested = models.IntegerField(default=0)
+    source_status = models.CharField(max_length=50, default='EXTERNAL_REST_API')
+    is_sealed = models.BooleanField(default=True)
+    checksum = models.CharField(max_length=64, blank=True)
+    ingested_at = models.DateTimeField(auto_now_add=True)
+
+

@@ -507,15 +507,15 @@ def autonomous_gap_detection_and_imputation(days_back=14):
                 record.is_auto_filled = True
                 record.save()
 
-                # Dynamic Employee Salary Payroll Sync
+                # Dynamic Employee Salary Payroll Sync (Individualized Targets & Outputs)
                 for emp in employees:
-                    target_kg = 165.0
+                    target_kg = round(150.0 + (((emp.id * 37) % 32) * 1.25), 1)
                     emp_eff = 0.92 + (((emp.id * 77) % 20) * 0.01)
-                    actual_out = round(max(110.0, 165.0 * emp_eff * dow_mult + float(np.random.uniform(-6.0, 6.0))), 1)
+                    actual_out = round(max(105.0, target_kg * emp_eff * dow_mult + float(np.random.uniform(-5.0, 5.0))), 1)
                     comp_pct = round((actual_out / target_kg) * 100, 1)
                     base_pay = 450.0
                     adj_pay = round(base_pay * 1.10, 2) if comp_pct >= 95.0 else round(base_pay * max(0.85, comp_pct / 100.0), 2)
-                    adj_pay = round(max(380.0, min(525.0, adj_pay)), 2)
+                    adj_pay = round(max(380.0, min(530.0, adj_pay)), 2)
 
                     existing_pr = SalaryPayroll.objects.filter(employee=emp, payout_date=target_date).first()
                     if existing_pr:
@@ -539,6 +539,15 @@ def autonomous_gap_detection_and_imputation(days_back=14):
                 logger.info(f"[SUCCESS] Autonomously imputed missing data for {target_date} ({target_date.strftime('%A')}). Output: {daily_total_out} kg across {active_count} active machines.")
             else:
                 logger.debug(f"Data for {target_date} is already complete.")
+
+        # Ensure today's operational predictions are refreshed via Local ML Pipeline
+        try:
+            from apps.production.local_ml_pipeline import LocalPharmaMLForecastingPipeline
+            local_pipeline = LocalPharmaMLForecastingPipeline()
+            local_pipeline.forecast_for_date(today)
+            logger.info("[ML PIPELINE] Today's operational predictions generated via local ML forecasting pipeline.")
+        except Exception as ml_p_err:
+            logger.warning("Local ML pipeline non-critical notice: %s", ml_p_err)
 
         # Run Autonomous Decision Engine to resolve any alerts
         try:
