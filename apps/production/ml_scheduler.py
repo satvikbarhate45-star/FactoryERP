@@ -327,7 +327,7 @@ def autonomous_gap_detection_and_imputation(days_back=14):
         SystemAlert
     )
     from apps.inventory.models import WarehouseStock
-    from apps.maintenance.models import Machine, MachineHistoricalMetrics
+    from apps.maintenance.models import Machine, MachineHistoricalMetrics, MaintenanceTicket
     from apps.accounts.models import User
     
     try:
@@ -357,7 +357,6 @@ def autonomous_gap_detection_and_imputation(days_back=14):
             
             has_logs = ProductionLog.objects.filter(date=target_date).exists()
             has_metrics = MachineHistoricalMetrics.objects.filter(date=target_date).exists()
-            has_payroll = SalaryPayroll.objects.filter(payout_date=target_date).exists()
             
             # Sunday Rule (Day 6 of week)
             if target_date.weekday() == 6:
@@ -389,8 +388,7 @@ def autonomous_gap_detection_and_imputation(days_back=14):
                 record.total_output_kg is None or
                 record.total_material_used_kg is None or
                 not has_logs or
-                not has_metrics or
-                not has_payroll
+                not has_metrics
             )
             
             if needs_imputation:
@@ -507,38 +505,17 @@ def autonomous_gap_detection_and_imputation(days_back=14):
                 record.is_auto_filled = True
                 record.save()
 
-                # Dynamic Employee Salary Payroll Sync (Individualized Targets & Outputs)
-                for emp in employees:
-                    target_kg = round(150.0 + (((emp.id * 37) % 32) * 1.25), 1)
-                    emp_eff = 0.92 + (((emp.id * 77) % 20) * 0.01)
-                    actual_out = round(max(105.0, target_kg * emp_eff * dow_mult + float(np.random.uniform(-5.0, 5.0))), 1)
-                    comp_pct = round((actual_out / target_kg) * 100, 1)
-                    base_pay = 450.0
-                    adj_pay = round(base_pay * 1.10, 2) if comp_pct >= 95.0 else round(base_pay * max(0.85, comp_pct / 100.0), 2)
-                    adj_pay = round(max(380.0, min(530.0, adj_pay)), 2)
-
-                    existing_pr = SalaryPayroll.objects.filter(employee=emp, payout_date=target_date).first()
-                    if existing_pr:
-                        existing_pr.base_salary = base_pay
-                        existing_pr.target_assigned = target_kg
-                        existing_pr.actual_output = actual_out
-                        existing_pr.completion_percentage = comp_pct
-                        existing_pr.salary_adjusted = adj_pay
-                        existing_pr.is_incremented = (comp_pct >= 95.0)
-                        existing_pr.is_auto_predicted = True
-                        existing_pr.save()
-                    else:
-                        SalaryPayroll.objects.create(
-                            employee=emp, payout_date=target_date,
-                            base_salary=base_pay, target_assigned=target_kg,
-                            actual_output=actual_out, completion_percentage=comp_pct,
-                            salary_adjusted=adj_pay, is_incremented=(comp_pct >= 95.0),
-                            is_auto_predicted=True
-                        )
-
-                logger.info(f"[SUCCESS] Autonomously imputed missing data for {target_date} ({target_date.strftime('%A')}). Output: {daily_total_out} kg across {active_count} active machines.")
+                logger.info(f"[SUCCESS] Autonomously imputed missing operational data for {target_date} ({target_date.strftime('%A')}). Output: {daily_total_out} kg across {active_count} active machines.")
             else:
                 logger.debug(f"Data for {target_date} is already complete.")
+
+        # Enforce Monthly Employee Payroll Cycle Distribution (Strictly Monthly)
+        try:
+            from apps.production.monthly_payroll import sync_all_monthly_payrolls
+            sync_all_monthly_payrolls(start_date=datetime.date(2026, 8, 25), end_date=today, clear_daily_records=True)
+            logger.info("[ML PIPELINE] Monthly employee payroll cycle successfully synchronized.")
+        except Exception as pr_sync_err:
+            logger.warning("Monthly payroll sync notice: %s", pr_sync_err)
 
         # Ensure today's operational predictions are refreshed via Local ML Pipeline
         try:

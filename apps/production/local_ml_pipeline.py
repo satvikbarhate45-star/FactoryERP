@@ -258,19 +258,10 @@ class LocalPharmaMLForecastingPipeline:
                     }
                 )
 
-                # SalaryPayroll
-                SalaryPayroll.objects.update_or_create(
-                    employee=emp, payout_date=target_date,
-                    defaults={
-                        'base_salary': base_pay,
-                        'target_assigned': unique_target_kg,
-                        'actual_output': unique_actual_output,
-                        'completion_percentage': comp_pct,
-                        'salary_adjusted': adj_pay,
-                        'is_incremented': (comp_pct >= 95.0),
-                        'is_auto_predicted': True
-                    }
-                )
+        # Enforce Monthly Operational Payroll Cycle Distribution (Strictly Monthly)
+        from apps.production.monthly_payroll import sync_all_monthly_payrolls
+        sync_all_monthly_payrolls(start_date=date(2026, 8, 25), end_date=target_date, clear_daily_records=True)
+
 
         # -----------------------------------------------------------------
         # 3. SYSTEM OVERVIEW & FINANCIAL BLOCK AGGREGATION

@@ -374,33 +374,14 @@ class ExternalPharmaAPIIngestionService:
                 ))
             total_records_count += 1
 
-            # SalaryPayroll
+            # Daily Shift Targets (Unique, non-zero for each employee)
             if not is_sunday and employees:
                 for emp in employees:
-                    target_kg = 150.0 + ((emp.id * 31) % 30) * 1.25 # Non-identical target
-                    actual_out = round(max(105.0, target_kg * dow_mult + m_rng.uniform(-5.0, 5.0)), 1)
-                    comp_pct = round((actual_out / target_kg) * 100, 1)
-                    base_pay = 450.0
-                    adj_pay = round(base_pay * 1.10, 2) if comp_pct >= 95.0 else round(base_pay * max(0.85, comp_pct / 100.0), 2)
-                    adj_pay = round(max(380.0, min(530.0, adj_pay)), 2)
-
-                    pr_id = existing_pr_map.get((curr_date, emp.id))
-                    if pr_id:
-                        SalaryPayroll.objects.filter(id=pr_id).update(
-                            base_salary=base_pay, target_assigned=target_kg,
-                            actual_output=actual_out, completion_percentage=comp_pct,
-                            salary_adjusted=adj_pay, is_incremented=(comp_pct >= 95.0),
-                            is_auto_predicted=False
-                        )
-                    else:
-                        pr_to_create.append(SalaryPayroll(
-                            employee=emp, payout_date=curr_date,
-                            base_salary=base_pay, target_assigned=target_kg,
-                            actual_output=actual_out, completion_percentage=comp_pct,
-                            salary_adjusted=adj_pay, is_incremented=(comp_pct >= 95.0),
-                            is_auto_predicted=False
-                        ))
-                    total_records_count += 1
+                    target_kg = round(150.0 + (((emp.id * 37) % 32) * 1.25), 1)
+                    ProductionTarget.objects.update_or_create(
+                        date=curr_date, employee=emp,
+                        defaults={'target_kg': target_kg, 'is_rollover': False}
+                    )
 
         # Bulk creations
         if inward_to_create:
@@ -415,8 +396,11 @@ class ExternalPharmaAPIIngestionService:
             MachinePrediction.objects.bulk_create(preds_to_create, batch_size=500)
         if so_to_create:
             SystemOverview.objects.bulk_create(so_to_create, batch_size=500)
-        if pr_to_create:
-            SalaryPayroll.objects.bulk_create(pr_to_create, batch_size=500)
+
+        # Enforce Monthly Employee Payroll Cycle Distribution (Strictly Monthly)
+        from apps.production.monthly_payroll import sync_all_monthly_payrolls
+        pr_res = sync_all_monthly_payrolls(start_date=start_date, end_date=end_date, clear_daily_records=True)
+        total_records_count += pr_res.get('monthly_records_count', 0)
 
         # Overhaul maintenance tickets with authentic cGMP compliance
         self._ensure_pharma_maintenance_tickets()

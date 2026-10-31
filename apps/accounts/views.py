@@ -6,7 +6,8 @@ from django.contrib import messages
 from django.db import transaction
 from django.db.models import Sum, Avg, Count, Q
 from django.utils import timezone
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime, date
+import calendar
 from apps.maintenance.models import Machine, MachineHistoricalMetrics, MaintenanceTicket
 from apps.production.models import ProductionLog
 from django.core.cache import cache
@@ -474,6 +475,16 @@ def dashboard_view(request):
     ).aggregate(s=Sum('total_cost'))['s'] or 0.0)
     disp_cost = float(Dispatch.objects.filter(created_at__date__gte=start_of_week, created_at__date__lte=end_of_week).aggregate(s=Sum('cost'))['s'] or 0.0)
     payroll_cost = float(SalaryPayroll.objects.filter(payout_date__gte=start_of_week, payout_date__lte=end_of_week).aggregate(s=Sum('salary_adjusted'))['s'] or 0.0)
+    if payroll_cost == 0.0:
+        mid_date = start_of_week + timedelta(days=3)
+        month_end_date = date(mid_date.year, mid_date.month, calendar.monthrange(mid_date.year, mid_date.month)[1])
+        monthly_total_payroll = float(SalaryPayroll.objects.filter(payout_date=month_end_date).aggregate(s=Sum('salary_adjusted'))['s'] or 0.0)
+        if monthly_total_payroll <= 0:
+            latest_pr = SalaryPayroll.objects.order_by('-payout_date').values('payout_date').first()
+            if latest_pr:
+                monthly_total_payroll = float(SalaryPayroll.objects.filter(payout_date=latest_pr['payout_date']).aggregate(s=Sum('salary_adjusted'))['s'] or 0.0)
+        days_in_month = calendar.monthrange(mid_date.year, mid_date.month)[1]
+        payroll_cost = round((monthly_total_payroll / float(days_in_month)) * 6.0, 2)
 
     kpi_total_expenses = round(inward_cost + tickets_cost + disp_cost + payroll_cost, 2)
     kpi_net_profit = round(kpi_gross_revenue - kpi_total_expenses, 2)
@@ -584,12 +595,27 @@ def pl_dashboard_view(request):
     disp_by_date = {r['created_at__date']: float(r['tot_cost'] or 0.0) for r in disp_qs}
     daily_logistics = [round(disp_by_date.get(d, 0.0), 2) for d in days]
 
-    # 5. Salary & Payroll Outlay
+    # 5. Salary & Payroll Outlay (Monthly Operational Cycle)
     payroll_qs = SalaryPayroll.objects.filter(
         payout_date__gte=start_of_week, payout_date__lte=end_of_week
     ).values('payout_date').annotate(tot_pay=Sum('salary_adjusted'))
     payroll_by_date = {r['payout_date']: float(r['tot_pay'] or 0.0) for r in payroll_qs}
-    daily_payrolls = [round(payroll_by_date.get(d, 0.0), 2) for d in days]
+    
+    # If the week contains the end-of-month payout date, record directly on that payout date.
+    # Otherwise, distribute the pro-rated operational labor cost across working days (Mon-Sat).
+    if payroll_by_date:
+        daily_payrolls = [round(payroll_by_date.get(d, 0.0), 2) for d in days]
+    else:
+        mid_date = start_of_week + timedelta(days=3)
+        month_end_date = date(mid_date.year, mid_date.month, calendar.monthrange(mid_date.year, mid_date.month)[1])
+        monthly_total_payroll = float(SalaryPayroll.objects.filter(payout_date=month_end_date).aggregate(s=Sum('salary_adjusted'))['s'] or 0.0)
+        if monthly_total_payroll <= 0:
+            latest_pr = SalaryPayroll.objects.order_by('-payout_date').values('payout_date').first()
+            if latest_pr:
+                monthly_total_payroll = float(SalaryPayroll.objects.filter(payout_date=latest_pr['payout_date']).aggregate(s=Sum('salary_adjusted'))['s'] or 0.0)
+        days_in_month = calendar.monthrange(mid_date.year, mid_date.month)[1]
+        daily_labor_cost = round(monthly_total_payroll / float(days_in_month), 2) if monthly_total_payroll > 0 else 0.0
+        daily_payrolls = [daily_labor_cost if d.weekday() != 6 else 0.0 for d in days]
 
     # Daily Aggregates
     daily_total_opex = []
@@ -687,6 +713,7 @@ def pl_dashboard_view(request):
         amount = float(p.salary_adjusted or 0.0)
         if amount > 0:
             emp_name = p.employee.get_full_name() or p.employee.username
+            month_label = p.payout_date.strftime('%B %Y')
             transactions.append({
                 'date_obj': p.payout_date,
                 'date_str': p.payout_date.strftime('%b %d, %Y'),
@@ -694,10 +721,28 @@ def pl_dashboard_view(request):
                 'badge_class': 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800',
                 'type': 'EXPENSE',
                 'reference': f"PAY-{p.id:04d}",
-                'description': f"Wages: {emp_name} ({p.employee.get_role_display()}) - Target: {p.target_assigned} kg, Achieved: {p.actual_output} kg",
+                'description': f"Monthly Salary: {emp_name} ({month_label}) - Target: {p.target_assigned} kg, Achieved: {p.actual_output} kg",
                 'amount': amount,
                 'status': 'Disbursed'
             })
+
+    if not payrolls.exists() and sum(daily_payrolls) > 0:
+        mid_date = start_of_week + timedelta(days=3)
+        month_label = mid_date.strftime('%B %Y')
+        for d in days:
+            if d.weekday() != 6:
+                d_idx = days.index(d)
+                transactions.append({
+                    'date_obj': d,
+                    'date_str': d.strftime('%b %d, %Y'),
+                    'category': 'Payroll',
+                    'badge_class': 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800',
+                    'type': 'EXPENSE',
+                    'reference': f"PAY-ALLOC-{d.strftime('%m%d')}",
+                    'description': f"Operational Labor Allocation ({month_label} Monthly Cycle)",
+                    'amount': daily_payrolls[d_idx],
+                    'status': 'Accrued'
+                })
 
     # Production Output Revenue
     prod_logs_all = ProductionLog.objects.filter(

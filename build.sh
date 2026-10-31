@@ -20,3 +20,6 @@ python manage.py run_local_ml_pipeline --date today --days-ahead 3
 # Execute autonomous ML gap detection and backfill missing operational days (Monday, Tuesday, etc.)
 python manage.py daily_imputation --days 14
 
+# Enforce monthly employee payroll distribution and purge legacy daily wages
+python manage.py sync_monthly_payroll --start-date 2026-08-25
+
