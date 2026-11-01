@@ -647,8 +647,9 @@ def dashboard_view(request):
     idx = (today.weekday() + 1) % 7
     start_of_week = today - timedelta(days=idx) + timedelta(weeks=week_offset)
     end_of_week = start_of_week + timedelta(days=6)
+    query_end = min(end_of_week, today)
     
-    # Pre-fill 7 days array (Sun to Sat)
+    # Pre-fill 7 days array (Sun to Sat) initialized strictly to None (empty state)
     days = []
     chart_dates = []
     uptime_data_dict = {}
@@ -657,70 +658,108 @@ def dashboard_view(request):
         d = start_of_week + timedelta(days=i)
         days.append(d)
         chart_dates.append(d.strftime('%a')) # 'Sun', 'Mon', etc.
-        uptime_data_dict[d] = 0.0
-        yield_data_dict[d] = 0.0
+        uptime_data_dict[d] = None
+        yield_data_dict[d] = None
     
-    # --- Chart 1: Vibration over week ---
-    metrics = MachineHistoricalMetrics.objects.filter(date__gte=start_of_week, date__lte=end_of_week).values('date').annotate(avg_vibration=Avg('vibration'))
-    for m in metrics:
-        if m['date'] in uptime_data_dict:
-            uptime_data_dict[m['date']] = float(round(m['avg_vibration'], 1))
-            
-    # Fallback to MachinePrediction for Vibration
-    from apps.maintenance.models import MachinePrediction
-    predictions = MachinePrediction.objects.filter(date__gte=start_of_week, date__lte=end_of_week).values('date').annotate(avg_vibration=Avg('predicted_vibration'))
-    for p in predictions:
-        if p['date'] in uptime_data_dict and uptime_data_dict[p['date']] == 0.0:
-            uptime_data_dict[p['date']] = float(round(p['avg_vibration'], 1))
+    if start_of_week <= today:
+        # --- Chart 1: Vibration over week (Real telemetry only; strictly exclude future dates & unrecorded Sundays) ---
+        metrics = MachineHistoricalMetrics.objects.filter(
+            date__gte=start_of_week, 
+            date__lte=query_end
+        ).values('date').annotate(avg_vibration=Avg('vibration'))
+        
+        for m in metrics:
+            m_date = m['date']
+            if m_date in uptime_data_dict and m['avg_vibration'] is not None:
+                # Sunday plant holiday filter: display vibration ONLY if verified Overtime exists
+                if m_date.weekday() == 6:
+                    has_ot = ProductionLog.objects.filter(date=m_date, is_overtime=True, output_kg__gt=0).exists()
+                    if has_ot and float(m['avg_vibration']) > 0:
+                        uptime_data_dict[m_date] = float(round(m['avg_vibration'], 1))
+                    else:
+                        uptime_data_dict[m_date] = None
+                else:
+                    if float(m['avg_vibration']) > 0:
+                        uptime_data_dict[m_date] = float(round(m['avg_vibration'], 1))
+                    else:
+                        uptime_data_dict[m_date] = None
+
+        # --- Chart 2: Production Yield % over week (Actual production logs only; capped at 100%) ---
+        prod_logs = ProductionLog.objects.filter(
+            date__gte=start_of_week, 
+            date__lte=query_end,
+            output_kg__gt=0
+        ).values('date', 'is_overtime').annotate(
+            total_raw=Sum('material_used'), 
+            total_out=Sum('output_kg')
+        )
+        for p in prod_logs:
+            p_date = p['date']
+            if p_date in yield_data_dict and p['total_raw'] and p['total_raw'] > 0:
+                # Sunday holiday filter: on Sunday, strictly only display if verified Overtime
+                if p_date.weekday() == 6:
+                    if p.get('is_overtime', False):
+                        y_val = min(100.0, (float(p['total_out']) / float(p['total_raw'])) * 100.0)
+                        yield_data_dict[p_date] = float(round(y_val, 1))
+                    # Non-overtime Sunday remains None!
+                else:
+                    y_val = min(100.0, (float(p['total_out']) / float(p['total_raw'])) * 100.0)
+                    yield_data_dict[p_date] = float(round(y_val, 1))
 
     uptime_data = [uptime_data_dict[d] for d in days]
-        
-    # --- Chart 2: Production Yield % over week ---
-    prod_logs = ProductionLog.objects.filter(date__gte=start_of_week, date__lte=end_of_week).values('date').annotate(total_raw=Sum('material_used'), total_out=Sum('output_kg'))
-    for p in prod_logs:
-        if p['date'] in yield_data_dict and p['total_raw'] and p['total_raw'] > 0:
-            yield_data_dict[p['date']] = float(round((p['total_out'] / p['total_raw']) * 100, 1))
-            
-    # Fallback to SystemOverview for Yield
-    from apps.production.models import SystemOverview
-    system_overviews = SystemOverview.objects.filter(date__gte=start_of_week, date__lte=end_of_week)
-    for so in system_overviews:
-        if so.date in yield_data_dict and yield_data_dict[so.date] == 0.0:
-            if so.total_material_used_kg and so.total_material_used_kg > 0:
-                yield_data_dict[so.date] = float(round((so.total_output_kg / so.total_material_used_kg) * 100, 1))
-
     yield_data = [yield_data_dict[d] for d in days]
 
     # --- Chart 3: Production Output by Machine (Pie) ---
-    machine_output = ProductionLog.objects.filter(date__gte=start_of_week, date__lte=end_of_week).values('machine__code').annotate(total_out=Sum('output_kg'))
-    pie_labels = [mo['machine__code'] for mo in machine_output]
-    pie_data = [float(mo['total_out']) for mo in machine_output]
+    valid_prod_dates = [
+        d for d in days 
+        if d <= today and (d.weekday() != 6 or ProductionLog.objects.filter(date=d, is_overtime=True, output_kg__gt=0).exists())
+    ]
+    if valid_prod_dates:
+        machine_output = (
+            ProductionLog.objects.filter(date__in=valid_prod_dates, output_kg__gt=0)
+            .values('machine__code')
+            .annotate(total_out=Sum('output_kg'))
+            .filter(total_out__gt=0)
+            .order_by('-total_out')
+        )
+        pie_labels = [mo['machine__code'] for mo in machine_output]
+        pie_data = [float(round(mo['total_out'], 1)) for mo in machine_output]
+    else:
+        pie_labels = []
+        pie_data = []
 
     # --- Executive High-Level Real-Time Summary (Pure Supabase DB Aggregates) ---
     from apps.inventory.models import InwardShipment
     from apps.production.models import SalaryPayroll, SystemAlert
     from apps.logistics.models import Dispatch
 
-    total_out_kg = float(ProductionLog.objects.filter(date__gte=start_of_week, date__lte=end_of_week).aggregate(s=Sum('output_kg'))['s'] or 0.0)
-    kpi_gross_revenue = round(total_out_kg * 45.0, 2)
-    inward_cost = float(InwardShipment.objects.filter(received_on__gte=start_of_week, received_on__lte=end_of_week).aggregate(s=Sum('cost'))['s'] or 0.0)
-    tickets_cost = float(MaintenanceTicket.objects.filter(
-        Q(opened_at__date__gte=start_of_week, opened_at__date__lte=end_of_week) |
-        Q(closed_at__date__gte=start_of_week, closed_at__date__lte=end_of_week)
-    ).aggregate(s=Sum('total_cost'))['s'] or 0.0)
-    disp_cost = float(Dispatch.objects.filter(created_at__date__gte=start_of_week, created_at__date__lte=end_of_week).aggregate(s=Sum('cost'))['s'] or 0.0)
-    payroll_cost = float(SalaryPayroll.objects.filter(payout_date__gte=start_of_week, payout_date__lte=end_of_week).aggregate(s=Sum('salary_adjusted'))['s'] or 0.0)
-    if payroll_cost == 0.0:
-        mid_date = start_of_week + timedelta(days=3)
-        month_end_date = date(mid_date.year, mid_date.month, calendar.monthrange(mid_date.year, mid_date.month)[1])
-        monthly_total_payroll = float(SalaryPayroll.objects.filter(payout_date=month_end_date, payout_date__lte=timezone.localdate()).aggregate(s=Sum('salary_adjusted'))['s'] or 0.0)
-        if monthly_total_payroll <= 0:
-            latest_pr = SalaryPayroll.objects.filter(payout_date__lte=timezone.localdate()).order_by('-payout_date').values('payout_date').first()
-            if latest_pr:
-                monthly_total_payroll = float(SalaryPayroll.objects.filter(payout_date=latest_pr['payout_date']).aggregate(s=Sum('salary_adjusted'))['s'] or 0.0)
-        days_in_month = calendar.monthrange(mid_date.year, mid_date.month)[1]
-        payroll_cost = round((monthly_total_payroll / float(days_in_month)) * 6.0, 2)
+    if start_of_week <= today and valid_prod_dates:
+        total_out_kg = float(ProductionLog.objects.filter(date__in=valid_prod_dates).aggregate(s=Sum('output_kg'))['s'] or 0.0)
+        inward_cost = float(InwardShipment.objects.filter(received_on__gte=start_of_week, received_on__lte=query_end).aggregate(s=Sum('cost'))['s'] or 0.0)
+        tickets_cost = float(MaintenanceTicket.objects.filter(
+            Q(opened_at__date__gte=start_of_week, opened_at__date__lte=query_end) |
+            Q(closed_at__date__gte=start_of_week, closed_at__date__lte=query_end)
+        ).aggregate(s=Sum('total_cost'))['s'] or 0.0)
+        disp_cost = float(Dispatch.objects.filter(created_at__date__gte=start_of_week, created_at__date__lte=query_end).aggregate(s=Sum('cost'))['s'] or 0.0)
+        payroll_cost = float(SalaryPayroll.objects.filter(payout_date__gte=start_of_week, payout_date__lte=query_end).aggregate(s=Sum('salary_adjusted'))['s'] or 0.0)
+        if payroll_cost == 0.0:
+            mid_date = start_of_week + timedelta(days=3)
+            month_end_date = date(mid_date.year, mid_date.month, calendar.monthrange(mid_date.year, mid_date.month)[1])
+            monthly_total_payroll = float(SalaryPayroll.objects.filter(payout_date=month_end_date, payout_date__lte=today).aggregate(s=Sum('salary_adjusted'))['s'] or 0.0)
+            if monthly_total_payroll <= 0:
+                latest_pr = SalaryPayroll.objects.filter(payout_date__lte=today).order_by('-payout_date').values('payout_date').first()
+                if latest_pr:
+                    monthly_total_payroll = float(SalaryPayroll.objects.filter(payout_date=latest_pr['payout_date']).aggregate(s=Sum('salary_adjusted'))['s'] or 0.0)
+            days_in_month = calendar.monthrange(mid_date.year, mid_date.month)[1]
+            payroll_cost = round((monthly_total_payroll / float(days_in_month)) * 6.0, 2)
+    else:
+        total_out_kg = 0.0
+        inward_cost = 0.0
+        tickets_cost = 0.0
+        disp_cost = 0.0
+        payroll_cost = 0.0
 
+    kpi_gross_revenue = round(total_out_kg * 45.0, 2)
     kpi_total_expenses = round(inward_cost + tickets_cost + disp_cost + payroll_cost, 2)
     kpi_net_profit = round(kpi_gross_revenue - kpi_total_expenses, 2)
     kpi_profit_margin = round((kpi_net_profit / kpi_gross_revenue) * 100, 1) if kpi_gross_revenue > 0 else 0.0

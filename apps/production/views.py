@@ -638,17 +638,30 @@ def admin_production_view(request):
     for i in range(6, -1, -1):
         d = today - timedelta(days=i)
         yield_chart_labels.append(d.strftime('%a %d'))
-        d_logs = recent_yield_qs.get(d)
-        y = 0.0
-        if d_logs and d_logs.get('tot_in') and float(d_logs['tot_in']) > 0:
-            y = (float(d_logs['tot_out']) / float(d_logs['tot_in'])) * 100
-        else:
-            so = recent_so_dict.get(d)
-            if so and so.total_material_used_kg and float(so.total_material_used_kg) > 0:
-                y = (float(so.total_output_kg) / float(so.total_material_used_kg)) * 100
+        if d.weekday() == 6:
+            # Sunday plant holiday: only include yield if explicit Overtime exists
+            ot_logs = ProductionLog.objects.filter(date=d, is_overtime=True, output_kg__gt=0)
+            if ot_logs.exists():
+                agg = ot_logs.aggregate(tot_in=Sum('material_used'), tot_out=Sum('output_kg'))
+                if agg['tot_in'] and float(agg['tot_in']) > 0:
+                    y = (float(agg['tot_out']) / float(agg['tot_in'])) * 100.0
+                    yield_chart_data.append(round(min(100.0, max(0.0, y)), 1))
+                else:
+                    yield_chart_data.append(None)
             else:
-                y = 94.8
-        yield_chart_data.append(round(min(100.0, max(60.0, y)), 1))
+                yield_chart_data.append(None)
+        else:
+            d_logs = recent_yield_qs.get(d)
+            if d_logs and d_logs.get('tot_in') and float(d_logs['tot_in']) > 0:
+                y = (float(d_logs['tot_out']) / float(d_logs['tot_in'])) * 100.0
+                yield_chart_data.append(round(min(100.0, max(0.0, y)), 1))
+            else:
+                so = recent_so_dict.get(d)
+                if so and so.total_material_used_kg and float(so.total_material_used_kg) > 0:
+                    y = (float(so.total_output_kg) / float(so.total_material_used_kg)) * 100.0
+                    yield_chart_data.append(round(min(100.0, max(0.0, y)), 1))
+                else:
+                    yield_chart_data.append(None)
 
     all_recent_logs = ProductionLog.objects.order_by('-date', '-created_at')[:50]
     total_factory_yield = 0.0
@@ -839,31 +852,68 @@ def admin_production_view(request):
     daily_workflow_history = []
     for i in range(1, 8):
         hist_date = today - timedelta(days=i)
-        d_overview = hist_so_dict.get(hist_date)
-        d_logs = hist_logs_dict.get(hist_date, {})
-        d_count = d_logs.get('count', 24) or 24
+        is_sun = (hist_date.weekday() == 6)
+        if is_sun:
+            ot_logs = ProductionLog.objects.filter(date=hist_date, is_overtime=True, output_kg__gt=0)
+            if ot_logs.exists():
+                agg = ot_logs.aggregate(tot_in=Sum('material_used'), tot_out=Sum('output_kg'), count=Count('id'))
+                tot_in = float(agg['tot_in'] or 0.0)
+                tot_out = float(agg['tot_out'] or 0.0)
+                d_count = agg['count'] or 0
+                y_pct = round((tot_out / tot_in) * 100.0, 1) if tot_in > 0 else 0.0
+                daily_workflow_history.append({
+                    'date': hist_date,
+                    'day_name': hist_date.strftime('%A'),
+                    'material_used': round(tot_in, 1),
+                    'finished_output': round(tot_out, 1),
+                    'yield_pct': y_pct,
+                    'is_good_yield': y_pct >= 90.0,
+                    'active_machines': min(d_count, 24),
+                    'total_batches': d_count,
+                    'is_auto_filled': False,
+                    'workflow_status': 'Overtime Shift Operational',
+                    'workflow_trace': f'Sunday authorized Overtime (OT) shifts logged. Yield recorded at {y_pct}%.',
+                    'audit_status': 'Verified & Sealed'
+                })
+            else:
+                daily_workflow_history.append({
+                    'date': hist_date,
+                    'day_name': hist_date.strftime('%A'),
+                    'material_used': 0.0,
+                    'finished_output': 0.0,
+                    'yield_pct': 0.0,
+                    'is_good_yield': True,
+                    'active_machines': 0,
+                    'total_batches': 0,
+                    'is_auto_filled': False,
+                    'workflow_status': 'Sunday Plant Holiday (Standby)',
+                    'workflow_trace': 'Sunday scheduled plant holiday. No overtime shifts logged.',
+                    'audit_status': 'Holiday'
+                })
+        else:
+            d_overview = hist_so_dict.get(hist_date)
+            d_logs = hist_logs_dict.get(hist_date, {})
+            tot_in = float(d_logs.get('tot_in') or (d_overview.total_material_used_kg if d_overview and d_overview.total_material_used_kg else 0.0))
+            tot_out = float(d_logs.get('tot_out') or (d_overview.total_output_kg if d_overview and d_overview.total_output_kg else 0.0))
+            d_count = d_logs.get('count', 0)
+            active_units = d_overview.active_machines_count if d_overview and d_overview.active_machines_count else min(d_count or 24, 24)
+            is_auto = d_overview.is_auto_filled if d_overview else False
+            y_pct = round((tot_out / tot_in) * 100.0, 1) if tot_in > 0 else 0.0
 
-        tot_in = float(d_logs.get('tot_in') or (d_overview.total_material_used_kg if d_overview and d_overview.total_material_used_kg else 520.0))
-        tot_out = float(d_logs.get('tot_out') or (d_overview.total_output_kg if d_overview and d_overview.total_output_kg else 495.0))
-        active_units = d_overview.active_machines_count if d_overview and d_overview.active_machines_count else 24
-        is_auto = d_overview.is_auto_filled if d_overview else True
-
-        y_pct = round((tot_out / tot_in) * 100, 1) if tot_in > 0 else 95.2
-
-        daily_workflow_history.append({
-            'date': hist_date,
-            'day_name': hist_date.strftime('%A'),
-            'material_used': round(tot_in, 1),
-            'finished_output': round(tot_out, 1),
-            'yield_pct': y_pct,
-            'is_good_yield': y_pct >= 90.0,
-            'active_machines': active_units,
-            'total_batches': d_count,
-            'is_auto_filled': is_auto,
-            'workflow_status': 'Auto-Healed & Synthesized' if is_auto else 'Production Cycle Completed',
-            'workflow_trace': f'APScheduler ML pipeline validated {d_count} machine streams. Nominal kinetic variance. Yield maintained at {y_pct}%.',
-            'audit_status': 'Verified & Sealed'
-        })
+            daily_workflow_history.append({
+                'date': hist_date,
+                'day_name': hist_date.strftime('%A'),
+                'material_used': round(tot_in, 1),
+                'finished_output': round(tot_out, 1),
+                'yield_pct': y_pct,
+                'is_good_yield': y_pct >= 90.0,
+                'active_machines': active_units,
+                'total_batches': d_count,
+                'is_auto_filled': is_auto,
+                'workflow_status': 'Production Cycle Completed',
+                'workflow_trace': f'Operations validated {d_count} machine streams. Yield maintained at {y_pct}%.',
+                'audit_status': 'Verified & Sealed'
+            })
 
     # Autonomous vs Manual Production Share
     recent_period_logs = ProductionLog.objects.filter(date__gte=today - timedelta(days=14))
