@@ -250,11 +250,6 @@ class LocalPharmaMLForecastingPipeline:
                 }
             )
 
-        # Enforce Monthly Operational Payroll Cycle Distribution (Strictly Monthly)
-        if target_date >= self.today:
-            from apps.production.monthly_payroll import sync_all_monthly_payrolls
-            sync_all_monthly_payrolls(start_date=date(2026, 8, 25), end_date=self.today, clear_daily_records=True)
-
 
         # -----------------------------------------------------------------
         # 3. SYSTEM OVERVIEW & FINANCIAL BLOCK AGGREGATION
