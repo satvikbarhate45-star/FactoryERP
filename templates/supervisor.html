@@ -1126,6 +1126,7 @@
                     </thead>
                     <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                         {% for pr in payrolls %}
+                        {% if pr.payout_date <= today %}
                         <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition">
                             <td class="px-4 py-3 font-bold text-slate-900 dark:text-white">{{ pr.employee.username }}</td>
                             <td class="px-4 py-3 font-mono text-slate-600 dark:text-slate-400">₹{{ pr.base_salary|floatformat:2 }}</td>
@@ -1144,6 +1145,7 @@
                             <td class="px-4 py-3 text-xs text-slate-400">{{ pr.payout_date }}</td>
                             <td class="px-4 py-3 text-right font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">₹{{ pr.salary_adjusted|floatformat:2 }}</td>
                         </tr>
+                        {% endif %}
                         {% endfor %}
                     </tbody>
                 </table>

@@ -1116,13 +1116,13 @@ def supervisor_dashboard_view(request):
 
     employee_performance.sort(key=lambda x: x['perf_score'], reverse=True)
 
-    # 3. Salary & Payroll Distribution Metrics
-    payrolls_qs = SalaryPayroll.objects.select_related('employee').order_by('-payout_date', '-id')[:35]
-    total_payroll_distributed = float(SalaryPayroll.objects.aggregate(s=Sum('salary_adjusted'))['s'] or 0.0)
-    total_base_salaries = float(SalaryPayroll.objects.aggregate(s=Sum('base_salary'))['s'] or 0.0)
-    avg_completion = float(SalaryPayroll.objects.aggregate(a=Avg('completion_percentage'))['a'] or 85.0)
-    auto_predicted_payrolls_count = SalaryPayroll.objects.filter(is_auto_predicted=True).count()
-    incremented_payrolls_count = SalaryPayroll.objects.filter(is_incremented=True).count()
+    # 3. Salary & Payroll Distribution Metrics (Strictly past and current active dates <= today)
+    payrolls_qs = SalaryPayroll.objects.filter(payout_date__lte=today).select_related('employee').order_by('-payout_date', '-id')[:35]
+    total_payroll_distributed = float(SalaryPayroll.objects.filter(payout_date__lte=today).aggregate(s=Sum('salary_adjusted'))['s'] or 0.0)
+    total_base_salaries = float(SalaryPayroll.objects.filter(payout_date__lte=today).aggregate(s=Sum('base_salary'))['s'] or 0.0)
+    avg_completion = float(SalaryPayroll.objects.filter(payout_date__lte=today).aggregate(a=Avg('completion_percentage'))['a'] or 85.0)
+    auto_predicted_payrolls_count = SalaryPayroll.objects.filter(payout_date__lte=today, is_auto_predicted=True).count()
+    incremented_payrolls_count = SalaryPayroll.objects.filter(payout_date__lte=today, is_incremented=True).count()
 
     payroll_incentive_pool = max(0.0, total_payroll_distributed - total_base_salaries)
 

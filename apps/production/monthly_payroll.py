@@ -55,6 +55,11 @@ def sync_all_monthly_payrolls(start_date=None, end_date=None, clear_daily_record
 
     logger.info("[MONTHLY PAYROLL] Starting monthly operational payroll cycle sync (%s to %s)...", start_date, end_date)
 
+    # Strictly purge any future records immediately
+    purged_future, _ = SalaryPayroll.objects.filter(payout_date__gt=today).delete()
+    if purged_future > 0:
+        logger.info("[MONTHLY PAYROLL] Purged %d future payroll records beyond %s.", purged_future, today)
+
     # Determine all distinct (year, month) cycles spanning start_date to end_date
     monthly_cycles = []
     cur = date(start_date.year, start_date.month, 1)
@@ -73,6 +78,11 @@ def sync_all_monthly_payrolls(start_date=None, end_date=None, clear_daily_record
             cycle_start, cycle_end, payout_date, working_days = get_month_operational_bounds(
                 year, month, startup_date=start_date
             )
+            # Strict constraint: No records, payouts, or distributions for any date after today (Nov 1, 2026)
+            if payout_date > today:
+                logger.info("[MONTHLY PAYROLL] Skipping future cycle %04d-%02d (Payout: %s > %s)", year, month, payout_date, today)
+                continue
+
             payout_dates.append(payout_date)
             is_partial_month = (cycle_start > date(year, month, 1))
 

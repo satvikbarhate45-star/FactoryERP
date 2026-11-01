@@ -424,12 +424,25 @@ def user_management_view(request):
     approved_count = sum(1 for u in all_users if u.kyc_status == User.KYCStatus.APPROVED)
     rejected_count = sum(1 for u in all_users if u.kyc_status == User.KYCStatus.REJECTED)
 
+    from apps.production.models import SalaryPayroll
+    today = timezone.localdate()
+    # Strict backend query filter: No payroll records after Nov 1, 2026
+    recent_payrolls = list(
+        SalaryPayroll.objects.filter(payout_date__lte=today)
+        .select_related('employee', 'employee__shift')
+        .order_by('-payout_date', '-id')[:50]
+    )
+    total_payroll_disbursed = float(SalaryPayroll.objects.filter(payout_date__lte=today).aggregate(s=Sum('salary_adjusted'))['s'] or 0.0)
+
     context = {
         'all_users': all_users,
         'total_count': total_count,
         'pending_count': pending_count,
         'approved_count': approved_count,
         'rejected_count': rejected_count,
+        'recent_payrolls': recent_payrolls,
+        'total_payroll_disbursed': total_payroll_disbursed,
+        'today': today,
         'roles': User.Role.choices,
         'shifts': list(Shift.objects.all()),
         'machines': list(Machine.objects.all()),
@@ -516,7 +529,9 @@ def employee_profile_view(request, user_id):
     gross_revenue_contrib = round(total_output_kg * 45.0, 2)
     raw_material_cost_contrib = round(total_material_kg * 18.0, 2)
 
-    payrolls_qs = SalaryPayroll.objects.filter(employee=emp).order_by('-payout_date')
+    today = timezone.localdate()
+    # Strict backend filter: No payroll records after Nov 1, 2026
+    payrolls_qs = SalaryPayroll.objects.filter(employee=emp, payout_date__lte=today).order_by('-payout_date')
     total_payroll_disbursed = float(payrolls_qs.aggregate(s=Sum('salary_adjusted'))['s'] or 0.0)
 
     total_opex_contrib = round(raw_material_cost_contrib + total_payroll_disbursed, 2)
@@ -567,10 +582,11 @@ def download_salary_slip_pdf(request, user_id, payroll_id=None):
         messages.error(request, "Permission denied: You cannot download salary slips for other employees.")
         return redirect('dashboard')
 
+    today = timezone.localdate()
     if payroll_id:
-        payroll = get_object_or_404(SalaryPayroll, id=payroll_id, employee=emp)
+        payroll = get_object_or_404(SalaryPayroll, id=payroll_id, employee=emp, payout_date__lte=today)
     else:
-        payroll = SalaryPayroll.objects.filter(employee=emp).order_by('-payout_date').first()
+        payroll = SalaryPayroll.objects.filter(employee=emp, payout_date__lte=today).order_by('-payout_date').first()
         if not payroll:
             messages.error(request, f"No monthly payroll record found for {emp.username}.")
             return redirect('employee_profile', user_id=emp.id)
@@ -678,9 +694,9 @@ def dashboard_view(request):
     if payroll_cost == 0.0:
         mid_date = start_of_week + timedelta(days=3)
         month_end_date = date(mid_date.year, mid_date.month, calendar.monthrange(mid_date.year, mid_date.month)[1])
-        monthly_total_payroll = float(SalaryPayroll.objects.filter(payout_date=month_end_date).aggregate(s=Sum('salary_adjusted'))['s'] or 0.0)
+        monthly_total_payroll = float(SalaryPayroll.objects.filter(payout_date=month_end_date, payout_date__lte=timezone.localdate()).aggregate(s=Sum('salary_adjusted'))['s'] or 0.0)
         if monthly_total_payroll <= 0:
-            latest_pr = SalaryPayroll.objects.order_by('-payout_date').values('payout_date').first()
+            latest_pr = SalaryPayroll.objects.filter(payout_date__lte=timezone.localdate()).order_by('-payout_date').values('payout_date').first()
             if latest_pr:
                 monthly_total_payroll = float(SalaryPayroll.objects.filter(payout_date=latest_pr['payout_date']).aggregate(s=Sum('salary_adjusted'))['s'] or 0.0)
         days_in_month = calendar.monthrange(mid_date.year, mid_date.month)[1]

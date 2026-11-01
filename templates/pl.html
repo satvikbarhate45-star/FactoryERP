@@ -83,14 +83,14 @@
         <!-- Period Navigation & Actions -->
         <div class="flex flex-wrap items-center gap-2 sm:gap-3 w-full lg:w-auto justify-between lg:justify-end">
             <div class="flex items-center bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm overflow-hidden">
-                <a href="?time_frame={{ time_frame }}&category={{ category }}&offset={{ offset|add:'-1' }}" class="px-3 sm:px-4 py-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 border-r border-slate-200 dark:border-slate-700 transition" title="Previous Historical Period">
+                <a id="prevPeriodLink" href="?time_frame={{ time_frame }}&category={{ category }}&offset={{ offset|add:'-1' }}" class="px-3 sm:px-4 py-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 border-r border-slate-200 dark:border-slate-700 transition" title="Previous Historical Period">
                     <i class="fa-solid fa-chevron-left text-xs"></i>
                 </a>
                 <div id="navOffsetLabel" class="px-3 sm:px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800">
                     {% if offset == 0 %}Current Period{% elif offset == -1 %}Previous Period{% else %}Offset: {{ offset }}{% endif %}
                 </div>
                 {% if offset < 0 %}
-                <a href="?time_frame={{ time_frame }}&category={{ category }}&offset={{ offset|add:'1' }}" class="px-3 sm:px-4 py-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 border-l border-slate-200 dark:border-slate-700 transition" title="Next Period (Up to Current Date)">
+                <a id="nextPeriodLink" href="?time_frame={{ time_frame }}&category={{ category }}&offset={{ offset|add:'1' }}" class="px-3 sm:px-4 py-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 border-l border-slate-200 dark:border-slate-700 transition" title="Next Period (Up to Current Date)">
                     <i class="fa-solid fa-chevron-right text-xs"></i>
                 </a>
                 {% else %}
@@ -101,7 +101,7 @@
             </div>
 
             {% if offset != 0 %}
-            <a href="?time_frame={{ time_frame }}&category={{ category }}&offset=0" class="px-3 py-2 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 rounded-xl text-xs font-bold transition flex items-center gap-1.5" title="Reset to current active period">
+            <a id="currentPeriodLink" href="?time_frame={{ time_frame }}&category={{ category }}&offset=0" class="px-3 py-2 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 rounded-xl text-xs font-bold transition flex items-center gap-1.5" title="Reset to current active period">
                 <i class="fa-solid fa-clock-rotate-left"></i> Current
             </a>
             {% endif %}
@@ -456,6 +456,7 @@
 
     let currentTimeFrame = '{{ time_frame }}' || 'weekly';
     let currentCategory = '{{ category }}' || 'all';
+    let currentOffset = parseInt('{{ offset }}', 10) || 0;
 
     // Chart.js Setup
     Chart.defaults.font.family = "'Inter', sans-serif";
@@ -585,6 +586,13 @@
     // 2. HEADER-LEVEL FILTER ENGINE (TIME, CALENDAR & CATEGORY)
     // -------------------------------------------------------------
     function setTimeFrame(tf) {
+        // If currently viewing a historical period (e.g. Previous Month / Previous Week)
+        // reload with target timeframe so backend computes that exact historical range dynamically
+        if (currentOffset !== 0 && tf !== '{{ time_frame }}') {
+            window.location.href = `?time_frame=${tf}&category=${currentCategory}&offset=${currentOffset}`;
+            return;
+        }
+
         if (!pkgs[tf]) return;
         currentTimeFrame = tf;
 
@@ -722,7 +730,26 @@
         const url = new URL(window.location);
         url.searchParams.set('time_frame', currentTimeFrame);
         url.searchParams.set('category', currentCategory);
+        if (currentOffset !== 0) {
+            url.searchParams.set('offset', currentOffset);
+        } else {
+            url.searchParams.delete('offset');
+        }
         window.history.replaceState({}, '', url);
+
+        // Dynamically update Previous, Next, and Current navigation link hrefs
+        const prevLink = document.getElementById('prevPeriodLink');
+        if (prevLink) {
+            prevLink.href = `?time_frame=${currentTimeFrame}&category=${currentCategory}&offset=${currentOffset - 1}`;
+        }
+        const nextLink = document.getElementById('nextPeriodLink');
+        if (nextLink && nextLink.tagName === 'A') {
+            nextLink.href = `?time_frame=${currentTimeFrame}&category=${currentCategory}&offset=${currentOffset + 1}`;
+        }
+        const curLink = document.getElementById('currentPeriodLink');
+        if (curLink) {
+            curLink.href = `?time_frame=${currentTimeFrame}&category=${currentCategory}&offset=0`;
+        }
     }
 
     // -------------------------------------------------------------

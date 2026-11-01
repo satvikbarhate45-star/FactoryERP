@@ -30,3 +30,8 @@ db.sqlite3
 
 # Scratch directory
 scratch/
+
+# Media files
+media/
+
+
