@@ -317,19 +317,20 @@ class ExternalPharmaAPIIngestionService:
                     ))
                 total_records_count += 1
 
-                # ProductionLog
-                assigned_emp = employees[(m_idx + curr_date.day) % len(employees)]
-                pl_id = existing_pl_map.get((curr_date, m.id))
-                if pl_id:
-                    ProductionLog.objects.filter(id=pl_id).update(
-                        output_kg=m_out, material_used=m_raw, employee=assigned_emp
-                    )
-                else:
-                    logs_to_create.append(ProductionLog(
-                        date=curr_date, machine=m, employee=assigned_emp,
-                        output_kg=m_out, material_used=m_raw, is_auto_predicted=False
-                    ))
-                total_records_count += 1
+                # ProductionLog (Do not generate regular employee shift logs on Sundays)
+                if not is_sunday:
+                    assigned_emp = employees[(m_idx + curr_date.day) % len(employees)]
+                    pl_id = existing_pl_map.get((curr_date, m.id))
+                    if pl_id:
+                        ProductionLog.objects.filter(id=pl_id).update(
+                            output_kg=m_out, material_used=m_raw, employee=assigned_emp, is_overtime=False
+                        )
+                    else:
+                        logs_to_create.append(ProductionLog(
+                            date=curr_date, machine=m, employee=assigned_emp,
+                            output_kg=m_out, material_used=m_raw, is_auto_predicted=False, is_overtime=False
+                        ))
+                    total_records_count += 1
 
                 # MachinePrediction
                 if curr_date >= date(2026, 10, 1):

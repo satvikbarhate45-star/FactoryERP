@@ -58,7 +58,8 @@ def generate_missing_production_data():
                 has_open_ticket = MaintenanceTicket.objects.filter(machine=machine, status__in=['O', 'I']).exists()
 
                 # Check if there is data for yesterday in ProductionLog
-                if not ProductionLog.objects.filter(machine=machine, date=yesterday).exists():
+                # Note: Sundays are plant holidays; do not auto-generate regular employee shift logs on Sunday
+                if yesterday.weekday() != 6 and not ProductionLog.objects.filter(machine=machine, date=yesterday).exists():
                     logger.info(f"Missing ProductionLog for {machine.name} on {yesterday}. Generating via ML...")
                     
                     past_logs = ProductionLog.objects.filter(machine=machine, date__lt=yesterday).order_by('date')

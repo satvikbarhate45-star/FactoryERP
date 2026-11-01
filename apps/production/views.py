@@ -538,14 +538,16 @@ def admin_production_view(request):
                         messages.error(request, f"Machine ID {machine_id} does not exist in registry.")
                     else:
                         with transaction.atomic():
+                            is_ot = (today.weekday() == 6 or request.POST.get('is_overtime') in ['1', 'true', 'True', 'on'])
                             ProductionLog.objects.create(
                                 date=today,
                                 employee=user,
                                 machine=machine,
                                 material_used=raw_material,
-                                output_kg=finished_output
+                                output_kg=finished_output,
+                                is_overtime=is_ot
                             )
-                        logger.info("User %s successfully logged %.1f kg output on %s", user.username, finished_output, machine.code)
+                        logger.info("User %s successfully logged %.1f kg output on %s (is_overtime=%s)", user.username, finished_output, machine.code, is_ot)
                         messages.success(request, f"Production log of {finished_output} kg on {machine.code} recorded successfully.")
             except ValueError as ve:
                 logger.warning("Numeric parse error during production logging by %s: %s", user.username, ve)
