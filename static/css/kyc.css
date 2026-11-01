@@ -534,21 +534,21 @@ html, body {
 .role-card:hover {
     border-color: #2563eb;
     background: #f8fafc;
-    transform: translateY(-5px) scale(1.02);
-    box-shadow: 0 16px 28px -6px rgba(37, 99, 235, 0.2);
+    transform: none !important;
+    box-shadow: 0 10px 22px -5px rgba(37, 99, 235, 0.15);
 }
 
 .role-card:active {
-    transform: translateY(0) scale(0.95) !important;
+    transform: none !important;
     box-shadow: 0 4px 10px -2px rgba(0, 0, 0, 0.12) !important;
-    transition: transform 0.08s ease-out !important;
+    transition: box-shadow 0.08s ease-out !important;
 }
 
 .role-card.selected {
     border-color: #2563eb;
     background: #eff6ff;
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18), 0 10px 20px -5px rgba(37, 99, 235, 0.2);
-    transform: translateY(-2px);
+    transform: none !important;
 }
 
 .role-icon {

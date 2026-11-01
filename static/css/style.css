@@ -387,22 +387,21 @@ html, body {
     border-radius: clamp(10px, 1.5vw + 4px, 16px);
     border: 1px solid #e2e8f0;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-    transition: transform 0.22s cubic-bezier(0.25, 1, 0.5, 1),
-                box-shadow 0.22s cubic-bezier(0.25, 1, 0.5, 1),
-                border-color 0.18s ease;
-    will-change: transform, box-shadow;
+    transition: box-shadow 0.22s cubic-bezier(0.25, 1, 0.5, 1),
+                border-color 0.18s ease,
+                background-color 0.18s ease;
     max-width: 100%;
 }
 
 .premium-card:hover {
-    transform: translateY(-6px) scale(1.018);
-    box-shadow: 0 20px 35px -8px rgba(79, 70, 229, 0.18), 0 8px 16px -4px rgba(0, 0, 0, 0.08);
+    transform: none !important;
+    box-shadow: 0 12px 24px -6px rgba(79, 70, 229, 0.12), 0 4px 10px -3px rgba(0, 0, 0, 0.05);
+    border-color: #cbd5e1;
 }
 
 .premium-card:active {
-    transform: translateY(0) scale(0.95) !important;
-    box-shadow: 0 4px 10px -2px rgba(0, 0, 0, 0.12) !important;
-    transition: transform 0.08s ease-out, box-shadow 0.08s ease-out !important;
+    transform: none !important;
+    box-shadow: 0 4px 10px -2px rgba(0, 0, 0, 0.10) !important;
 }
 
 .dark .premium-card {
@@ -692,39 +691,38 @@ html, body {
 .supervisor-interactive-card,
 .stat-widget,
 .metric-box {
-    transition: transform 0.22s cubic-bezier(0.25, 1, 0.5, 1),
-                box-shadow 0.22s cubic-bezier(0.25, 1, 0.5, 1),
+    transition: box-shadow 0.22s cubic-bezier(0.25, 1, 0.5, 1),
                 border-color 0.18s ease !important;
     cursor: pointer;
     user-select: none;
-    will-change: transform, box-shadow;
     backface-visibility: hidden;
 }
 
-/* Heavy Hover Elevation: translateY(-6px) + Expanded Glow Shadow */
+/* Static Elevation: Non-Shifting Expanded Shadow */
 .erp-card-interactive:hover,
 .supervisor-interactive-card:hover,
 .stat-widget:hover,
 .metric-box:hover {
-    transform: translateY(-6px) scale(1.018) !important;
-    box-shadow: 0 20px 35px -8px rgba(79, 70, 229, 0.22), 0 8px 16px -4px rgba(0, 0, 0, 0.08) !important;
+    transform: none !important;
+    box-shadow: 0 14px 28px -6px rgba(79, 70, 229, 0.16), 0 4px 12px -3px rgba(0, 0, 0, 0.06) !important;
 }
 
 .dark .erp-card-interactive:hover,
 .dark .supervisor-interactive-card:hover,
 .dark .stat-widget:hover,
 .dark .metric-box:hover {
-    box-shadow: 0 22px 42px -8px rgba(0, 0, 0, 0.65), 0 0 0 1.5px rgba(99, 102, 241, 0.45) !important;
+    transform: none !important;
+    box-shadow: 0 16px 32px -6px rgba(0, 0, 0, 0.55), 0 0 0 1.5px rgba(99, 102, 241, 0.45) !important;
 }
 
-/* Aggressive Tactile Click-Tap Scaling: scale(0.95) Press Down */
+/* Static Press State without Layout Shift */
 .erp-card-interactive:active,
 .supervisor-interactive-card:active,
 .stat-widget:active,
 .metric-box:active {
-    transform: translateY(0) scale(0.95) !important;
-    box-shadow: 0 4px 10px -2px rgba(0, 0, 0, 0.15) !important;
-    transition: transform 0.08s ease-out, box-shadow 0.08s ease-out !important;
+    transform: none !important;
+    box-shadow: 0 4px 10px -2px rgba(0, 0, 0, 0.12) !important;
+    transition: box-shadow 0.08s ease-out !important;
 }
 
 /* Tactile Interactive Buttons & Navigation */

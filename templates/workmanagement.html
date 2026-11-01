@@ -170,6 +170,10 @@
                                     <div class="text-xs font-medium text-slate-500 dark:text-slate-400 truncate mt-0.5">
                                         <i class="fa-regular fa-envelope text-[10px] mr-1"></i>{{ u.email|default:"No email registered" }}
                                     </div>
+                                    <div class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 truncate mt-0.5 flex items-center gap-1">
+                                        <i class="fa-solid fa-location-dot text-[10px] text-rose-500"></i>
+                                        <span>{{ u.village|default:"Hadapsar, Pune" }}</span>
+                                    </div>
                                     {% if u.phone %}
                                     <div class="text-[11px] font-mono text-slate-400 truncate mt-0.5">
                                         <i class="fa-solid fa-phone text-[9px] mr-1"></i>{{ u.phone }}
@@ -262,15 +266,15 @@
 
                         <!-- Admin Actions -->
                         <td class="px-5 sm:px-6 py-4 text-right">
-                            <div class="flex items-center justify-end gap-1.5">
+                            <div class="flex items-center justify-end gap-1.5 flex-wrap">
                                 
-                                <!-- View KYC Document Dossier -->
-                                <button type="button"
-                                    onclick="viewKycDetails('{{ u.id }}', '{{ u.username|escapejs }}', '{{ u.first_name|escapejs }}', '{{ u.email|escapejs }}', '{{ u.phone|default:''|escapejs }}', '{{ u.pan|default:''|escapejs }}', '{{ u.government_id|default:''|escapejs }}', '{{ u.account_number|default:''|escapejs }}', '{{ u.ifsc|default:''|escapejs }}', '{{ u.kyc_status }}', '{{ u.rejection_reason|default:''|escapejs }}')"
-                                    title="View Full KYC Dossier"
-                                    class="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold transition">
-                                    <i class="fa-regular fa-id-badge"></i>
-                                </button>
+                                <!-- Explicit 'View Employee' Profile & Salary Slip Button -->
+                                <a href="{% url 'employee_profile' u.id %}"
+                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/80 dark:hover:bg-indigo-900/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 text-xs font-bold transition shadow-sm"
+                                    title="View Full Profile, KYC, P&L & Salary Slips">
+                                    <i class="fa-solid fa-user-gear text-[11px]"></i>
+                                    <span>View Employee</span>
+                                </a>
 
                                 {% if u.kyc_status == 'PENDING' %}
                                 <!-- Approve KYC Button -->
@@ -278,17 +282,17 @@
                                     {% csrf_token %}
                                     <input type="hidden" name="action" value="approve_kyc">
                                     <input type="hidden" name="user_id" value="{{ u.id }}">
-                                    <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-1.5 rounded-lg font-bold shadow-sm shadow-emerald-200 dark:shadow-none transition flex items-center gap-1">
-                                        <i class="fa-solid fa-check"></i>
+                                    <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-2.5 py-1.5 rounded-lg font-bold shadow-sm transition flex items-center gap-1" title="Approve KYC">
+                                        <i class="fa-solid fa-check text-[11px]"></i>
                                         <span>Approve</span>
                                     </button>
                                 </form>
 
-                                <!-- Reject KYC Button (Opens modal with mandatory rejection reason) -->
+                                <!-- Reject KYC Button -->
                                 <button type="button"
                                     onclick="openRejectModal('{{ u.id }}', '{{ u.username|escapejs }}')"
-                                    class="bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 text-xs px-2.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1">
-                                    <i class="fa-solid fa-xmark"></i>
+                                    class="bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 text-xs px-2.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1" title="Reject KYC">
+                                    <i class="fa-solid fa-xmark text-[11px]"></i>
                                     <span>Reject</span>
                                 </button>
                                 
@@ -298,17 +302,20 @@
                                     {% csrf_token %}
                                     <input type="hidden" name="action" value="approve_kyc">
                                     <input type="hidden" name="user_id" value="{{ u.id }}">
-                                    <button type="submit" class="bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs px-2.5 py-1.5 rounded-lg font-bold transition">
+                                    <button type="submit" class="bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs px-2.5 py-1.5 rounded-lg font-bold transition" title="Re-Approve KYC">
                                         Re-Approve
                                     </button>
                                 </form>
+                                {% endif %}
 
-                                {% else %}
-                                <!-- Edit User Assignments -->
+                                <!-- Explicit 'Delete' Employee Button -->
+                                {% if u.id != request.user.id %}
                                 <button type="button"
-                                    onclick="openEditUserModal('{{ u.id }}', '{{ u.username|escapejs }}', '{{ u.role }}', '{{ u.shift.id|default:'' }}', '{{ u.machine.id|default:'' }}', '{{ u.phone|default:''|escapejs }}', '{{ u.supervisor.id|default:'' }}')"
-                                    class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900 text-xs px-2.5 py-1.5 rounded-lg font-bold transition">
-                                    <i class="fa-solid fa-pen-to-square mr-1"></i> Edit
+                                    onclick="openDeleteUserModal('{{ u.id }}', '{{ u.username|escapejs }}', '{{ u.first_name|default:u.username|escapejs }}')"
+                                    class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 text-xs font-bold transition shadow-sm"
+                                    title="Permanently Delete Employee">
+                                    <i class="fa-solid fa-trash-can text-[11px]"></i>
+                                    <span>Delete</span>
                                 </button>
                                 {% endif %}
 
@@ -618,6 +625,42 @@
                 </button>
             </div>
         </form>
+</div>
+
+<!-- ========================================================================= -->
+<!-- MODAL: DELETE EMPLOYEE CONFIRMATION MODAL                                 -->
+<!-- ========================================================================= -->
+<div id="delete-user-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 w-full max-w-md overflow-hidden transform transition-all">
+        <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-700 bg-rose-50/50 dark:bg-rose-950/30 flex justify-between items-center">
+            <h3 class="text-base font-extrabold text-rose-700 dark:text-rose-400 flex items-center gap-2">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <span>Confirm Delete Employee</span>
+            </h3>
+            <button onclick="closeDeleteUserModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-bold text-xl">&times;</button>
+        </div>
+        
+        <form method="POST" action="{% url 'workmanagement' %}" class="p-6 space-y-4">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="delete_user">
+            <input type="hidden" id="deleteUserId" name="user_id" value="">
+
+            <p class="text-xs text-slate-600 dark:text-slate-300">
+                Are you sure you want to permanently delete employee <strong id="deleteUserDisplayName" class="text-rose-600 dark:text-rose-400 font-bold">--</strong>?
+            </p>
+            <div class="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl text-xs text-amber-800 dark:text-amber-300">
+                <i class="fa-solid fa-circle-exclamation mr-1"></i>
+                This action is irreversible. All associated KYC profiles, station allocations, and user login credentials will be removed.
+            </div>
+
+            <div class="pt-2 flex justify-end gap-3">
+                <button type="button" onclick="closeDeleteUserModal()" class="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 transition">Cancel</button>
+                <button type="submit" class="bg-rose-600 hover:bg-rose-700 text-white text-xs px-4 py-2 rounded-xl font-bold shadow-md shadow-rose-200 dark:shadow-none transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-trash-can"></i>
+                    <span>Confirm Delete</span>
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -676,6 +719,16 @@
             return false;
         }
         return true;
+    }
+
+    function openDeleteUserModal(userId, username, fullName) {
+        document.getElementById('deleteUserId').value = userId;
+        document.getElementById('deleteUserDisplayName').textContent = fullName + ' (@' + username + ')';
+        document.getElementById('delete-user-modal').classList.remove('hidden');
+    }
+
+    function closeDeleteUserModal() {
+        document.getElementById('delete-user-modal').classList.add('hidden');
     }
 
     function viewKycDetails(id, username, fullName, email, phone, pan, govId, account, ifsc, status, rejectionReason) {

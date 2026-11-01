@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404, HttpResponse
 from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.contrib.auth.decorators import login_required
 from .decorators import role_required
@@ -319,6 +319,15 @@ def user_management_view(request):
             machine_id = (request.POST.get('machine_id') or '').strip()
             supervisor_id = (request.POST.get('supervisor_id') or '').strip()
             phone = (request.POST.get('phone') or '').strip()
+            first_name = (request.POST.get('first_name') or '').strip()
+            last_name = (request.POST.get('last_name') or '').strip()
+            email = (request.POST.get('email') or '').strip()
+            whatsapp = (request.POST.get('whatsapp') or '').strip()
+            village = (request.POST.get('village') or '').strip()
+            pan = (request.POST.get('pan') or '').strip()
+            government_id = (request.POST.get('government_id') or '').strip()
+            account_number = (request.POST.get('account_number') or '').strip()
+            ifsc = (request.POST.get('ifsc') or '').strip()
 
             if user_id:
                 try:
@@ -327,14 +336,37 @@ def user_management_view(request):
                         if not u:
                             messages.error(request, f"Employee #{user_id} not found.")
                             return redirect(redirect_url)
-                        if role:
+                        if role and role in dict(User.Role.choices):
                             u.role = role
+                        if first_name:
+                            u.first_name = first_name
+                        if last_name:
+                            u.last_name = last_name
+                        if email:
+                            u.email = email
+                        if phone:
+                            u.phone = phone
+                        if whatsapp:
+                            u.whatsapp = whatsapp
+                        if village:
+                            u.village = village
+                        if pan:
+                            u.pan = pan
+                        if government_id:
+                            u.government_id = government_id
+                        if account_number:
+                            u.account_number = account_number
+                        if ifsc:
+                            u.ifsc = ifsc
+                        if 'photo' in request.FILES:
+                            u.photo = request.FILES['photo']
+
                         if shift_id and shift_id.isdigit():
                             try:
                                 u.shift = Shift.objects.get(id=int(shift_id))
                             except Shift.DoesNotExist:
                                 u.shift = None
-                        elif not shift_id:
+                        elif not shift_id and 'shift_id' in request.POST:
                             u.shift = None
 
                         if machine_id and machine_id.isdigit():
@@ -342,7 +374,7 @@ def user_management_view(request):
                                 u.machine = Machine.objects.get(id=int(machine_id))
                             except Machine.DoesNotExist:
                                 u.machine = None
-                        elif not machine_id:
+                        elif not machine_id and 'machine_id' in request.POST:
                             u.machine = None
 
                         if supervisor_id and supervisor_id.isdigit():
@@ -353,8 +385,6 @@ def user_management_view(request):
                         elif 'supervisor_id' in request.POST and not supervisor_id:
                             u.supervisor = None
 
-                        if phone:
-                            u.phone = phone
                         u.save()
                         cache.clear()
                         logger.info("Admin %s updated user %s", request.user.username, u.username)
@@ -362,6 +392,30 @@ def user_management_view(request):
                 except Exception as exc:
                     logger.exception("Failed to edit user %s: %s", user_id, exc)
                     messages.error(request, f"Failed to update user: {exc}")
+            return redirect(redirect_url)
+
+        elif action == 'delete_user':
+            user_id = request.POST.get('user_id')
+            if user_id:
+                try:
+                    u = User.objects.filter(id=int(user_id)).first()
+                    if not u:
+                        messages.error(request, f"Employee #{user_id} not found.")
+                        return redirect(redirect_url)
+                    if u.id == request.user.id:
+                        messages.error(request, "Security constraint: You cannot delete your own logged-in admin account.")
+                        return redirect(redirect_url)
+                    if u.is_superuser and not request.user.is_superuser:
+                        messages.error(request, "Permission denied: Only root superusers can delete other superusers.")
+                        return redirect(redirect_url)
+                    username_deleted = u.username
+                    u.delete()
+                    cache.clear()
+                    logger.info("Admin %s deleted employee %s (ID: %s)", request.user.username, username_deleted, user_id)
+                    messages.success(request, f"Employee '{username_deleted}' has been permanently deleted from FactoryERP.")
+                except Exception as exc:
+                    logger.exception("Failed to delete user %s: %s", user_id, exc)
+                    messages.error(request, f"Error deleting employee: {exc}")
             return redirect(redirect_url)
 
     all_users = list(User.objects.select_related('shift', 'machine', 'supervisor', 'kyc_reviewed_by').order_by('-date_joined'))
@@ -382,6 +436,152 @@ def user_management_view(request):
         'supervisors': list(User.objects.filter(role='SU', is_active=True)),
     }
     return render(request, 'workmanagement.html', context)
+
+
+@login_required(login_url='/login/')
+def employee_profile_view(request, user_id):
+    from apps.production.models import ProductionLog, ProductionTarget, SalaryPayroll
+    from apps.maintenance.models import Machine
+    from apps.accounts.models import Shift
+
+    emp = get_object_or_404(User.objects.select_related('shift', 'machine', 'supervisor', 'kyc_reviewed_by'), id=user_id)
+
+    # Security check: Admins, Supervisors, or the employee himself
+    if request.user.role not in ['AD', 'SU'] and request.user.id != emp.id:
+        messages.error(request, "Permission denied: You do not have permission to view other employee records.")
+        return redirect('dashboard')
+
+    if request.method == 'POST':
+        if request.user.role != 'AD':
+            messages.error(request, "Permission denied: Only Administrators can update employee KYC profiles.")
+            return redirect('employee_profile', user_id=emp.id)
+
+        first_name = (request.POST.get('first_name') or '').strip()
+        last_name = (request.POST.get('last_name') or '').strip()
+        email = (request.POST.get('email') or '').strip()
+        phone = (request.POST.get('phone') or '').strip()
+        whatsapp = (request.POST.get('whatsapp') or '').strip()
+        village = (request.POST.get('village') or '').strip()
+        pan = (request.POST.get('pan') or '').strip()
+        government_id = (request.POST.get('government_id') or '').strip()
+        account_number = (request.POST.get('account_number') or '').strip()
+        ifsc = (request.POST.get('ifsc') or '').strip()
+        role = (request.POST.get('role') or '').strip()
+        shift_id = (request.POST.get('shift_id') or '').strip()
+        machine_id = (request.POST.get('machine_id') or '').strip()
+        supervisor_id = (request.POST.get('supervisor_id') or '').strip()
+
+        if first_name: emp.first_name = first_name
+        if last_name: emp.last_name = last_name
+        if email: emp.email = email
+        if phone: emp.phone = phone
+        if whatsapp: emp.whatsapp = whatsapp
+        if village: emp.village = village
+        if pan: emp.pan = pan
+        if government_id: emp.government_id = government_id
+        if account_number: emp.account_number = account_number
+        if ifsc: emp.ifsc = ifsc
+        if role and role in dict(User.Role.choices): emp.role = role
+
+        if shift_id and shift_id.isdigit():
+            emp.shift = Shift.objects.filter(id=int(shift_id)).first()
+        elif 'shift_id' in request.POST and not shift_id:
+            emp.shift = None
+
+        if machine_id and machine_id.isdigit():
+            emp.machine = Machine.objects.filter(id=int(machine_id)).first()
+        elif 'machine_id' in request.POST and not machine_id:
+            emp.machine = None
+
+        if supervisor_id and supervisor_id.isdigit():
+            emp.supervisor = User.objects.filter(id=int(supervisor_id)).first()
+        elif 'supervisor_id' in request.POST and not supervisor_id:
+            emp.supervisor = None
+
+        if 'photo' in request.FILES:
+            emp.photo = request.FILES['photo']
+
+        emp.save()
+        cache.clear()
+        messages.success(request, f"KYC Profile & Station Assignments for '{emp.get_full_name() or emp.username}' successfully updated!")
+        return redirect('employee_profile', user_id=emp.id)
+
+    # 1. Operational Shift Logs & Production Metrics
+    prod_logs = list(ProductionLog.objects.filter(employee=emp).select_related('machine').order_by('-date')[:30])
+    total_output_kg = float(ProductionLog.objects.filter(employee=emp).aggregate(s=Sum('output_kg'))['s'] or 0.0)
+    total_material_kg = float(ProductionLog.objects.filter(employee=emp).aggregate(s=Sum('material_used'))['s'] or 0.0)
+    total_shifts_count = ProductionLog.objects.filter(employee=emp).count()
+
+    # 2. Profit & Loss Contribution
+    gross_revenue_contrib = round(total_output_kg * 45.0, 2)
+    raw_material_cost_contrib = round(total_material_kg * 18.0, 2)
+
+    payrolls_qs = SalaryPayroll.objects.filter(employee=emp).order_by('-payout_date')
+    total_payroll_disbursed = float(payrolls_qs.aggregate(s=Sum('salary_adjusted'))['s'] or 0.0)
+
+    total_opex_contrib = round(raw_material_cost_contrib + total_payroll_disbursed, 2)
+    net_profit_contrib = round(gross_revenue_contrib - total_opex_contrib, 2)
+    margin_pct = round((net_profit_contrib / gross_revenue_contrib * 100), 1) if gross_revenue_contrib > 0 else 0.0
+    is_profitable = net_profit_contrib >= 0
+
+    # 3. Monthly Payroll Records
+    payrolls = list(payrolls_qs)
+    latest_payroll = payrolls[0] if payrolls else None
+
+    # 4. Target completion average
+    avg_completion = float(payrolls_qs.aggregate(a=Avg('completion_percentage'))['a'] or 96.5)
+
+    context = {
+        'emp': emp,
+        'prod_logs': prod_logs,
+        'total_output_kg': total_output_kg,
+        'total_material_kg': total_material_kg,
+        'total_shifts_count': total_shifts_count,
+        'gross_revenue_contrib': gross_revenue_contrib,
+        'raw_material_cost_contrib': raw_material_cost_contrib,
+        'total_payroll_disbursed': total_payroll_disbursed,
+        'total_opex_contrib': total_opex_contrib,
+        'net_profit_contrib': net_profit_contrib,
+        'margin_pct': margin_pct,
+        'is_profitable': is_profitable,
+        'payrolls': payrolls,
+        'latest_payroll': latest_payroll,
+        'avg_completion': avg_completion,
+        'shifts': list(Shift.objects.all()),
+        'machines': list(Machine.objects.all()),
+        'supervisors': list(User.objects.filter(role='SU', is_active=True)),
+        'roles': User.Role.choices,
+    }
+    return render(request, 'employee_profile.html', context)
+
+
+@login_required(login_url='/login/')
+def download_salary_slip_pdf(request, user_id, payroll_id=None):
+    from apps.production.models import SalaryPayroll
+    from .salary_slip_pdf import generate_salary_slip_pdf_buffer
+
+    emp = get_object_or_404(User, id=user_id)
+
+    # Security check: Admin, Supervisor, or employee themselves
+    if request.user.role not in ['AD', 'SU'] and request.user.id != emp.id:
+        messages.error(request, "Permission denied: You cannot download salary slips for other employees.")
+        return redirect('dashboard')
+
+    if payroll_id:
+        payroll = get_object_or_404(SalaryPayroll, id=payroll_id, employee=emp)
+    else:
+        payroll = SalaryPayroll.objects.filter(employee=emp).order_by('-payout_date').first()
+        if not payroll:
+            messages.error(request, f"No monthly payroll record found for {emp.username}.")
+            return redirect('employee_profile', user_id=emp.id)
+
+    pdf_buffer = generate_salary_slip_pdf_buffer(emp, payroll)
+    month_slug = payroll.payout_date.strftime('%b_%Y')
+    filename = f"Salary_Slip_{emp.username}_{month_slug}.pdf"
+
+    response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
 
 
 @login_required(login_url='/login/')

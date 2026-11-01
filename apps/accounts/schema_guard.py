@@ -63,6 +63,7 @@ def ensure_runtime_schema_integrity(force=False, max_age_seconds=60):
                     ("accounts_user", "rejection_reason", "text", "text"),
                     ("accounts_user", "phone", "varchar(25)", "varchar(25)"),
                     ("accounts_user", "whatsapp", "varchar(25)", "varchar(25)"),
+                    ("accounts_user", "village", "varchar(150)", "varchar(150)"),
                     ("accounts_user", "pan", "varchar(20)", "varchar(20)"),
                     ("accounts_user", "government_id", "varchar(50)", "varchar(50)"),
                     ("accounts_user", "account_number", "varchar(50)", "varchar(50)"),

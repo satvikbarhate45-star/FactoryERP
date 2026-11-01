@@ -35,6 +35,7 @@ pydantic>=2.9.0
 requests>=2.32.0
 python-dotenv>=1.0.0
 Pillow>=10.4.0
+reportlab>=4.0.0
 
 # Production WSGI Server & Static File Management (Render)
 gunicorn>=21.2.0

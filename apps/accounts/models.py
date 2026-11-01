@@ -39,6 +39,7 @@ class User(AbstractUser):
     rejection_reason = models.TextField(blank=True, null=True)
     phone = models.CharField(max_length=25, blank=True, null=True)
     whatsapp = models.CharField(max_length=25, blank=True, null=True)
+    village = models.CharField(max_length=150, blank=True, null=True, verbose_name=_("Village / Location"))
     pan = models.CharField(max_length=20, blank=True, null=True)
     government_id = models.CharField(max_length=50, blank=True, null=True)
     account_number = models.CharField(max_length=50, blank=True, null=True)

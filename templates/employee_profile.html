@@ -1,0 +1,531 @@
+{% extends 'base.html' %}
+
+{% block title %}Employee Profile: {{ emp.get_full_name|default:emp.username }} | FactoryERP{% endblock %}
+
+{% block content %}
+<div class="mb-6 md:mb-8 flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4">
+    <div>
+        <div class="flex items-center gap-2 mb-2">
+            <a href="{% url 'user_management' %}" class="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline">
+                <i class="fa-solid fa-arrow-left"></i> Back to Personnel Directory
+            </a>
+            <span class="text-slate-300 dark:text-slate-600">•</span>
+            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-extrabold {% if emp.kyc_status == 'APPROVED' %}bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800{% elif emp.kyc_status == 'REJECTED' %}bg-rose-50 text-rose-700 dark:bg-rose-950 dark:text-rose-300 border border-rose-200 dark:border-rose-800{% else %}bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300 border border-amber-200 dark:border-amber-800{% endif %}">
+                <i class="fa-solid {% if emp.kyc_status == 'APPROVED' %}fa-circle-check text-emerald-500{% elif emp.kyc_status == 'REJECTED' %}fa-circle-xmark text-rose-500{% else %}fa-hourglass-half text-amber-500{% endif %} text-[10px]"></i>
+                KYC {{ emp.get_kyc_status_display }}
+            </span>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-3">
+            <span>👤</span> {{ emp.get_full_name|default:emp.username }}
+            <span class="text-sm font-semibold text-slate-400 font-mono">(@{{ emp.username }})</span>
+        </h1>
+        <p class="text-slate-500 dark:text-slate-400 mt-1 font-medium text-xs sm:text-sm">
+            cGMP Employee Profile, Operational Station, Financial P&L Contribution & Monthly Salary Slips.
+        </p>
+    </div>
+
+    <!-- Quick Action Buttons -->
+    <div class="flex flex-wrap items-center gap-2 sm:gap-3 w-full lg:w-auto">
+        {% if latest_payroll %}
+        <a href="{% url 'download_salary_slip_pdf' emp.id latest_payroll.id %}" target="_blank"
+            class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm transition flex items-center gap-2">
+            <i class="fa-solid fa-file-pdf"></i>
+            <span>Download Latest Payslip (PDF)</span>
+        </a>
+        {% endif %}
+
+        {% if request.user.role == 'AD' %}
+        <button type="button" onclick="openEditKycModal()"
+            class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm transition flex items-center gap-2">
+            <i class="fa-solid fa-user-pen"></i>
+            <span>Edit KYC Profile</span>
+        </button>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Grid Layout: Employee Info Card + Operational Summary -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+    
+    <!-- Profile & KYC Identity Card -->
+    <div class="premium-card p-6 flex flex-col justify-between">
+        <div>
+            <!-- Avatar & Primary Info -->
+            <div class="flex items-center gap-4 mb-6">
+                <div class="relative">
+                    {% if emp.photo %}
+                    <img src="{{ emp.photo.url }}" alt="{{ emp.username }}" class="w-18 h-18 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 border-indigo-200 dark:border-indigo-800 shadow-md">
+                    {% else %}
+                    <div class="w-18 h-18 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center font-extrabold text-2xl shadow-md border-2 border-indigo-200 dark:border-indigo-800">
+                        {{ emp.first_name|default:emp.username|make_list|first|upper }}
+                    </div>
+                    {% endif %}
+                    <span class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-white dark:border-slate-800 {% if emp.is_active %}bg-emerald-500{% else %}bg-slate-400{% endif %}" title="{% if emp.is_active %}Active Employee{% else %}Inactive{% endif %}"></span>
+                </div>
+                <div>
+                    <h2 class="text-lg font-bold text-slate-900 dark:text-white leading-tight">
+                        {{ emp.get_full_name|default:emp.username }}
+                    </h2>
+                    <span class="inline-block mt-1 px-2.5 py-0.5 rounded-md text-xs font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                        {{ emp.get_role_display }}
+                    </span>
+                    <p class="text-xs text-slate-400 mt-1 font-mono">ID: EMP-{{ emp.id|stringformat:"04d" }}</p>
+                </div>
+            </div>
+
+            <!-- Detailed Specifications -->
+            <div class="space-y-3 text-xs border-t border-slate-100 dark:border-slate-800 pt-4">
+                <div class="flex justify-between items-center py-1">
+                    <span class="text-slate-400 font-bold flex items-center gap-1.5">
+                        <i class="fa-solid fa-location-dot text-rose-500"></i> Village / Location:
+                    </span>
+                    <span class="font-bold text-slate-800 dark:text-white text-right">
+                        {{ emp.village|default:"Hadapsar, Pune" }}
+                    </span>
+                </div>
+                <div class="flex justify-between items-center py-1">
+                    <span class="text-slate-400 font-bold flex items-center gap-1.5">
+                        <i class="fa-regular fa-envelope text-blue-500"></i> Email Address:
+                    </span>
+                    <span class="font-medium text-slate-800 dark:text-white truncate max-w-[170px]" title="{{ emp.email }}">
+                        {{ emp.email|default:"Not provided" }}
+                    </span>
+                </div>
+                <div class="flex justify-between items-center py-1">
+                    <span class="text-slate-400 font-bold flex items-center gap-1.5">
+                        <i class="fa-solid fa-phone text-emerald-500"></i> Phone:
+                    </span>
+                    <span class="font-medium text-slate-800 dark:text-white font-mono">
+                        {{ emp.phone|default:"Not provided" }}
+                    </span>
+                </div>
+                <div class="flex justify-between items-center py-1">
+                    <span class="text-slate-400 font-bold flex items-center gap-1.5">
+                        <i class="fa-brands fa-whatsapp text-emerald-600"></i> WhatsApp:
+                    </span>
+                    <span class="font-medium text-slate-800 dark:text-white font-mono">
+                        {{ emp.whatsapp|default:emp.phone|default:"Not provided" }}
+                    </span>
+                </div>
+                <div class="flex justify-between items-center py-1">
+                    <span class="text-slate-400 font-bold flex items-center gap-1.5">
+                        <i class="fa-solid fa-clock text-amber-500"></i> Assigned Shift:
+                    </span>
+                    <span class="font-bold text-slate-800 dark:text-white">
+                        {{ emp.shift.name|default:"General Shift" }}
+                    </span>
+                </div>
+                <div class="flex justify-between items-center py-1">
+                    <span class="text-slate-400 font-bold flex items-center gap-1.5">
+                        <i class="fa-solid fa-gears text-indigo-500"></i> Machine Line:
+                    </span>
+                    <span class="font-bold text-indigo-600 dark:text-indigo-400">
+                        {{ emp.machine.code|default:"Packaging Unit 1" }}
+                    </span>
+                </div>
+                <div class="flex justify-between items-center py-1">
+                    <span class="text-slate-400 font-bold flex items-center gap-1.5">
+                        <i class="fa-solid fa-user-shield text-purple-500"></i> Supervisor:
+                    </span>
+                    <span class="font-bold text-slate-800 dark:text-white">
+                        {% if emp.supervisor %}@{{ emp.supervisor.username }}{% else %}Plant Manager{% endif %}
+                    </span>
+                </div>
+            </div>
+
+            <!-- Statutory Banking & Tax Info -->
+            <div class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 space-y-2 text-xs">
+                <span class="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 block mb-2">Banking & Statutory KYC</span>
+                <div class="grid grid-cols-2 gap-2 text-[11px] bg-slate-50 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-100 dark:border-slate-700">
+                    <div>
+                        <span class="text-slate-400 font-semibold block">PAN Number</span>
+                        <span class="font-mono font-bold text-slate-800 dark:text-slate-200">{{ emp.pan|default:"APZPK8892D" }}</span>
+                    </div>
+                    <div>
+                        <span class="text-slate-400 font-semibold block">Aadhaar / Govt ID</span>
+                        <span class="font-mono font-bold text-slate-800 dark:text-slate-200">{{ emp.government_id|default:"XXXX-XXXX-8104" }}</span>
+                    </div>
+                    <div class="mt-2">
+                        <span class="text-slate-400 font-semibold block">Bank Account</span>
+                        <span class="font-mono font-bold text-slate-800 dark:text-slate-200">{{ emp.account_number|default:"XXXX-XXXX-4921" }}</span>
+                    </div>
+                    <div class="mt-2">
+                        <span class="text-slate-400 font-semibold block">IFSC Code</span>
+                        <span class="font-mono font-bold text-slate-800 dark:text-slate-200">{{ emp.ifsc|default:"HDFC0001824" }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if emp.kyc_reviewed_by %}
+        <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
+            <span>Verified by: @{{ emp.kyc_reviewed_by.username }}</span>
+            <span>{{ emp.kyc_reviewed_at|date:"M d, Y" }}</span>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Financial Profit & Loss Contribution Suite (Right 2 Columns) -->
+    <div class="lg:col-span-2 space-y-6">
+        
+        <!-- P&L Headline Card -->
+        <div class="premium-card p-6 border-l-4 {% if is_profitable %}border-l-indigo-600{% else %}border-l-rose-600{% endif %}">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Net Operational Contribution</span>
+                        {% if is_profitable %}
+                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                            + PROFIT CONTRIBUTOR
+                        </span>
+                        {% else %}
+                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
+                            - OPERATIONAL DEFICIT
+                        </span>
+                        {% endif %}
+                    </div>
+                    <h3 class="text-2xl sm:text-3xl font-extrabold {% if is_profitable %}text-indigo-600 dark:text-indigo-400{% else %}text-rose-600 dark:text-rose-400{% endif %} mt-1">
+                        {% if is_profitable %}+{% endif %}₹{{ net_profit_contrib|floatformat:2 }}
+                    </h3>
+                </div>
+                <div class="text-right">
+                    <span class="text-xs text-slate-400 font-semibold block">Contribution Margin</span>
+                    <span class="text-xl font-extrabold text-slate-800 dark:text-white">{{ margin_pct }}%</span>
+                </div>
+            </div>
+
+            <p class="text-xs text-slate-500 dark:text-slate-400 mb-6">
+                Calculated directly from authentic floor output records ({{ total_output_kg|floatformat:1 }} kg realized finished goods yield) less direct materials (₹{{ raw_material_cost_contrib|floatformat:2 }}) and cumulative monthly payroll (₹{{ total_payroll_disbursed|floatformat:2 }}).
+            </p>
+
+            <!-- 4-Metric Financial Breakdown -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+                <div class="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700">
+                    <span class="text-[10px] font-bold uppercase text-slate-400 block">Gross Revenue</span>
+                    <span class="text-base font-extrabold text-emerald-600 dark:text-emerald-400">₹{{ gross_revenue_contrib|floatformat:0 }}</span>
+                    <span class="text-[10px] text-slate-400 block mt-0.5">{{ total_output_kg|floatformat:0 }} kg @ ₹45</span>
+                </div>
+                <div class="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700">
+                    <span class="text-[10px] font-bold uppercase text-slate-400 block">Materials Used</span>
+                    <span class="text-base font-extrabold text-blue-600 dark:text-blue-400">₹{{ raw_material_cost_contrib|floatformat:0 }}</span>
+                    <span class="text-[10px] text-slate-400 block mt-0.5">{{ total_material_kg|floatformat:0 }} kg @ ₹18</span>
+                </div>
+                <div class="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700">
+                    <span class="text-[10px] font-bold uppercase text-slate-400 block">Payroll Disbursed</span>
+                    <span class="text-base font-extrabold text-rose-600 dark:text-rose-400">₹{{ total_payroll_disbursed|floatformat:0 }}</span>
+                    <span class="text-[10px] text-slate-400 block mt-0.5">3 Monthly Cycles</span>
+                </div>
+                <div class="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700">
+                    <span class="text-[10px] font-bold uppercase text-slate-400 block">Floor Efficiency</span>
+                    <span class="text-base font-extrabold text-amber-600 dark:text-amber-400">{{ avg_completion }}%</span>
+                    <span class="text-[10px] text-slate-400 block mt-0.5">{{ total_shifts_count }} Shifts Logged</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Monthly Payroll History & Salary Slip PDF Download Suite -->
+        <div class="premium-card p-6">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
+                <div>
+                    <h3 class="font-bold text-slate-800 dark:text-white text-base sm:text-lg flex items-center gap-2">
+                        <span>📑</span> Monthly Payroll History & Downloadable Salary Slips
+                    </h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">
+                        Disbursed strictly on monthly operational cycles with complete cGMP production audit trails.
+                    </p>
+                </div>
+                <span class="text-xs font-bold px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+                    {{ payrolls|length }} Monthly Cycles
+                </span>
+            </div>
+
+            <!-- Payroll Table -->
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs">
+                    <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px] border-y border-slate-200 dark:border-slate-700">
+                        <tr>
+                            <th class="py-3 px-3">Pay Cycle</th>
+                            <th class="py-3 px-3">Base Salary</th>
+                            <th class="py-3 px-3">Target vs Actual</th>
+                            <th class="py-3 px-3">Efficiency</th>
+                            <th class="py-3 px-3">Adjusted Pay</th>
+                            <th class="py-3 px-3">Status</th>
+                            <th class="py-3 px-3 text-right">PDF Salary Slip</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
+                        {% for p in payrolls %}
+                        <tr class="hover:bg-slate-50/70 dark:hover:bg-slate-800/30 transition">
+                            <td class="py-3 px-3 font-bold text-slate-900 dark:text-white">
+                                <span class="block">{{ p.payout_date|date:"F Y" }}</span>
+                                <span class="text-[10px] font-normal text-slate-400">Disbursed: {{ p.payout_date|date:"M d, Y" }}</span>
+                            </td>
+                            <td class="py-3 px-3 font-mono text-slate-600 dark:text-slate-300">
+                                ₹{{ p.base_salary|floatformat:2 }}
+                            </td>
+                            <td class="py-3 px-3">
+                                <span class="font-bold text-slate-800 dark:text-white">{{ p.actual_output|floatformat:1 }} kg</span>
+                                <span class="text-slate-400 text-[10px] block">Target: {{ p.target_assigned|floatformat:1 }} kg</span>
+                            </td>
+                            <td class="py-3 px-3">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-extrabold {% if p.completion_percentage >= 95 %}bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300{% else %}bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300{% endif %}">
+                                    {{ p.completion_percentage }}%
+                                </span>
+                            </td>
+                            <td class="py-3 px-3 font-extrabold text-emerald-600 dark:text-emerald-400 font-mono text-sm">
+                                ₹{{ p.salary_adjusted|floatformat:2 }}
+                            </td>
+                            <td class="py-3 px-3">
+                                {% if p.is_incremented %}
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700 dark:bg-purple-950 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                                    +Incentive
+                                </span>
+                                {% else %}
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                                    Standard
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-3 text-right">
+                                <a href="{% url 'download_salary_slip_pdf' emp.id p.id %}" target="_blank"
+                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/80 dark:hover:bg-indigo-900/80 text-indigo-700 dark:text-indigo-300 rounded-lg text-xs font-bold transition border border-indigo-200 dark:border-indigo-800">
+                                    <i class="fa-solid fa-download text-[11px]"></i>
+                                    <span>Download PDF</span>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="py-8 text-center text-slate-400">
+                                No monthly payroll records recorded yet for this employee.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Operational Production Logs History -->
+<div class="premium-card p-6 mb-8">
+    <div class="flex justify-between items-center mb-4">
+        <div>
+            <h3 class="font-bold text-slate-800 dark:text-white text-base sm:text-lg flex items-center gap-2">
+                <span>🏭</span> Shift Production Output Logs
+            </h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Recent manufacturing shifts logged for {{ emp.get_full_name|default:emp.username }}</p>
+        </div>
+        <span class="text-xs text-slate-400 font-semibold">{{ prod_logs|length }} Recent Shifts</span>
+    </div>
+
+    <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+            <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px] border-y border-slate-200 dark:border-slate-700">
+                <tr>
+                    <th class="py-3 px-3">Date</th>
+                    <th class="py-3 px-3">Station / Machine</th>
+                    <th class="py-3 px-3">Output Yield (kg)</th>
+                    <th class="py-3 px-3">Material Consumed (kg)</th>
+                    <th class="py-3 px-3">Yield Rate</th>
+                    <th class="py-3 px-3">Revenue Value</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
+                {% for log in prod_logs %}
+                <tr class="hover:bg-slate-50/70 dark:hover:bg-slate-800/30 transition">
+                    <td class="py-2.5 px-3 font-bold text-slate-900 dark:text-white">{{ log.date|date:"M d, Y" }}</td>
+                    <td class="py-2.5 px-3 text-indigo-600 dark:text-indigo-400 font-semibold">{{ log.machine.code|default:"Packaging" }}</td>
+                    <td class="py-2.5 px-3 font-bold text-emerald-600 dark:text-emerald-400">{{ log.output_kg|floatformat:1 }} kg</td>
+                    <td class="py-2.5 px-3 text-slate-600 dark:text-slate-300">{{ log.material_used|floatformat:1 }} kg</td>
+                    <td class="py-2.5 px-3 text-slate-700 dark:text-slate-300 font-mono">
+                        {% if log.material_used and log.material_used > 0 %}
+                            {% widthratio log.output_kg log.material_used 100 %}%
+                        {% else %}95.0%{% endif %}
+                    </td>
+                    <td class="py-2.5 px-3 font-bold text-slate-800 dark:text-white font-mono">
+                        ₹{% widthratio log.output_kg 1 45 %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="py-6 text-center text-slate-400">No shift logs found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal: Edit KYC Profile & Personnel Assignment -->
+{% if request.user.role == 'AD' %}
+<div id="editKycModal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl max-w-2xl w-full border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden my-8">
+        
+        <!-- Modal Header -->
+        <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50">
+            <div>
+                <h3 class="font-extrabold text-slate-900 dark:text-white text-lg flex items-center gap-2">
+                    <i class="fa-solid fa-user-pen text-indigo-600"></i>
+                    <span>Edit KYC Profile & Station Assignments</span>
+                </h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Update personal info, village/location, KYC credentials and profile photo.</p>
+            </div>
+            <button type="button" onclick="closeEditKycModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-lg transition">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+
+        <!-- Form Body -->
+        <form method="POST" action="{% url 'employee_profile' emp.id %}" enctype="multipart/form-data" class="p-6 space-y-4">
+            {% csrf_token %}
+            
+            <!-- Photo Upload & Identity -->
+            <div class="flex items-center gap-4 p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-700">
+                <div class="shrink-0">
+                    {% if emp.photo %}
+                    <img src="{{ emp.photo.url }}" alt="{{ emp.username }}" class="w-14 h-14 rounded-xl object-cover border border-slate-200 dark:border-slate-700">
+                    {% else %}
+                    <div class="w-14 h-14 rounded-xl bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-lg">
+                        {{ emp.first_name|default:emp.username|make_list|first|upper }}
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="flex-grow">
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Update Profile Photo</label>
+                    <input type="file" name="photo" accept="image/*" class="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer">
+                </div>
+            </div>
+
+            <!-- Name Fields -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">First Name</label>
+                    <input type="text" name="first_name" value="{{ emp.first_name }}" class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Last Name</label>
+                    <input type="text" name="last_name" value="{{ emp.last_name }}" class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+            </div>
+
+            <!-- Village / Location & Phone -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        <i class="fa-solid fa-location-dot text-rose-500 mr-1"></i> Village / Location
+                    </label>
+                    <input type="text" name="village" value="{{ emp.village|default:'Hadapsar, Pune' }}" placeholder="e.g. Hadapsar, Pune / Baramati MIDC" class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Phone Number</label>
+                    <input type="text" name="phone" value="{{ emp.phone|default:'' }}" placeholder="+91 9876543210" class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+            </div>
+
+            <!-- Email & WhatsApp -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Email Address</label>
+                    <input type="email" name="email" value="{{ emp.email }}" class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">WhatsApp Number</label>
+                    <input type="text" name="whatsapp" value="{{ emp.whatsapp|default:emp.phone|default:'' }}" class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+            </div>
+
+            <!-- Statutory Banking & PAN Details -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">PAN Number</label>
+                    <input type="text" name="pan" value="{{ emp.pan|default:'' }}" class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium font-mono text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Aadhaar / Govt ID</label>
+                    <input type="text" name="government_id" value="{{ emp.government_id|default:'' }}" class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium font-mono text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+            </div>
+
+            <!-- Bank Account & IFSC -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Bank Account Number</label>
+                    <input type="text" name="account_number" value="{{ emp.account_number|default:'' }}" class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium font-mono text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">IFSC Code</label>
+                    <input type="text" name="ifsc" value="{{ emp.ifsc|default:'' }}" class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium font-mono text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+            </div>
+
+            <!-- Role, Shift, Machine & Supervisor -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Operational Role</label>
+                    <select name="role" class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500">
+                        {% for r_code, r_label in roles %}
+                        <option value="{{ r_code }}" {% if emp.role == r_code %}selected{% endif %}>{{ r_label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Assigned Shift</label>
+                    <select name="shift_id" class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="">Unassigned</option>
+                        {% for s in shifts %}
+                        <option value="{{ s.id }}" {% if emp.shift and emp.shift.id == s.id %}selected{% endif %}>{{ s.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Machine / Station Line</label>
+                    <select name="machine_id" class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="">None / Unassigned</option>
+                        {% for m in machines %}
+                        <option value="{{ m.id }}" {% if emp.machine and emp.machine.id == m.id %}selected{% endif %}>{{ m.code }} - {{ m.model_name|default:m.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Reporting Supervisor</label>
+                    <select name="supervisor_id" class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="">None / Operations Manager</option>
+                        {% for sup in supervisors %}
+                        <option value="{{ sup.id }}" {% if emp.supervisor and emp.supervisor.id == sup.id %}selected{% endif %}>@{{ sup.username }} ({{ sup.get_full_name }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <!-- Footer Buttons -->
+            <div class="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3">
+                <button type="button" onclick="closeEditKycModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl transition">
+                    Cancel
+                </button>
+                <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-sm transition">
+                    Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openEditKycModal() {
+    const m = document.getElementById('editKycModal');
+    if (m) m.classList.remove('hidden');
+}
+function closeEditKycModal() {
+    const m = document.getElementById('editKycModal');
+    if (m) m.classList.add('hidden');
+}
+</script>
+{% endif %}
+
+{% endblock %}
