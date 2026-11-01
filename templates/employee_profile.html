@@ -364,13 +364,16 @@
     </div>
 </div>
 
+{% endblock %}
+
+{% block modals %}
 <!-- Modal: Edit KYC Profile & Personnel Assignment -->
 {% if request.user.role == 'AD' %}
-<div id="editKycModal" class="fixed inset-0 z-[9998] hidden bg-slate-900/75 backdrop-blur-md">
-    <div id="editKycModalContent" class="erp-modal-centered w-[calc(100vw-2rem)] sm:w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col">
+<div id="editKycModal" class="erp-modal-overlay hidden" style="display: none;">
+    <div id="editKycModalContent" class="erp-modal-centered w-[calc(100vw-2rem)] sm:w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         
         <!-- Modal Header -->
-        <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50">
+        <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50 shrink-0">
             <div>
                 <h3 class="font-extrabold text-slate-900 dark:text-white text-lg flex items-center gap-2">
                     <i class="fa-solid fa-user-pen text-indigo-600"></i>
@@ -384,7 +387,7 @@
         </div>
 
         <!-- Form Body -->
-        <form method="POST" action="{% url 'employee_profile' emp.id %}" enctype="multipart/form-data" class="p-6 space-y-4">
+        <form method="POST" action="{% url 'employee_profile' emp.id %}" enctype="multipart/form-data" class="block p-6 space-y-4 overflow-y-auto">
             {% csrf_token %}
             
             <!-- Photo Upload & Identity -->
@@ -507,7 +510,7 @@
             </div>
 
             <!-- Footer Buttons -->
-            <div class="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3">
+            <div class="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3 shrink-0">
                 <button type="button" onclick="closeEditKycModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl transition">
                     Cancel
                 </button>
@@ -524,6 +527,7 @@ function openEditKycModal() {
     const m = document.getElementById('editKycModal');
     if (m) {
         m.classList.remove('hidden');
+        m.style.display = 'block';
         if (window.lockModalScroll) window.lockModalScroll();
     }
 }
@@ -531,6 +535,7 @@ function closeEditKycModal() {
     const m = document.getElementById('editKycModal');
     if (m) {
         m.classList.add('hidden');
+        m.style.display = 'none';
         if (window.unlockModalScroll) window.unlockModalScroll();
     }
 }
@@ -562,5 +567,4 @@ function previewProfilePhoto(event) {
 }
 </script>
 {% endif %}
-
 {% endblock %}

@@ -468,10 +468,13 @@
 
 </div>
 
+{% endblock %}
+
+{% block modals %}
 <!-- ========================================================================= -->
 <!-- MODAL 1: MANDATORY KYC REJECTION MODAL                                    -->
 <!-- ========================================================================= -->
-<div id="reject-kyc-modal" class="hidden fixed inset-0 z-[9998] bg-slate-900/75 backdrop-blur-md">
+<div id="reject-kyc-modal" class="erp-modal-overlay hidden" style="display: none;">
     <div class="erp-modal-centered w-[calc(100vw-2rem)] sm:w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col">
         <div class="px-6 py-4 border-b border-rose-100 dark:border-rose-900/40 bg-rose-50 dark:bg-rose-950/30 flex justify-between items-center">
             <h3 class="text-base font-extrabold text-rose-900 dark:text-rose-200 flex items-center gap-2">
@@ -511,7 +514,7 @@
 <!-- ========================================================================= -->
 <!-- MODAL 2: FULL KYC DETAILS DOSSIER MODAL                                   -->
 <!-- ========================================================================= -->
-<div id="kyc-details-modal" class="hidden fixed inset-0 z-[9998] bg-slate-900/75 backdrop-blur-md">
+<div id="kyc-details-modal" class="erp-modal-overlay hidden" style="display: none;">
     <div class="erp-modal-centered w-[calc(100vw-2rem)] sm:w-full max-w-lg bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col">
         <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex justify-between items-center">
             <h3 class="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
@@ -596,7 +599,7 @@
 <!-- ========================================================================= -->
 <!-- MODAL 3: CREATE USER / EMPLOYEE REGISTRATION MODAL                        -->
 <!-- ========================================================================= -->
-<div id="create-user-modal" class="hidden fixed inset-0 z-[9998] bg-slate-900/75 backdrop-blur-md">
+<div id="create-user-modal" class="erp-modal-overlay hidden" style="display: none;">
     <div class="erp-modal-centered w-[calc(100vw-2rem)] sm:w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-y-auto flex flex-col">
         <div class="px-5 sm:px-6 py-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex justify-between items-center sticky top-0 bg-white dark:bg-slate-800 z-10">
             <h3 class="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
@@ -692,7 +695,7 @@
 <!-- ========================================================================= -->
 <!-- MODAL 4: EDIT USER / ASSIGNMENT MODAL                                     -->
 <!-- ========================================================================= -->
-<div id="edit-user-modal" class="hidden fixed inset-0 z-[9998] bg-slate-900/75 backdrop-blur-md">
+<div id="edit-user-modal" class="erp-modal-overlay hidden" style="display: none;">
     <div class="erp-modal-centered w-[calc(100vw-2rem)] sm:w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-y-auto flex flex-col">
         <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex justify-between items-center">
             <h3 class="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
@@ -762,12 +765,13 @@
                 </button>
             </div>
         </form>
+    </div>
 </div>
 
 <!-- ========================================================================= -->
 <!-- MODAL: DELETE EMPLOYEE CONFIRMATION MODAL                                 -->
 <!-- ========================================================================= -->
-<div id="delete-user-modal" class="hidden fixed inset-0 z-[9998] bg-slate-900/75 backdrop-blur-md">
+<div id="delete-user-modal" class="erp-modal-overlay hidden" style="display: none;">
     <div class="erp-modal-centered w-[calc(100vw-2rem)] sm:w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col">
         <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-700 bg-rose-50/50 dark:bg-rose-950/30 flex justify-between items-center">
             <h3 class="text-base font-extrabold text-rose-700 dark:text-rose-400 flex items-center gap-2">
@@ -841,12 +845,20 @@
         document.getElementById('rejectUsernameDisplay').textContent = '@' + username;
         document.getElementById('rejectionReasonInput').value = '';
         document.getElementById('rejectionErrorMsg').classList.add('hidden');
-        document.getElementById('reject-kyc-modal').classList.remove('hidden');
+        const m = document.getElementById('reject-kyc-modal');
+        if (m) {
+            m.classList.remove('hidden');
+            m.style.display = 'block';
+        }
         if (window.lockModalScroll) window.lockModalScroll();
     }
 
     function closeRejectModal() {
-        document.getElementById('reject-kyc-modal').classList.add('hidden');
+        const m = document.getElementById('reject-kyc-modal');
+        if (m) {
+            m.classList.add('hidden');
+            m.style.display = 'none';
+        }
         if (window.unlockModalScroll) window.unlockModalScroll();
     }
 
@@ -863,12 +875,20 @@
     function openDeleteUserModal(userId, username, fullName) {
         document.getElementById('deleteUserId').value = userId;
         document.getElementById('deleteUserDisplayName').textContent = fullName + ' (@' + username + ')';
-        document.getElementById('delete-user-modal').classList.remove('hidden');
+        const m = document.getElementById('delete-user-modal');
+        if (m) {
+            m.classList.remove('hidden');
+            m.style.display = 'block';
+        }
         if (window.lockModalScroll) window.lockModalScroll();
     }
 
     function closeDeleteUserModal() {
-        document.getElementById('delete-user-modal').classList.add('hidden');
+        const m = document.getElementById('delete-user-modal');
+        if (m) {
+            m.classList.add('hidden');
+            m.style.display = 'none';
+        }
         if (window.unlockModalScroll) window.unlockModalScroll();
     }
 
@@ -903,22 +923,38 @@
             rejectionWrap.classList.add('hidden');
         }
 
-        document.getElementById('kyc-details-modal').classList.remove('hidden');
+        const m = document.getElementById('kyc-details-modal');
+        if (m) {
+            m.classList.remove('hidden');
+            m.style.display = 'block';
+        }
         if (window.lockModalScroll) window.lockModalScroll();
     }
 
     function closeKycDetailsModal() {
-        document.getElementById('kyc-details-modal').classList.add('hidden');
+        const m = document.getElementById('kyc-details-modal');
+        if (m) {
+            m.classList.add('hidden');
+            m.style.display = 'none';
+        }
         if (window.unlockModalScroll) window.unlockModalScroll();
     }
 
     function openCreateUserModal() {
-        document.getElementById('create-user-modal').classList.remove('hidden');
+        const m = document.getElementById('create-user-modal');
+        if (m) {
+            m.classList.remove('hidden');
+            m.style.display = 'block';
+        }
         if (window.lockModalScroll) window.lockModalScroll();
     }
 
     function closeCreateUserModal() {
-        document.getElementById('create-user-modal').classList.add('hidden');
+        const m = document.getElementById('create-user-modal');
+        if (m) {
+            m.classList.add('hidden');
+            m.style.display = 'none';
+        }
         if (window.unlockModalScroll) window.unlockModalScroll();
     }
 
@@ -930,12 +966,20 @@
         document.getElementById('editMachineSelect').value = machineId || '';
         document.getElementById('editSupervisorSelect').value = supervisorId || '';
         document.getElementById('editPhoneInput').value = phone || '';
-        document.getElementById('edit-user-modal').classList.remove('hidden');
+        const m = document.getElementById('edit-user-modal');
+        if (m) {
+            m.classList.remove('hidden');
+            m.style.display = 'block';
+        }
         if (window.lockModalScroll) window.lockModalScroll();
     }
 
     function closeEditUserModal() {
-        document.getElementById('edit-user-modal').classList.add('hidden');
+        const m = document.getElementById('edit-user-modal');
+        if (m) {
+            m.classList.add('hidden');
+            m.style.display = 'none';
+        }
         if (window.unlockModalScroll) window.unlockModalScroll();
     }
 
@@ -954,6 +998,7 @@
         document.getElementById(id)?.addEventListener('click', function(e) {
             if (e.target === this) {
                 this.classList.add('hidden');
+                this.style.display = 'none';
                 if (window.unlockModalScroll) window.unlockModalScroll();
             }
         });

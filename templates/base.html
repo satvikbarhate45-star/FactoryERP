@@ -494,6 +494,13 @@
             scrollbar-gutter: stable;
         }
 
+        #main-content-view {
+            transform: none !important;
+            will-change: auto !important;
+            filter: none !important;
+            perspective: none !important;
+        }
+
         body.modal-open,
         body.modal-open #main-content-wrapper {
             overflow: hidden !important;
@@ -507,6 +514,7 @@
             backdrop-filter: blur(8px) !important;
             -webkit-backdrop-filter: blur(8px) !important;
             z-index: 9998 !important;
+            display: block;
         }
 
         .erp-modal-centered {
@@ -519,6 +527,8 @@
             z-index: 9999 !important;
             margin: 0 !important;
             box-sizing: border-box !important;
+            display: flex !important;
+            flex-direction: column !important;
         }
     </style>
 </head>
@@ -675,7 +685,7 @@
         </header>
 
         <!-- Main Viewport Content -->
-        <main id="main-content-view" class="flex-1 p-2 sm:p-4 md:p-6 lg:p-8 erp-page-enter max-w-full">
+        <main id="main-content-view" class="flex-1 p-2 sm:p-4 md:p-6 lg:p-8 max-w-full">
             {% block content %}{% endblock %}
         </main>
     </div>
@@ -1175,11 +1185,8 @@
             // -----------------------------------------------------------------
             // Global Fluid UI Page-to-Page Sliding & Scaling Transition Engine
             // -----------------------------------------------------------------
-            // Smooth page enter transition
+            // Main view active
             const mainView = document.getElementById('main-content-view');
-            if (mainView) {
-                mainView.classList.add('erp-page-enter');
-            }
 
         });
 
