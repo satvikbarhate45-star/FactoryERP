@@ -16,7 +16,7 @@ from django.core.cache import cache
 from django.db.models import Count, Q
 
 @login_required(login_url='/login/')
-@role_required('MA', 'SU', 'AD')
+@role_required('MA', 'SU', 'AD', 'EQ')
 def equipment_view(request):
     today = timezone.localdate()
 
@@ -176,7 +176,7 @@ def equipment_view(request):
 
 
 @login_required(login_url='/login/')
-@role_required('MA', 'SU', 'AD')
+@role_required('MA', 'SU', 'AD', 'EQ')
 def machine_history_view(request, machine_id):
     from datetime import timedelta
     from apps.production.models import ProductionLog
@@ -254,7 +254,7 @@ def machine_history_view(request, machine_id):
 
 
 @login_required(login_url='/login/')
-@role_required('MA', 'SU', 'AD')
+@role_required('MA', 'SU', 'AD', 'EQ')
 def work_orders_view(request):
     from django.contrib import messages
 

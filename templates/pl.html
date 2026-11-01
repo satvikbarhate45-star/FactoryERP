@@ -48,12 +48,36 @@
         border-color: #334155 !important;
         box-shadow: 0 2px 4px rgba(51, 65, 85, 0.3) !important;
     }
-    /* Modal smooth animation transitions */
+    /* Sticky Top Header for Financial P&L */
+    .pl-sticky-header {
+        position: -webkit-sticky !important;
+        position: sticky !important;
+        top: 0 !important;
+        z-index: 999 !important;
+        background-color: rgba(255, 255, 255, 0.96) !important;
+        backdrop-filter: blur(12px) !important;
+        -webkit-backdrop-filter: blur(12px) !important;
+        box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.04) !important;
+    }
+    .dark .pl-sticky-header {
+        background-color: rgba(15, 23, 42, 0.96) !important;
+        box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5), 0 2px 6px -1px rgba(0, 0, 0, 0.3) !important;
+    }
+
+    /* Modal smooth animation transitions & exact viewport center */
     #financialHistoryModal {
         transition: opacity 0.2s ease-out;
     }
     #modalDialogContent {
-        transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease-out;
+        position: fixed !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        max-height: 90vh !important;
+        overflow-y: auto !important;
+        z-index: 10001 !important;
+        margin: 0 !important;
+        transition: opacity 0.2s ease-out;
     }
 </style>
 {% endblock %}
@@ -62,7 +86,7 @@
 <!-- ========================================================================= -->
 <!-- TOP HEADER SECTION: HERO TITLE & PRIMARY INTERACTIVE FILTER CONTROLS -->
 <!-- ========================================================================= -->
-<div class="mb-6 static-card p-5 sm:p-6 rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 shadow-sm">
+<div class="pl-sticky-header mb-6 static-card p-4 sm:p-5 md:p-6 rounded-2xl border border-slate-200/90 dark:border-slate-800">
     <!-- Header Top Row: Title, Real-Time Guard & Period Navigation -->
     <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 pb-5 border-b border-slate-100 dark:border-slate-700/60">
         <div>
@@ -368,8 +392,8 @@
 <!-- ========================================================================= -->
 <!-- SECTION 5: IN-PLACE ANIMATED CARD CLICK POPUP MODAL (ACCESSIBLE OVERLAY) -->
 <!-- ========================================================================= -->
-<div id="financialHistoryModal" class="hidden fixed inset-0 z-[100] flex items-start sm:items-center justify-center p-3 sm:p-6 overflow-y-auto bg-slate-900/70 backdrop-blur-sm opacity-0 transition-opacity duration-200">
-    <div id="modalDialogContent" class="relative w-full max-w-4xl max-h-[88vh] bg-white dark:bg-slate-800 rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col overflow-hidden transform scale-95 opacity-0 transition-all duration-200 my-auto">
+<div id="financialHistoryModal" class="hidden fixed inset-0 z-[10000] bg-slate-900/75 backdrop-blur-md opacity-0 transition-opacity duration-200">
+    <div id="modalDialogContent" class="erp-modal-centered w-[calc(100vw-2rem)] sm:w-full max-w-4xl max-h-[90vh] bg-white dark:bg-slate-800 rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col overflow-hidden opacity-0 transition-all duration-200 z-[10001] m-0">
         <!-- Modal Header -->
         <div class="px-6 py-4 sm:py-5 border-b border-slate-100 dark:border-slate-700/60 flex items-center justify-between bg-slate-50/70 dark:bg-slate-800/70 shrink-0">
             <div class="flex items-center gap-3">
@@ -1138,15 +1162,17 @@
         rowBadge.textContent = `${records.length} Records Logged`;
 
         // IN-PLACE MODAL LAUNCH: Lock body scroll to avoid background jumps
-        document.body.style.overflow = 'hidden';
+        if (window.lockModalScroll) window.lockModalScroll();
+        else document.body.style.overflow = 'hidden';
+
         modal.scrollTop = 0;
         if (scrollBox) scrollBox.scrollTop = 0;
 
         modal.classList.remove('hidden');
         requestAnimationFrame(() => {
             modal.classList.remove('opacity-0');
-            dialog.classList.remove('scale-95', 'opacity-0');
-            dialog.classList.add('scale-100', 'opacity-100');
+            dialog.classList.remove('opacity-0');
+            dialog.classList.add('opacity-100');
         });
     }
 
@@ -1156,10 +1182,11 @@
         if (!modal) return;
 
         // Restore body scroll
-        document.body.style.overflow = '';
+        if (window.unlockModalScroll) window.unlockModalScroll();
+        else document.body.style.overflow = '';
 
-        dialog.classList.remove('scale-100', 'opacity-100');
-        dialog.classList.add('scale-95', 'opacity-0');
+        dialog.classList.remove('opacity-100');
+        dialog.classList.add('opacity-0');
         modal.classList.add('opacity-0');
 
         setTimeout(() => {

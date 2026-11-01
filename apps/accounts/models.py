@@ -16,6 +16,7 @@ class User(AbstractUser):
         EMPLOYEE = 'EM', _('Employee')
         LOGISTICS = 'LO', _('Logistics')
         MAINTENANCE = 'MA', _('Maintenance')
+        EQUIPMENT = 'EQ', _('Equipment Manager')
 
     class KYCStatus(models.TextChoices):
         PENDING = 'PENDING', _('Pending')

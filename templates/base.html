@@ -486,6 +486,40 @@
         .dark .hover\:text-rose-600:hover {
             color: #f8fafc !important;
         }
+
+        /* --------------------------------------------------------------------------
+           Universal Modal Centering & Background Scroll Lock System
+           -------------------------------------------------------------------------- */
+        html {
+            scrollbar-gutter: stable;
+        }
+
+        body.modal-open,
+        body.modal-open #main-content-wrapper {
+            overflow: hidden !important;
+            touch-action: none;
+        }
+
+        .erp-modal-overlay {
+            position: fixed !important;
+            inset: 0 !important;
+            background-color: rgba(15, 23, 42, 0.75) !important;
+            backdrop-filter: blur(8px) !important;
+            -webkit-backdrop-filter: blur(8px) !important;
+            z-index: 9998 !important;
+        }
+
+        .erp-modal-centered {
+            position: fixed !important;
+            top: 50% !important;
+            left: 50% !important;
+            transform: translate(-50%, -50%) !important;
+            max-height: 90vh !important;
+            overflow-y: auto !important;
+            z-index: 9999 !important;
+            margin: 0 !important;
+            box-sizing: border-box !important;
+        }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden text-slate-800 bg-[#f8fafc] dark:bg-slate-900 font-inter">
@@ -536,8 +570,8 @@
             {% endif %}
             
             <!-- Maintenance & Equipment -->
-            {% if user.role in 'AD,MA,SU' %}
-            <a href="/maintenance/equipment/" class="sidebar-link {% if 'equipment' in request.path %}active{% endif %}" title="Equipment Fleet" data-title="Equipment Fleet">
+            {% if user.role in 'AD,MA,SU,EQ' or user.is_staff or user.is_superuser %}
+            <a href="/maintenance/equipment/" class="sidebar-link {% if 'equipment' in request.path %}active{% endif %}" title="Equipment" data-title="Equipment">
                 <i class="fa-solid fa-gears sidebar-icon"></i>
                 <span class="sidebar-text font-medium text-sm">Equipment</span>
             </a>
@@ -697,10 +731,10 @@
                 </a>
                 {% endif %}
 
-                {% if user.role in 'AD,MA,SU' %}
+                {% if user.role in 'AD,MA,SU,EQ' or user.is_staff or user.is_superuser %}
                 <a href="/maintenance/equipment/" onclick="toggleNavOverlay(false)" class="drawer-link {% if 'equipment' in request.path %}active{% endif %}">
                     <i class="fa-solid fa-gears mr-3 text-lg text-sky-400"></i>
-                    <span class="font-medium text-sm">Equipment Fleet</span>
+                    <span class="font-medium text-sm">Equipment</span>
                 </a>
                 <a href="/maintenance/work-orders/" onclick="toggleNavOverlay(false)" class="drawer-link {% if 'work-orders' in request.path %}active{% endif %}">
                     <i class="fa-solid fa-wrench mr-3 text-lg text-amber-400"></i>
@@ -1078,6 +1112,21 @@
                 }, 300);
             }
         }
+
+        // Global Modal Scroll Locking API
+        window.lockModalScroll = function() {
+            document.body.classList.add('modal-open');
+            document.body.style.overflow = 'hidden';
+            const wrapper = document.getElementById('main-content-wrapper');
+            if (wrapper) wrapper.style.overflow = 'hidden';
+        };
+
+        window.unlockModalScroll = function() {
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+            const wrapper = document.getElementById('main-content-wrapper');
+            if (wrapper) wrapper.style.overflow = '';
+        };
 
         // Close overlay on ESC key or desktop resize
         window.addEventListener('keydown', (e) => {

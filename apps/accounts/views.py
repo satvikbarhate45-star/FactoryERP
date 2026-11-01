@@ -100,7 +100,8 @@ def signup_view(request):
 
         role_map = {
             "Maintenance Tech": "MA",
-            "Equipments Manager": "MA",
+            "Equipments Manager": "EQ",
+            "Equipment Manager": "EQ",
             "Supervisor": "SU",
             "Production": "PM",
             "Local Operator": "EM",

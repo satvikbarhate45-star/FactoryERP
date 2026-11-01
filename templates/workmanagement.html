@@ -471,8 +471,8 @@
 <!-- ========================================================================= -->
 <!-- MODAL 1: MANDATORY KYC REJECTION MODAL                                    -->
 <!-- ========================================================================= -->
-<div id="reject-kyc-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
-    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 w-full max-w-md overflow-hidden transform transition-all">
+<div id="reject-kyc-modal" class="hidden fixed inset-0 z-[9998] bg-slate-900/75 backdrop-blur-md">
+    <div class="erp-modal-centered w-[calc(100vw-2rem)] sm:w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col">
         <div class="px-6 py-4 border-b border-rose-100 dark:border-rose-900/40 bg-rose-50 dark:bg-rose-950/30 flex justify-between items-center">
             <h3 class="text-base font-extrabold text-rose-900 dark:text-rose-200 flex items-center gap-2">
                 <i class="fa-solid fa-triangle-exclamation text-rose-600"></i>
@@ -511,8 +511,8 @@
 <!-- ========================================================================= -->
 <!-- MODAL 2: FULL KYC DETAILS DOSSIER MODAL                                   -->
 <!-- ========================================================================= -->
-<div id="kyc-details-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
-    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 w-full max-w-lg overflow-hidden transform transition-all">
+<div id="kyc-details-modal" class="hidden fixed inset-0 z-[9998] bg-slate-900/75 backdrop-blur-md">
+    <div class="erp-modal-centered w-[calc(100vw-2rem)] sm:w-full max-w-lg bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col">
         <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex justify-between items-center">
             <h3 class="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
                 <i class="fa-regular fa-id-card text-indigo-600"></i>
@@ -596,8 +596,8 @@
 <!-- ========================================================================= -->
 <!-- MODAL 3: CREATE USER / EMPLOYEE REGISTRATION MODAL                        -->
 <!-- ========================================================================= -->
-<div id="create-user-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
-    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 w-full max-w-md max-h-[90vh] overflow-y-auto transform transition-all">
+<div id="create-user-modal" class="hidden fixed inset-0 z-[9998] bg-slate-900/75 backdrop-blur-md">
+    <div class="erp-modal-centered w-[calc(100vw-2rem)] sm:w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-y-auto flex flex-col">
         <div class="px-5 sm:px-6 py-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex justify-between items-center sticky top-0 bg-white dark:bg-slate-800 z-10">
             <h3 class="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
                 <i class="fa-solid fa-user-plus text-indigo-600"></i>
@@ -692,8 +692,8 @@
 <!-- ========================================================================= -->
 <!-- MODAL 4: EDIT USER / ASSIGNMENT MODAL                                     -->
 <!-- ========================================================================= -->
-<div id="edit-user-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
-    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 w-full max-w-md overflow-hidden transform transition-all">
+<div id="edit-user-modal" class="hidden fixed inset-0 z-[9998] bg-slate-900/75 backdrop-blur-md">
+    <div class="erp-modal-centered w-[calc(100vw-2rem)] sm:w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-y-auto flex flex-col">
         <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex justify-between items-center">
             <h3 class="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
                 <i class="fa-solid fa-user-pen text-indigo-600"></i>
@@ -767,8 +767,8 @@
 <!-- ========================================================================= -->
 <!-- MODAL: DELETE EMPLOYEE CONFIRMATION MODAL                                 -->
 <!-- ========================================================================= -->
-<div id="delete-user-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
-    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 w-full max-w-md overflow-hidden transform transition-all">
+<div id="delete-user-modal" class="hidden fixed inset-0 z-[9998] bg-slate-900/75 backdrop-blur-md">
+    <div class="erp-modal-centered w-[calc(100vw-2rem)] sm:w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col">
         <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-700 bg-rose-50/50 dark:bg-rose-950/30 flex justify-between items-center">
             <h3 class="text-base font-extrabold text-rose-700 dark:text-rose-400 flex items-center gap-2">
                 <i class="fa-solid fa-triangle-exclamation"></i>
@@ -842,10 +842,12 @@
         document.getElementById('rejectionReasonInput').value = '';
         document.getElementById('rejectionErrorMsg').classList.add('hidden');
         document.getElementById('reject-kyc-modal').classList.remove('hidden');
+        if (window.lockModalScroll) window.lockModalScroll();
     }
 
     function closeRejectModal() {
         document.getElementById('reject-kyc-modal').classList.add('hidden');
+        if (window.unlockModalScroll) window.unlockModalScroll();
     }
 
     function validateRejectionForm() {
@@ -862,10 +864,12 @@
         document.getElementById('deleteUserId').value = userId;
         document.getElementById('deleteUserDisplayName').textContent = fullName + ' (@' + username + ')';
         document.getElementById('delete-user-modal').classList.remove('hidden');
+        if (window.lockModalScroll) window.lockModalScroll();
     }
 
     function closeDeleteUserModal() {
         document.getElementById('delete-user-modal').classList.add('hidden');
+        if (window.unlockModalScroll) window.unlockModalScroll();
     }
 
     function viewKycDetails(id, username, fullName, email, phone, pan, govId, account, ifsc, status, rejectionReason) {
@@ -900,18 +904,22 @@
         }
 
         document.getElementById('kyc-details-modal').classList.remove('hidden');
+        if (window.lockModalScroll) window.lockModalScroll();
     }
 
     function closeKycDetailsModal() {
         document.getElementById('kyc-details-modal').classList.add('hidden');
+        if (window.unlockModalScroll) window.unlockModalScroll();
     }
 
     function openCreateUserModal() {
         document.getElementById('create-user-modal').classList.remove('hidden');
+        if (window.lockModalScroll) window.lockModalScroll();
     }
 
     function closeCreateUserModal() {
         document.getElementById('create-user-modal').classList.add('hidden');
+        if (window.unlockModalScroll) window.unlockModalScroll();
     }
 
     function openEditUserModal(userId, username, role, shiftId, machineId, phone, supervisorId) {
@@ -923,11 +931,33 @@
         document.getElementById('editSupervisorSelect').value = supervisorId || '';
         document.getElementById('editPhoneInput').value = phone || '';
         document.getElementById('edit-user-modal').classList.remove('hidden');
+        if (window.lockModalScroll) window.lockModalScroll();
     }
 
     function closeEditUserModal() {
         document.getElementById('edit-user-modal').classList.add('hidden');
+        if (window.unlockModalScroll) window.unlockModalScroll();
     }
+
+    // Close on backdrop click & ESC key for all workmanagement modals
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeRejectModal();
+            closeDeleteUserModal();
+            closeKycDetailsModal();
+            closeCreateUserModal();
+            closeEditUserModal();
+        }
+    });
+
+    ['reject-kyc-modal', 'delete-user-modal', 'kyc-details-modal', 'create-user-modal', 'edit-user-modal'].forEach(id => {
+        document.getElementById(id)?.addEventListener('click', function(e) {
+            if (e.target === this) {
+                this.classList.add('hidden');
+                if (window.unlockModalScroll) window.unlockModalScroll();
+            }
+        });
+    });
 
     function filterPayrollTable() {
         const q = (document.getElementById('payrollLedgerSearch')?.value || '').toLowerCase();
