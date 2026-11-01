@@ -419,14 +419,24 @@ def user_management_view(request):
                     messages.error(request, f"Error deleting employee: {exc}")
             return redirect(redirect_url)
 
+    from apps.production.models import ProductionLog, SalaryPayroll
+    today = timezone.localdate()
+    is_sunday = (today.weekday() == 6)
+
+    # Detect verified Overtime (OT) employees on Sundays
+    ot_user_ids = set()
+    if is_sunday:
+        ot_user_ids = set(ProductionLog.objects.filter(date=today, output_kg__gt=0, is_overtime=True).values_list('employee_id', flat=True))
+
     all_users = list(User.objects.select_related('shift', 'machine', 'supervisor', 'kyc_reviewed_by').order_by('-date_joined'))
+    for u in all_users:
+        u.is_on_overtime = (u.id in ot_user_ids)
+
     total_count = len(all_users)
     pending_count = sum(1 for u in all_users if u.kyc_status == User.KYCStatus.PENDING)
     approved_count = sum(1 for u in all_users if u.kyc_status == User.KYCStatus.APPROVED)
     rejected_count = sum(1 for u in all_users if u.kyc_status == User.KYCStatus.REJECTED)
 
-    from apps.production.models import SalaryPayroll
-    today = timezone.localdate()
     # Strict backend query filter: No payroll records after Nov 1, 2026
     recent_payrolls = list(
         SalaryPayroll.objects.filter(payout_date__lte=today)
@@ -444,6 +454,7 @@ def user_management_view(request):
         'recent_payrolls': recent_payrolls,
         'total_payroll_disbursed': total_payroll_disbursed,
         'today': today,
+        'is_sunday': is_sunday,
         'roles': User.Role.choices,
         'shifts': list(Shift.objects.all()),
         'machines': list(Machine.objects.all()),
@@ -521,10 +532,12 @@ def employee_profile_view(request, user_id):
         return redirect('employee_profile', user_id=emp.id)
 
     # 1. Operational Shift Logs & Production Metrics (strictly valid non-zero outputs)
-    prod_logs = list(ProductionLog.objects.filter(employee=emp, output_kg__gt=0).select_related('machine').order_by('-date')[:30])
-    total_output_kg = float(ProductionLog.objects.filter(employee=emp, output_kg__gt=0).aggregate(s=Sum('output_kg'))['s'] or 0.0)
-    total_material_kg = float(ProductionLog.objects.filter(employee=emp, output_kg__gt=0).aggregate(s=Sum('material_used'))['s'] or 0.0)
-    total_shifts_count = ProductionLog.objects.filter(employee=emp, output_kg__gt=0).count()
+    # SUNDAY HOLIDAY FILTER: Exclude regular Sunday shifts. Include Sundays ONLY if explicit Overtime (OT) is logged!
+    raw_logs = list(ProductionLog.objects.filter(employee=emp, output_kg__gt=0).select_related('machine').order_by('-date')[:60])
+    prod_logs = [log for log in raw_logs if log.date.weekday() != 6 or getattr(log, 'is_overtime', False)][:30]
+    total_output_kg = float(sum(float(l.output_kg or 0.0) for l in prod_logs))
+    total_material_kg = float(sum(float(l.material_used or 0.0) for l in prod_logs))
+    total_shifts_count = len(prod_logs)
 
     # 2. Profit & Loss Contribution
     gross_revenue_contrib = round(total_output_kg * 45.0, 2)
@@ -863,143 +876,252 @@ def reports_view(request):
     from apps.production.models import ProductionLog, ProductionTarget
     from apps.maintenance.models import MachineHistoricalMetrics, MaintenanceTicket
     from apps.logistics.models import Dispatch
-    
-    target_date_str = request.GET.get('date')
-    if target_date_str:
-        try:
-            target_date = datetime.strptime(target_date_str, '%Y-%m-%d').date()
-        except ValueError:
-            target_date = timezone.localdate()
-    else:
-        target_date = timezone.localdate()
-        
-    cache_key = f'reports_view_{target_date}'
-    cached_context = cache.get(cache_key)
-    if cached_context is not None:
-        return render(request, 'report.html', cached_context)
 
-    # --- Production & Employee Data (bulk fetched with select_related) ---
-    logs = list(ProductionLog.objects.filter(date=target_date, output_kg__gt=0).select_related('employee', 'employee__shift'))
-    if not logs:
-        from apps.production.local_ml_pipeline import LocalPharmaMLForecastingPipeline
-        LocalPharmaMLForecastingPipeline().forecast_for_date(target_date)
-        logs = list(ProductionLog.objects.filter(date=target_date, output_kg__gt=0).select_related('employee', 'employee__shift'))
-    
-    PRICE_PER_KG = 50.0  # Selling price per kg
-    COST_PER_KG = 20.0   # Raw material (cardboard, etc) cost per kg
-    
-    emp_map = {}
-    total_production = 0.0
-    total_material = 0.0
-    
-    for log in logs:
-        emp = log.employee
-        if not emp:
-            continue
-        if emp.id not in emp_map:
-            emp_map[emp.id] = {
-                'employee': emp,
-                'out_kg': 0.0,
-                'mat_used': 0.0,
-            }
-        emp_map[emp.id]['out_kg'] += float(log.output_kg or 0.0)
-        emp_map[emp.id]['mat_used'] += float(log.material_used or 0.0)
-        total_production += float(log.output_kg or 0.0)
-        total_material += float(log.material_used or 0.0)
-        
-    emp_ids = list(emp_map.keys())
-    existing_targets = {
-        t.employee_id: t 
-        for t in ProductionTarget.objects.filter(date=target_date, employee_id__in=emp_ids)
-    }
-    
-    new_targets = []
-    for i, emp_id in enumerate(emp_ids):
-        if emp_id not in existing_targets:
-            default_target = 300.0 + (i * 50.0)
-            new_target = ProductionTarget(
-                date=target_date,
-                employee_id=emp_id,
-                target_kg=default_target
-            )
-            new_targets.append(new_target)
-            existing_targets[emp_id] = new_target
-            
-    if new_targets:
-        ProductionTarget.objects.bulk_create(new_targets, ignore_conflicts=True)
-        
-    employee_data = []
-    for emp_id, data in emp_map.items():
-        emp = data['employee']
-        out_kg = data['out_kg']
-        mat_used = data['mat_used']
-        
-        revenue = out_kg * PRICE_PER_KG
-        expense = mat_used * COST_PER_KG
-        profit = revenue - expense
-        
-        target_obj = existing_targets.get(emp_id)
-        target_kg = float(target_obj.target_kg) if target_obj else 300.0
-        target_achieved = (target_kg > 0 and out_kg >= target_kg)
-        
-        shift_name = emp.shift.name if emp.shift else 'No Shift'
-        
-        employee_data.append({
-            'employee': emp,
-            'shift': shift_name,
-            'output': out_kg,
-            'material': mat_used,
-            'profit': profit,
-            'target': target_kg,
-            'target_achieved': target_achieved,
-        })
-        
-    # --- Maintenance & Logistics Data ---
-    metrics_count = MachineHistoricalMetrics.objects.filter(date=target_date).count()
-    tickets = list(MaintenanceTicket.objects.select_related('machine').filter(opened_at__date=target_date))
-    dispatches = list(Dispatch.objects.filter(created_at__date=target_date))
-    
-    # --- Chart Data Preparation ---
-    chart_emp_names = []
-    chart_emp_outputs = []
-    chart_emp_targets = []
-    chart_emp_profits = []
-    shift_output = {'Morning Shift': 0, 'Evening Shift': 0, 'Night Shift': 0, 'No Shift': 0}
-    
-    employee_data.sort(key=lambda x: x['output'], reverse=True)
-    
-    for item in employee_data:
-        chart_emp_names.append(item['employee'].first_name or item['employee'].username)
-        chart_emp_outputs.append(item['output'])
-        chart_emp_targets.append(item['target'])
-        chart_emp_profits.append(item['profit'])
-        
-        shift_name = item['shift']
-        if shift_name in shift_output:
-            shift_output[shift_name] += item['output']
+    today = timezone.localdate()
+    target_date_str = (request.GET.get('date') or '').strip()
+
+    # Helper function for flexible multi-format date parsing
+    def _parse_search_date(d_str):
+        if not d_str:
+            return None
+        for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%d-%m-%Y', '%m/%d/%Y', '%Y/%m/%d'):
+            try:
+                return datetime.strptime(d_str, fmt).date()
+            except (ValueError, TypeError):
+                continue
+        return None
+
+    try:
+        if target_date_str:
+            parsed_date = _parse_search_date(target_date_str)
+            if parsed_date is None:
+                # Unparseable / Malformed Date format: return clean empty dataset with graceful message
+                context = {
+                    'target_date': today,
+                    'target_date_str': target_date_str,
+                    'employee_data': [],
+                    'total_production': 0.0,
+                    'total_material': 0.0,
+                    'metrics_count': 0,
+                    'tickets': [],
+                    'dispatches': [],
+                    'chart_emp_names_json': '[]',
+                    'chart_emp_outputs_json': '[]',
+                    'chart_emp_targets_json': '[]',
+                    'chart_emp_profits_json': '[]',
+                    'shift_labels_json': '[]',
+                    'shift_data_json': '[]',
+                    'empty_message': "Dataset Not Found",
+                    'empty_subtext': f"Unrecognized date query '{target_date_str}'. Please select a valid calendar date.",
+                }
+                return render(request, 'report.html', context)
+
+            # FUTURE DATE CHECK: Dates that do not exist yet (> today) must return graceful empty state
+            if parsed_date > today:
+                context = {
+                    'target_date': parsed_date,
+                    'target_date_str': parsed_date.strftime('%Y-%m-%d'),
+                    'employee_data': [],
+                    'total_production': 0.0,
+                    'total_material': 0.0,
+                    'metrics_count': 0,
+                    'tickets': [],
+                    'dispatches': [],
+                    'chart_emp_names_json': '[]',
+                    'chart_emp_outputs_json': '[]',
+                    'chart_emp_targets_json': '[]',
+                    'chart_emp_profits_json': '[]',
+                    'shift_labels_json': '[]',
+                    'shift_data_json': '[]',
+                    'empty_message': "Dataset Not Found",
+                    'empty_subtext': f"The requested date ({parsed_date.strftime('%B %d, %Y')}) has not occurred yet. Future datasets do not exist.",
+                }
+                return render(request, 'report.html', context)
+
+            target_date = parsed_date
         else:
-            shift_output['No Shift'] += item['output']
-            
-    shift_labels = [k for k, v in shift_output.items() if v > 0]
-    shift_data = [v for k, v in shift_output.items() if v > 0]
-    
-    context = {
-        'target_date': target_date,
-        'target_date_str': target_date.strftime('%Y-%m-%d'),
-        'employee_data': employee_data,
-        'total_production': total_production,
-        'total_material': total_material,
-        'metrics_count': metrics_count,
-        'tickets': tickets,
-        'dispatches': dispatches,
-        'chart_emp_names_json': json.dumps(chart_emp_names),
-        'chart_emp_outputs_json': json.dumps(chart_emp_outputs),
-        'chart_emp_targets_json': json.dumps(chart_emp_targets),
-        'chart_emp_profits_json': json.dumps(chart_emp_profits),
-        'shift_labels_json': json.dumps(shift_labels),
-        'shift_data_json': json.dumps(shift_data),
-    }
-    
-    cache.set(cache_key, context, timeout=60)
-    return render(request, 'report.html', context)
+            target_date = today
+
+        # SUNDAY HOLIDAY FILTER:
+        # Sundays are treated strictly as holidays by default.
+        # Regular working records are NOT displayed on Sunday.
+        # Records are displayed on Sunday ONLY if an employee has a verified, explicit Overtime (OT) entry logged.
+        is_sunday = (target_date.weekday() == 6)
+
+        cache_key = f'reports_view_{target_date}'
+        cached_context = cache.get(cache_key)
+        if cached_context is not None:
+            return render(request, 'report.html', cached_context)
+
+        if is_sunday:
+            # Query ONLY explicit verified Overtime logs for Sunday
+            logs = list(ProductionLog.objects.filter(date=target_date, output_kg__gt=0, is_overtime=True).select_related('employee', 'employee__shift'))
+        else:
+            # Standard operational day: query active shift outputs
+            logs = list(ProductionLog.objects.filter(date=target_date, output_kg__gt=0).select_related('employee', 'employee__shift'))
+            if not logs and target_date <= today:
+                from apps.production.local_ml_pipeline import LocalPharmaMLForecastingPipeline
+                LocalPharmaMLForecastingPipeline().forecast_for_date(target_date)
+                logs = list(ProductionLog.objects.filter(date=target_date, output_kg__gt=0).select_related('employee', 'employee__shift'))
+
+        PRICE_PER_KG = 50.0  # Selling price per kg
+        COST_PER_KG = 20.0   # Raw material (cardboard, etc) cost per kg
+
+        emp_map = {}
+        total_production = 0.0
+        total_material = 0.0
+
+        for log in logs:
+            emp = log.employee
+            if not emp:
+                continue
+            if emp.id not in emp_map:
+                emp_map[emp.id] = {
+                    'employee': emp,
+                    'out_kg': 0.0,
+                    'mat_used': 0.0,
+                    'is_overtime': getattr(log, 'is_overtime', False)
+                }
+            emp_map[emp.id]['out_kg'] += float(log.output_kg or 0.0)
+            emp_map[emp.id]['mat_used'] += float(log.material_used or 0.0)
+            if getattr(log, 'is_overtime', False):
+                emp_map[emp.id]['is_overtime'] = True
+            total_production += float(log.output_kg or 0.0)
+            total_material += float(log.material_used or 0.0)
+
+        emp_ids = list(emp_map.keys())
+        existing_targets = {
+            t.employee_id: t 
+            for t in ProductionTarget.objects.filter(date=target_date, employee_id__in=emp_ids)
+        }
+
+        new_targets = []
+        for i, emp_id in enumerate(emp_ids):
+            if emp_id not in existing_targets:
+                default_target = 300.0 + (i * 50.0)
+                new_target = ProductionTarget(
+                    date=target_date,
+                    employee_id=emp_id,
+                    target_kg=default_target
+                )
+                new_targets.append(new_target)
+                existing_targets[emp_id] = new_target
+
+        if new_targets:
+            ProductionTarget.objects.bulk_create(new_targets, ignore_conflicts=True)
+
+        employee_data = []
+        for emp_id, data in emp_map.items():
+            emp = data['employee']
+            out_kg = data['out_kg']
+            mat_used = data['mat_used']
+            is_ot = data.get('is_overtime', False) or is_sunday
+
+            revenue = out_kg * PRICE_PER_KG
+            expense = mat_used * COST_PER_KG
+            profit = revenue - expense
+
+            target_obj = existing_targets.get(emp_id)
+            target_kg = float(target_obj.target_kg) if target_obj else 300.0
+            target_achieved = (target_kg > 0 and out_kg >= target_kg)
+
+            shift_base = emp.shift.name if emp.shift else 'No Shift'
+            shift_name = f"{shift_base} (OT)" if is_ot else shift_base
+
+            employee_data.append({
+                'employee': emp,
+                'shift': shift_name,
+                'output': out_kg,
+                'material': mat_used,
+                'profit': profit,
+                'target': target_kg,
+                'target_achieved': target_achieved,
+                'is_overtime': is_ot,
+            })
+
+        # Maintenance & Logistics
+        metrics_count = MachineHistoricalMetrics.objects.filter(date=target_date).count()
+        tickets = list(MaintenanceTicket.objects.select_related('machine').filter(opened_at__date=target_date))
+        dispatches = list(Dispatch.objects.filter(created_at__date=target_date))
+
+        # Chart Data Preparation
+        chart_emp_names = []
+        chart_emp_outputs = []
+        chart_emp_targets = []
+        chart_emp_profits = []
+        shift_output = {'Morning Shift': 0, 'Evening Shift': 0, 'Night Shift': 0, 'No Shift': 0}
+
+        employee_data.sort(key=lambda x: x['output'], reverse=True)
+
+        for item in employee_data:
+            chart_emp_names.append(item['employee'].first_name or item['employee'].username)
+            chart_emp_outputs.append(item['output'])
+            chart_emp_targets.append(item['target'])
+            chart_emp_profits.append(item['profit'])
+
+            shift_name_clean = item['shift'].replace(' (OT)', '').strip()
+            if shift_name_clean in shift_output:
+                shift_output[shift_name_clean] += item['output']
+            else:
+                shift_output['No Shift'] += item['output']
+
+        shift_labels = [k for k, v in shift_output.items() if v > 0]
+        shift_data = [v for k, v in shift_output.items() if v > 0]
+
+        empty_message = None
+        empty_subtext = None
+        if not employee_data:
+            if is_sunday:
+                empty_message = "Dataset Not Found"
+                empty_subtext = f"Sunday ({target_date.strftime('%B %d, %Y')}) is a scheduled factory holiday. No verified Overtime (OT) shifts logged."
+            else:
+                empty_message = "Dataset Not Found"
+                empty_subtext = f"No production or operational logs found for {target_date.strftime('%B %d, %Y')}."
+
+        context = {
+            'target_date': target_date,
+            'target_date_str': target_date.strftime('%Y-%m-%d'),
+            'employee_data': employee_data,
+            'total_production': total_production,
+            'total_material': total_material,
+            'metrics_count': metrics_count,
+            'tickets': tickets,
+            'dispatches': dispatches,
+            'chart_emp_names_json': json.dumps(chart_emp_names),
+            'chart_emp_outputs_json': json.dumps(chart_emp_outputs),
+            'chart_emp_targets_json': json.dumps(chart_emp_targets),
+            'chart_emp_profits_json': json.dumps(chart_emp_profits),
+            'shift_labels_json': json.dumps(shift_labels),
+            'shift_data_json': json.dumps(shift_data),
+            'empty_message': empty_message,
+            'empty_subtext': empty_subtext,
+            'is_sunday': is_sunday,
+        }
+
+        cache.set(cache_key, context, timeout=60)
+        return render(request, 'report.html', context)
+
+    except Exception as e:
+        logger.error("[REPORTS VIEW EXCEPTION] Error processing date query '%s': %s", target_date_str, e, exc_info=True)
+        # Robust exception fallback: return a clean empty dataset with graceful message instead of 500 error!
+        fallback_context = {
+            'target_date': today,
+            'target_date_str': target_date_str or today.strftime('%Y-%m-%d'),
+            'employee_data': [],
+            'total_production': 0.0,
+            'total_material': 0.0,
+            'metrics_count': 0,
+            'tickets': [],
+            'dispatches': [],
+            'chart_emp_names_json': '[]',
+            'chart_emp_outputs_json': '[]',
+            'chart_emp_targets_json': '[]',
+            'chart_emp_profits_json': '[]',
+            'shift_labels_json': '[]',
+            'shift_data_json': '[]',
+            'empty_message': "Dataset Not Found",
+            'empty_subtext': "Unable to retrieve operational metrics for the requested query date.",
+            'is_sunday': False,
+        }
+        return render(request, 'report.html', fallback_context)
 

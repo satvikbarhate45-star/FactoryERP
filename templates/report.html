@@ -19,6 +19,19 @@
     </form>
 </div>
 
+{% if empty_message %}
+<div class="mb-6 p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
+    <div class="flex items-center gap-3">
+        <i class="fa-solid fa-circle-exclamation text-amber-600 dark:text-amber-400 text-2xl"></i>
+        <div>
+            <div class="font-bold text-sm sm:text-base">{{ empty_message }}</div>
+            <div class="text-xs text-amber-700 dark:text-amber-300">{{ empty_subtext }}</div>
+        </div>
+    </div>
+    <span class="text-xs px-2.5 py-1 bg-amber-200/80 dark:bg-amber-900/80 text-amber-900 dark:text-amber-100 rounded-full font-bold self-end sm:self-auto">Query Date: {{ target_date_str }}</span>
+</div>
+{% endif %}
+
 <!-- Daily Summary Cards -->
 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
     <div class="bg-white p-6 rounded-2xl shadow-sm border border-indigo-100 relative overflow-hidden">
@@ -119,9 +132,10 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="7" class="p-12 text-center text-slate-500 bg-slate-50">
-                            <i class="fa-solid fa-folder-open text-4xl mb-3 text-slate-300 block"></i>
-                            <p class="font-medium">No production or employee data found for {{ target_date_str }}.</p>
+                        <td colspan="7" class="p-12 text-center text-slate-500 bg-slate-50 dark:bg-slate-800/40">
+                            <i class="fa-solid fa-folder-open text-4xl mb-3 text-slate-300 dark:text-slate-600 block"></i>
+                            <p class="font-bold text-base text-slate-700 dark:text-slate-200">{% if empty_message %}{{ empty_message }}{% else %}Dataset Not Found{% endif %}</p>
+                            <p class="text-xs text-slate-400 mt-1">{% if empty_subtext %}{{ empty_subtext }}{% else %}No production or employee data found for {{ target_date_str }}.{% endif %}</p>
                         </td>
                     </tr>
                     {% endfor %}

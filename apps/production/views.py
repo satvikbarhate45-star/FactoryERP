@@ -285,11 +285,13 @@ def build_master_supervisor_timeline(today):
     logs_by_date_emp = {}
     for entry in ProductionLog.objects.filter(date__gte=earliest_date, date__lte=today).values('date', 'employee_id').annotate(
         tot_out=Sum('output_kg'),
-        tot_mat=Sum('material_used')
+        tot_mat=Sum('material_used'),
+        has_ot=Count('id', filter=Q(is_overtime=True))
     ):
         logs_by_date_emp[(entry['date'], entry['employee_id'])] = {
             'out': float(entry['tot_out'] or 0.0),
-            'mat': float(entry['tot_mat'] or 0.0)
+            'mat': float(entry['tot_mat'] or 0.0),
+            'is_overtime': (entry['has_ot'] > 0)
         }
 
     # Pre-aggregate targets by (date, emp_id)
@@ -360,38 +362,54 @@ def build_master_supervisor_timeline(today):
             day_total_mat = 0.0
             day_operators = []
 
+            day_is_sunday = (day_cursor.weekday() == 6)
+
             for emp in employees_qs:
                 emp_target = targets_by_date_emp.get((day_cursor, emp.id), 165.0)
                 emp_log = logs_by_date_emp.get((day_cursor, emp.id))
 
-                if emp_log:
+                # SUNDAY HOLIDAY FILTER: Exclude regular workers on Sunday.
+                # Only include if employee has a verified, explicit Overtime (OT) entry logged!
+                if day_is_sunday:
+                    if not (emp_log and emp_log.get('is_overtime')):
+                        continue
                     achieved = emp_log['out']
                     mat = emp_log['mat']
-                elif day_logs_exist:
-                    achieved = 0.0
-                    mat = 0.0
+                    status = 'Overtime Active'
                 else:
-                    achieved = round(emp_target * 0.94, 1)
-                    mat = round(achieved * 1.05, 1)
+                    if emp_log:
+                        achieved = emp_log['out']
+                        mat = emp_log['mat']
+                    elif day_logs_exist:
+                        achieved = 0.0
+                        mat = 0.0
+                    else:
+                        achieved = round(emp_target * 0.94, 1)
+                        mat = round(achieved * 1.05, 1)
+
+                    if achieved >= emp_target and emp_target > 0:
+                        status = 'Completed'
+                    elif achieved > 0:
+                        status = 'In Progress'
+                    else:
+                        status = 'Scheduled'
 
                 day_tasks_allocated += 1
                 if achieved >= emp_target and emp_target > 0:
                     day_tasks_completed += 1
-                    status = 'Completed'
-                elif achieved > 0:
-                    status = 'In Progress'
-                else:
-                    status = 'Scheduled'
 
                 day_total_out += achieved
                 day_total_mat += mat
                 pct = min(100, int((achieved / emp_target) * 100)) if emp_target > 0 else 0
                 yield_pct = round((achieved / mat) * 100, 1) if mat > 0 else 94.2
 
+                shift_base = emp.shift.name if emp.shift else 'Morning Shift A'
+                shift_display = f"{shift_base} (OT)" if (day_is_sunday or (emp_log and emp_log.get('is_overtime'))) else shift_base
+
                 day_operators.append({
                     'employee_id': emp.id,
                     'employee_name': emp.username,
-                    'shift': emp.shift.name if emp.shift else 'Morning Shift A',
+                    'shift': shift_display,
                     'machine': emp.machine.code if emp.machine else 'Line M-01',
                     'target_kg': emp_target,
                     'achieved_kg': achieved,
@@ -402,11 +420,11 @@ def build_master_supervisor_timeline(today):
                     'bonus_qualified': pct >= 95
                 })
 
-            day_comp_rate = round((day_tasks_completed / day_tasks_allocated * 100), 1) if day_tasks_allocated > 0 else 92.0
+            day_comp_rate = round((day_tasks_completed / day_tasks_allocated * 100), 1) if day_tasks_allocated > 0 else (0.0 if day_is_sunday else 92.0)
             day_payroll = pr_info.get('total_paid', 0.0)
-            if day_payroll == 0.0:
+            if day_payroll == 0.0 and not day_is_sunday:
                 day_payroll = round(len(employees_qs) * 450.0, 2)
-            auto_cnt = pr_info.get('auto_count', len(employees_qs) if not day_logs_exist else 0)
+            auto_cnt = pr_info.get('auto_count', len(employees_qs) if not day_logs_exist and not day_is_sunday else 0)
 
             w_tasks_allocated += day_tasks_allocated
             w_tasks_completed += day_tasks_completed
@@ -421,14 +439,22 @@ def build_master_supervisor_timeline(today):
             w_yield_pcts.append(day_yield)
             w_tasks_completed_counts.append(day_tasks_completed)
 
-            decision_text = day_alerts[0]['decision'] if day_alerts else "Floor staff balanced across shifts. Autonomous yield thresholds verified. Zero line bottlenecks detected."
+            if day_is_sunday and not day_operators:
+                decision_text = "Sunday scheduled plant holiday. Plant on standby, regular manufacturing shifts resume Monday."
+                day_status = "Sunday Plant Holiday (Standby)"
+            elif day_is_sunday:
+                decision_text = f"Sunday Overtime authorized for {len(day_operators)} critical cleanroom operators."
+                day_status = "Sunday Overtime Shift"
+            else:
+                decision_text = day_alerts[0]['decision'] if day_alerts else "Floor staff balanced across shifts. Autonomous yield thresholds verified. Zero line bottlenecks detected."
+                day_status = "Shift Sign-Off Completed"
 
             days_in_week.append({
                 'date': day_cursor.isoformat(),
                 'formatted_date': day_cursor.strftime('%b %d, %Y'),
                 'short_label': day_cursor.strftime('%a %d'),
                 'day_name': day_cursor.strftime('%A'),
-                'workers_on_duty': len(employees_qs),
+                'workers_on_duty': len(day_operators) if day_is_sunday else len(employees_qs),
                 'tasks_allocated': day_tasks_allocated,
                 'tasks_completed': day_tasks_completed,
                 'completion_rate': day_comp_rate,
@@ -436,7 +462,7 @@ def build_master_supervisor_timeline(today):
                 'payroll_disbursed': round(day_payroll, 2),
                 'auto_predicted_count': auto_cnt,
                 'supervisor_decision': decision_text,
-                'status': 'Shift Sign-Off Completed',
+                'status': day_status,
                 'operators': day_operators
             })
 

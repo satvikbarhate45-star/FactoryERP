@@ -40,11 +40,14 @@ def get_date_range_for_timeframe(time_frame='weekly', offset=0, base_date=None, 
     if time_frame == 'daily':
         target_date = base_date
         if target_date_str:
-            try:
-                parsed = datetime.strptime(str(target_date_str).strip(), '%Y-%m-%d').date()
-                target_date = min(parsed, base_date)
-            except (ValueError, TypeError):
-                target_date = base_date
+            parsed = None
+            for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%d-%m-%Y', '%m/%d/%Y', '%Y/%m/%d'):
+                try:
+                    parsed = datetime.strptime(str(target_date_str).strip(), fmt).date()
+                    break
+                except (ValueError, TypeError):
+                    continue
+            target_date = min(parsed, base_date) if parsed else base_date
         else:
             target_date = min(base_date + timedelta(days=offset), base_date)
             # If offset is 0 and target_date has no active production (e.g. Sunday/rest day),

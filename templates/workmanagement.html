@@ -201,6 +201,13 @@
                             <div class="text-xs space-y-1">
                                 <div class="font-medium text-slate-700 dark:text-slate-300">
                                     <span class="text-slate-400 font-bold">Shift:</span> {{ u.shift.name|default:"Unassigned" }}
+                                    {% if is_sunday %}
+                                        {% if u.is_on_overtime %}
+                                            <span class="ml-1 px-1.5 py-0.5 rounded text-[10px] bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200 font-extrabold border border-amber-300">OT Active</span>
+                                        {% else %}
+                                            <span class="ml-1 text-[10px] text-slate-400 font-normal italic">(Sunday Holiday)</span>
+                                        {% endif %}
+                                    {% endif %}
                                 </div>
                                 <div class="font-medium text-slate-700 dark:text-slate-300">
                                     <span class="text-slate-400 font-bold">Line:</span> {{ u.machine.code|default:"None" }}

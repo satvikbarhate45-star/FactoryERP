@@ -80,6 +80,7 @@ def ensure_runtime_schema_integrity(force=False, max_age_seconds=60):
                     
                     # Production
                     ("production_productionlog", "is_auto_predicted", "boolean DEFAULT false", "boolean DEFAULT 0"),
+                    ("production_productionlog", "is_overtime", "boolean DEFAULT false", "boolean DEFAULT 0"),
                     ("production_salarypayroll", "is_auto_predicted", "boolean DEFAULT false", "boolean DEFAULT 0"),
                     ("production_salarypayroll", "is_incremented", "boolean DEFAULT false", "boolean DEFAULT 0"),
                     ("production_systemoverview", "is_auto_filled", "boolean DEFAULT false", "boolean DEFAULT 0"),

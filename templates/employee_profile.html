@@ -339,7 +339,12 @@
             <tbody class="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
                 {% for log in prod_logs %}
                 <tr class="hover:bg-slate-50/70 dark:hover:bg-slate-800/30 transition">
-                    <td class="py-2.5 px-3 font-bold text-slate-900 dark:text-white">{{ log.date|date:"M d, Y" }}</td>
+                    <td class="py-2.5 px-3 font-bold text-slate-900 dark:text-white">
+                        {{ log.date|date:"M d, Y" }}
+                        {% if log.is_overtime %}
+                            <span class="ml-1.5 px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200 border border-amber-300">OT</span>
+                        {% endif %}
+                    </td>
                     <td class="py-2.5 px-3 text-indigo-600 dark:text-indigo-400 font-semibold">{{ log.machine.code|default:"Packaging" }}</td>
                     <td class="py-2.5 px-3 font-bold text-emerald-600 dark:text-emerald-400">{{ log.output_kg|floatformat:1 }} kg</td>
                     <td class="py-2.5 px-3 text-slate-600 dark:text-slate-300">{{ log.material_used|floatformat:1 }} kg</td>

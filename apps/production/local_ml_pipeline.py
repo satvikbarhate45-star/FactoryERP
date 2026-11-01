@@ -202,53 +202,59 @@ class LocalPharmaMLForecastingPipeline:
         # -----------------------------------------------------------------
         # 2. EMPLOYEE TARGETS & SHIFT OUTPUTS (Unique, Non-Zero, Non-Flat)
         # -----------------------------------------------------------------
-        for emp_idx, emp in enumerate(employees):
-            e_rng = random.Random((target_date.toordinal() * 50) + emp.id)
+        is_sunday = (target_date.weekday() == 6)
 
-            # A. UNIQUE NON-ZERO TARGET (Eliminates flat 165.0 and zero targets)
-            # Distinct target for each worker based on grade, role, and assigned machine
-            unique_target_kg = round(150.0 + (((emp.id * 37) % 32) * 1.25), 1)  # e.g. 156.2, 172.5, 168.8, 185.0 kg
+        if not is_sunday:
+            for emp_idx, emp in enumerate(employees):
+                e_rng = random.Random((target_date.toordinal() * 50) + emp.id)
 
-            ProductionTarget.objects.update_or_create(
-                date=target_date, employee=emp,
-                defaults={'target_kg': unique_target_kg, 'is_rollover': False}
-            )
+                # A. UNIQUE NON-ZERO TARGET (Eliminates flat 165.0 and zero targets)
+                unique_target_kg = round(150.0 + (((emp.id * 37) % 32) * 1.25), 1)
 
-            # B. UNIQUE NON-IDENTICAL ACTUAL OUTPUT (Local ML historical skill velocity)
-            past_logs = list(ProductionLog.objects.filter(
-                employee=emp, date__lt=target_date, date__gte=target_date - timedelta(days=30), output_kg__gt=0
-            ).values_list('output_kg', flat=True))
+                ProductionTarget.objects.update_or_create(
+                    date=target_date, employee=emp,
+                    defaults={'target_kg': unique_target_kg, 'is_rollover': False}
+                )
 
-            if past_logs and len(past_logs) >= 3:
-                avg_past = float(np.mean([float(o) for o in past_logs if float(o) > 0]))
-            else:
-                avg_past = unique_target_kg
+                # B. UNIQUE NON-IDENTICAL ACTUAL OUTPUT (Local ML historical skill velocity)
+                past_logs = list(ProductionLog.objects.filter(
+                    employee=emp, date__lt=target_date, date__gte=target_date - timedelta(days=30), output_kg__gt=0
+                ).values_list('output_kg', flat=True))
 
-            emp_eff = 0.94 + (((emp.id * 77) % 18) * 0.01)  # 0.94 - 1.11 efficiency
-            unique_actual_output = round(max(95.0, (avg_past * 0.4 + unique_target_kg * 0.6) * emp_eff * dow_mult + e_rng.uniform(-4.5, 4.5)), 1)
-            raw_comp = (unique_actual_output / unique_target_kg) * 100 if unique_target_kg > 0 else 96.5
-            comp_pct = min(100.0, max(0.0, round(raw_comp, 1)))
+                if past_logs and len(past_logs) >= 3:
+                    avg_past = float(np.mean([float(o) for o in past_logs if float(o) > 0]))
+                else:
+                    avg_past = unique_target_kg
 
-            base_pay = 450.0
-            if comp_pct >= 95.0:
-                bonus_factor = 1.10 + (min(5.0, comp_pct - 95.0) * 0.005)
-                adj_pay = round(base_pay * bonus_factor, 2)
-            else:
-                adj_pay = round(base_pay * max(0.85, comp_pct / 100.0), 2)
-            adj_pay = round(max(380.0, min(530.0, adj_pay)), 2)
+                emp_eff = 0.94 + (((emp.id * 77) % 18) * 0.01)
+                unique_actual_output = round(max(95.0, (avg_past * 0.4 + unique_target_kg * 0.6) * emp_eff * dow_mult + e_rng.uniform(-4.5, 4.5)), 1)
+                raw_comp = (unique_actual_output / unique_target_kg) * 100 if unique_target_kg > 0 else 96.5
+                comp_pct = min(100.0, max(0.0, round(raw_comp, 1)))
 
-            # Assigned machine rotating by shift
-            assigned_machine = machines[(emp_idx + target_date.day) % len(machines)]
+                base_pay = 450.0
+                if comp_pct >= 95.0:
+                    bonus_factor = 1.10 + (min(5.0, comp_pct - 95.0) * 0.005)
+                    adj_pay = round(base_pay * bonus_factor, 2)
+                else:
+                    adj_pay = round(base_pay * max(0.85, comp_pct / 100.0), 2)
+                adj_pay = round(max(380.0, min(530.0, adj_pay)), 2)
 
-            # ProductionLog - always non-zero output
-            ProductionLog.objects.update_or_create(
-                date=target_date, employee=emp, machine=assigned_machine,
-                defaults={
-                    'output_kg': unique_actual_output,
-                    'material_used': round(unique_actual_output / 0.952, 2),
-                    'is_auto_predicted': True
-                }
-            )
+                assigned_machine = machines[(emp_idx + target_date.day) % len(machines)]
+
+                ProductionLog.objects.update_or_create(
+                    date=target_date, employee=emp, machine=assigned_machine,
+                    defaults={
+                        'output_kg': unique_actual_output,
+                        'material_used': round(unique_actual_output / 0.952, 2),
+                        'is_auto_predicted': True,
+                        'is_overtime': False
+                    }
+                )
+        else:
+            # SUNDAY STRICT HOLIDAY RULE:
+            # Regular workers are on holiday by default.
+            # Do NOT create regular shift records for all employees on Sundays.
+            logger.info("[LOCAL ML] Sunday %s is a plant holiday. Regular employee shifts skipped.", target_date)
 
 
         # -----------------------------------------------------------------
