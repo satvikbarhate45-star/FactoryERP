@@ -155,13 +155,16 @@
                     <tr class="user-row hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors group"
                         data-status="{{ u.kyc_status }}"
                         data-search="{{ u.username|lower }} {{ u.first_name|lower }} {{ u.email|lower }} {{ u.get_role_display|lower }} {{ u.phone|default:'' }}">
-                        
                         <!-- Employee Identity -->
                         <td class="px-5 sm:px-6 py-4">
                             <div class="flex items-center gap-3">
+                                {% if u.photo %}
+                                <img src="{{ u.photo.url }}" alt="{{ u.username }}" class="w-10 h-10 rounded-full object-cover border border-slate-200 dark:border-slate-700 shadow-sm shrink-0">
+                                {% else %}
                                 <div class="w-10 h-10 rounded-full {% if u.kyc_status == 'APPROVED' %}bg-gradient-to-br from-emerald-100 to-teal-50 text-emerald-700 border-emerald-200 dark:from-emerald-950 dark:to-teal-950 dark:text-emerald-300 dark:border-emerald-800{% elif u.kyc_status == 'REJECTED' %}bg-gradient-to-br from-rose-100 to-pink-50 text-rose-700 border-rose-200 dark:from-rose-950 dark:to-pink-950 dark:text-rose-300 dark:border-rose-800{% else %}bg-gradient-to-br from-amber-100 to-yellow-50 text-amber-700 border-amber-200 dark:from-amber-950 dark:to-yellow-950 dark:text-amber-300 dark:border-amber-800{% endif %} flex items-center justify-center font-bold text-sm shadow-sm border shrink-0">
                                     {{ u.first_name|default:u.username|make_list|first|upper }}
                                 </div>
+                                {% endif %}
                                 <div class="min-w-0">
                                     <div class="font-bold text-slate-900 dark:text-white flex items-center gap-1.5 truncate">
                                         <span>{{ u.first_name|default:u.username }}</span>

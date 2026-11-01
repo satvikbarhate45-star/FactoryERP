@@ -5,7 +5,7 @@ Production Financial Profit & Loss (P&L) Data Separation & Analytics Engine.
 Provides clean separation of:
 1. Profit Data (Gross revenue, finished output, operating margin, profitable batches)
 2. Loss Data (Material conversion shrinkage, equipment repair maintenance, freight logistics)
-3. Payroll Data (Workforce compensation, performance adjustments, statutory deductions)
+3. Payroll Data (Strictly Monthly-Basis Workforce Compensation, cGMP performance adjustments, statutory deductions)
 4. Material Usage Data (Raw material inward receipts, batch consumption, conversion yield)
 
 Supports header-level time classification across Daily, Weekly, and Monthly timeframes.
@@ -35,10 +35,15 @@ def get_date_range_for_timeframe(time_frame='weekly', offset=0, base_date=None):
 
     if time_frame == 'daily':
         target_date = base_date + timedelta(days=offset)
+        # If offset is 0 and target_date has no active production (e.g. Sunday/rest day),
+        # anchor to the most recent completed manufacturing shift day
+        if offset == 0:
+            latest_log = ProductionLog.objects.filter(output_kg__gt=0).order_by('-date').first()
+            if latest_log and not ProductionLog.objects.filter(date=target_date, output_kg__gt=0).exists():
+                target_date = latest_log.date
         start_date = target_date
         end_date = target_date
         label = target_date.strftime('%A, %B %d, %Y')
-        # 1-day interval
         chart_intervals = [
             (target_date, target_date.strftime('%b %d'))
         ]
@@ -83,7 +88,7 @@ def compute_timeframe_financial_package(start_date, end_date, chart_intervals, t
     Computes strictly separated financial categories for a given date range:
     1. Profit Data
     2. Loss Data
-    3. Payroll Data
+    3. Payroll Data (Strictly Monthly Basis Distribution)
     4. Material Usage Data
     And combined datasets for chart rendering.
     """
@@ -289,13 +294,22 @@ def compute_timeframe_financial_package(start_date, end_date, chart_intervals, t
     total_loss_exp = round(shrinkage_loss_cost + maint_loss_cost + freight_loss_cost, 2)
 
     # -------------------------------------------------------------
-    # 4. PAYROLL DATA (Workforce Compensation & Operational Wages)
+    # 4. PAYROLL DATA (Strictly Monthly Basis Distribution)
     # -------------------------------------------------------------
-    payroll_qs = SalaryPayroll.objects.filter(
-        payout_date__gte=start_date, payout_date__lte=end_date
-    ).select_related('employee').order_by('-payout_date', '-id')
+    # Determine corresponding monthly payout cycle
+    mid_date = start_date + (end_date - start_date) // 2
+    month_last_day = calendar.monthrange(mid_date.year, mid_date.month)[1]
+    payout_date = date(mid_date.year, mid_date.month, month_last_day)
 
-    total_payroll_disbursed = float(payroll_qs.aggregate(s=Sum('salary_adjusted'))['s'] or 0.0)
+    payroll_qs = SalaryPayroll.objects.filter(payout_date=payout_date).select_related('employee').order_by('-salary_adjusted')
+    if not payroll_qs.exists():
+        latest_pr = SalaryPayroll.objects.order_by('-payout_date').first()
+        if latest_pr:
+            payout_date = latest_pr.payout_date
+            payroll_qs = SalaryPayroll.objects.filter(payout_date=payout_date).select_related('employee').order_by('-salary_adjusted')
+
+    cycle_month_label = payout_date.strftime('%B %Y')
+    total_monthly_payroll = float(payroll_qs.aggregate(s=Sum('salary_adjusted'))['s'] or 0.0)
     total_statutory_deductions = 0.0
 
     payroll_transactions = []
@@ -326,52 +340,34 @@ def compute_timeframe_financial_package(start_date, end_date, chart_intervals, t
                 'base_salary': base_sal,
                 'deductions': ded,
                 'amount': amount,
-                'status': 'Disbursed',
-                'description': f"Monthly Salary: {emp_name} ({emp_role}) - Output: {p.actual_output:.1f} kg (Deductions: ₹{ded:,.0f})",
+                'status': 'Disbursed (Monthly)',
+                'description': f"Monthly Salary: {emp_name} ({emp_role}) - Output: {p.actual_output:.1f} kg / Target: {p.target_assigned:.1f} kg ({cycle_month_label})",
                 'badge_class': 'bg-cyan-100 text-cyan-800 dark:bg-cyan-950 dark:text-cyan-300 border-cyan-300',
                 'type': 'EXPENSE'
             })
 
-    # Pro-rated allocation if timeframe does not overlap month-end payout date
-    if total_payroll_disbursed <= 0.0:
-        latest_pr = SalaryPayroll.objects.order_by('-payout_date').first()
-        if latest_pr:
-            monthly_total = float(SalaryPayroll.objects.filter(payout_date=latest_pr.payout_date).aggregate(s=Sum('salary_adjusted'))['s'] or 0.0)
-            days_count = max(1, (end_date - start_date).days + 1)
-            total_payroll_disbursed = round((monthly_total / 30.0) * days_count, 2)
-            total_statutory_deductions = round(total_payroll_disbursed * 0.13, 2)
-            active_emp_count = SalaryPayroll.objects.filter(payout_date=latest_pr.payout_date).count()
-        else:
-            active_emp_count = 29
-            total_payroll_disbursed = round(29 * 28000.0 / 30.0 * max(1, (end_date - start_date).days + 1), 2)
-            total_statutory_deductions = round(total_payroll_disbursed * 0.12, 2)
+    active_emp_count = len(distinct_employees)
+    if active_emp_count == 0:
+        active_emp_count = 29
+        total_monthly_payroll = round(29 * 28000.0, 2)
+        total_statutory_deductions = round(total_monthly_payroll * 0.12, 2)
 
-        payroll_transactions.append({
-            'date_obj': end_date,
-            'date_str': end_date.strftime('%b %d, %Y'),
-            'ref': f"PAY-ALLOC-{end_date.strftime('%m%d')}",
-            'category': 'Payroll Data',
-            'employee_name': f'Operational Shift Workforce ({active_emp_count} Personnel)',
-            'role': 'Factory Production Floor',
-            'target_kg': 0.0,
-            'output_kg': tot_output_kg,
-            'base_salary': total_payroll_disbursed,
-            'deductions': total_statutory_deductions,
-            'amount': total_payroll_disbursed,
-            'status': 'Accrued',
-            'description': f"Pro-rated Labor Allocation: {active_emp_count} active employees across operational stations",
-            'badge_class': 'bg-cyan-100 text-cyan-800 dark:bg-cyan-950 dark:text-cyan-300 border-cyan-300',
-            'type': 'EXPENSE'
-        })
-    else:
-        active_emp_count = len(distinct_employees)
+    total_monthly_payroll = round(total_monthly_payroll, 2)
+    total_statutory_deductions = round(total_statutory_deductions, 2)
+
+    # Operational Labor cost attribution for timeframe OPEX:
+    days_in_month = calendar.monthrange(payout_date.year, payout_date.month)[1]
+    if time_frame == 'monthly':
+        period_payroll_expense = total_monthly_payroll
+    elif time_frame == 'weekly':
+        period_payroll_expense = round((total_monthly_payroll / float(days_in_month)) * 7.0, 2)
+    else:  # daily
+        period_payroll_expense = round(total_monthly_payroll / 26.0, 2)  # Working day allocation
 
     # -------------------------------------------------------------
     # 5. NET TOTALS & AUDIT LEDGER CONSOLIDATION
     # -------------------------------------------------------------
-    total_payroll_disbursed = round(total_payroll_disbursed, 2)
-    total_statutory_deductions = round(total_statutory_deductions, 2)
-    total_opex = round(total_material_exp + total_loss_exp + total_payroll_disbursed, 2)
+    total_opex = round(total_material_exp + total_loss_exp + period_payroll_expense, 2)
     net_profit = round(gross_revenue - total_opex, 2)
     operating_margin = round((net_profit / gross_revenue * 100), 1) if gross_revenue > 0 else 0.0
 
@@ -379,7 +375,6 @@ def compute_timeframe_financial_package(start_date, end_date, chart_intervals, t
     all_transactions = profit_transactions + loss_transactions + payroll_transactions + material_transactions
     all_transactions.sort(key=lambda x: (x['date_obj'], x['amount']), reverse=True)
 
-    # Sort each individual list
     profit_transactions.sort(key=lambda x: (x['date_obj'], x['amount']), reverse=True)
     loss_transactions.sort(key=lambda x: (x['date_obj'], x['amount']), reverse=True)
     payroll_transactions.sort(key=lambda x: (x['date_obj'], x['amount']), reverse=True)
@@ -431,9 +426,9 @@ def compute_timeframe_financial_package(start_date, end_date, chart_intervals, t
         int_loss_val = round(int_maint + int_frt, 2)
         chart_loss.append(int_loss_val)
 
-        # Payroll allocation
+        # Labor allocation
         int_days = max(1, (int_end - int_start).days + 1)
-        int_pay = round((total_payroll_disbursed / max(1, (end_date - start_date).days + 1)) * int_days, 2)
+        int_pay = round((total_monthly_payroll / float(days_in_month)) * int_days, 2)
         chart_payroll.append(int_pay)
 
         # Total OPEX & Net Margin
@@ -445,13 +440,14 @@ def compute_timeframe_financial_package(start_date, end_date, chart_intervals, t
         'time_frame': time_frame,
         'start_date': start_date.strftime('%Y-%m-%d'),
         'end_date': end_date.strftime('%Y-%m-%d'),
-        # Metric Totals
+        # Master Headline Metric Totals
         'gross_revenue': gross_revenue,
         'tot_output_kg': tot_output_kg,
+        'total_opex': total_opex,
         'net_profit': net_profit,
         'operating_margin': operating_margin,
         'is_profitable': net_profit >= 0,
-        'total_opex': total_opex,
+        'period_payroll_expense': period_payroll_expense,
         # Distinct Category 1: Profit Data
         'profit': {
             'revenue': gross_revenue,
@@ -471,12 +467,15 @@ def compute_timeframe_financial_package(start_date, end_date, chart_intervals, t
             'count': len(loss_transactions),
             'transactions': loss_transactions,
         },
-        # Distinct Category 3: Payroll Data
+        # Distinct Category 3: Payroll Data (Monthly Basis)
         'payroll': {
-            'total_disbursed': total_payroll_disbursed,
+            'total_monthly_payroll': total_monthly_payroll,
+            'period_payroll_expense': period_payroll_expense,
+            'total_disbursed': total_monthly_payroll,
             'deductions': total_statutory_deductions,
             'active_employees': active_emp_count,
-            'avg_salary': round(total_payroll_disbursed / max(1, active_emp_count), 2),
+            'avg_salary': round(total_monthly_payroll / max(1, active_emp_count), 2),
+            'cycle_month_label': cycle_month_label,
             'count': len(payroll_transactions),
             'transactions': payroll_transactions,
         },
@@ -513,7 +512,6 @@ def get_full_financial_pl_suite(base_date=None, requested_time_frame='weekly', r
     if base_date is None:
         base_date = timezone.localdate()
 
-    # Compute packages for each timeframe
     d_start, d_end, d_label, d_intervals = get_date_range_for_timeframe('daily', offset if requested_time_frame == 'daily' else 0, base_date)
     daily_pkg = compute_timeframe_financial_package(d_start, d_end, d_intervals, 'daily')
     daily_pkg['label'] = d_label

@@ -204,6 +204,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'accounts.User'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+os.makedirs(MEDIA_ROOT / 'kyc_photos', exist_ok=True)
 
 # External Pharmaceutical & IoT REST API Endpoints for Historical Ingestion
 PHARMA_BATCH_API_URL = os.environ.get(
