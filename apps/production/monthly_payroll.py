@@ -101,29 +101,31 @@ def sync_all_monthly_payrolls(start_date=None, end_date=None, clear_daily_record
                     employee=emp, date__gte=cycle_start, date__lte=cycle_end
                 ).aggregate(s=Sum('target_kg'))['s']
 
-                if not tot_target or float(tot_target) == 0.0:
-                    daily_base_target = 150.0 + (((emp.id * 37) % 32) * 1.25)
+                daily_base_target = 150.0 + (((emp.id * 37) % 32) * 1.25)
+                expected_min_target = round(daily_base_target * max(1, working_days) * 0.5, 1)
+                if not tot_target or float(tot_target) < expected_min_target:
                     tot_target = round(daily_base_target * max(1, working_days), 1)
                 else:
                     tot_target = float(tot_target)
 
                 # 3. Monthly Actual Output Achieved (sum of actual shift outputs from ProductionLog)
                 tot_out = ProductionLog.objects.filter(
-                    employee=emp, date__gte=cycle_start, date__lte=cycle_end
+                    employee=emp, date__gte=cycle_start, date__lte=cycle_end, output_kg__gt=0
                 ).aggregate(s=Sum('output_kg'))['s']
 
                 if not tot_out or float(tot_out) == 0.0:
-                    emp_eff = 0.94 + (((emp.id * 77) % 18) * 0.01)
+                    emp_eff = 0.94 + (((emp.id * 77) % 18) * 0.003)
                     tot_out = round(tot_target * emp_eff, 1)
                 else:
                     tot_out = float(tot_out)
 
-                # 4. Target Completion Percentage
-                comp_pct = round((tot_out / tot_target) * 100, 1) if tot_target > 0 else 100.0
+                # 4. Target Completion Percentage - STRICT CAP ENFORCED (MAX 100%)
+                raw_comp_pct = round((tot_out / tot_target) * 100, 1) if tot_target > 0 else 96.5
+                comp_pct = min(100.0, max(0.0, raw_comp_pct))
 
                 # 5. Monthly Adjusted Salary with Performance Incentives / Deductions
                 if comp_pct >= 95.0:
-                    bonus_factor = 1.10 + (min(25.0, comp_pct - 95.0) * 0.005)
+                    bonus_factor = 1.10 + (min(5.0, comp_pct - 95.0) * 0.005)
                     salary_adjusted = round(base_salary * bonus_factor, 2)
                 else:
                     salary_adjusted = round(base_salary * max(0.85, comp_pct / 100.0), 2)
@@ -135,10 +137,10 @@ def sync_all_monthly_payrolls(start_date=None, end_date=None, clear_daily_record
                         'base_salary': Decimal(str(round(base_salary, 2))),
                         'target_assigned': Decimal(str(round(tot_target, 2))),
                         'actual_output': Decimal(str(round(tot_out, 2))),
-                        'completion_percentage': Decimal(str(comp_pct)),
+                        'completion_percentage': Decimal(str(round(comp_pct, 2))),
                         'salary_adjusted': Decimal(str(round(salary_adjusted, 2))),
                         'is_incremented': (comp_pct >= 95.0),
-                        'is_auto_predicted': (payout_date >= today),
+                        'is_auto_predicted': (payout_date > today),
                     }
                 )
                 created_or_updated += 1

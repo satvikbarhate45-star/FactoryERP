@@ -184,7 +184,7 @@ def generate_salary_slip_pdf_buffer(employee, payroll):
     # 4. Production Floor Performance (Authentic Shift Output vs Targets)
     target_assigned = float(payroll.target_assigned or 0.0)
     actual_output = float(payroll.actual_output or 0.0)
-    completion_pct = float(payroll.completion_percentage or 100.0)
+    completion_pct = min(100.0, max(0.0, float(payroll.completion_percentage or 100.0)))
     is_incentive = getattr(payroll, 'is_incremented', False) or completion_pct >= 95.0
 
     perf_badge_text = "<font color='#047857'><b>TARGET ACHIEVED (+PERFORMANCE INCENTIVE)</b></font>" if is_incentive else "<font color='#b45309'><b>STANDARD SHIFT PERFORMANCE</b></font>"

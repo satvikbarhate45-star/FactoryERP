@@ -1120,7 +1120,8 @@ def supervisor_dashboard_view(request):
     payrolls_qs = SalaryPayroll.objects.filter(payout_date__lte=today).select_related('employee').order_by('-payout_date', '-id')[:35]
     total_payroll_distributed = float(SalaryPayroll.objects.filter(payout_date__lte=today).aggregate(s=Sum('salary_adjusted'))['s'] or 0.0)
     total_base_salaries = float(SalaryPayroll.objects.filter(payout_date__lte=today).aggregate(s=Sum('base_salary'))['s'] or 0.0)
-    avg_completion = float(SalaryPayroll.objects.filter(payout_date__lte=today).aggregate(a=Avg('completion_percentage'))['a'] or 85.0)
+    avg_comp_val = SalaryPayroll.objects.filter(payout_date__lte=today).aggregate(a=Avg('completion_percentage'))['a']
+    avg_completion = min(100.0, max(0.0, float(avg_comp_val))) if avg_comp_val is not None else 85.0
     auto_predicted_payrolls_count = SalaryPayroll.objects.filter(payout_date__lte=today, is_auto_predicted=True).count()
     incremented_payrolls_count = SalaryPayroll.objects.filter(payout_date__lte=today, is_incremented=True).count()
 

@@ -220,7 +220,7 @@
                 </div>
                 <div class="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700">
                     <span class="text-[10px] font-bold uppercase text-slate-400 block">Floor Efficiency</span>
-                    <span class="text-base font-extrabold text-amber-600 dark:text-amber-400">{{ avg_completion }}%</span>
+                    <span class="text-base font-extrabold text-amber-600 dark:text-amber-400">{{ avg_completion|floatformat:1 }}%</span>
                     <span class="text-[10px] text-slate-400 block mt-0.5">{{ total_shifts_count }} Shifts Logged</span>
                 </div>
             </div>
@@ -258,7 +258,6 @@
                     </thead>
                     <tbody class="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
                         {% for p in payrolls %}
-                        {% if p.payout_date <= today %}
                         <tr class="hover:bg-slate-50/70 dark:hover:bg-slate-800/30 transition">
                             <td class="py-3 px-3 font-bold text-slate-900 dark:text-white">
                                 <span class="block">{{ p.payout_date|date:"F Y" }}</span>
@@ -273,7 +272,7 @@
                             </td>
                             <td class="py-3 px-3">
                                 <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-extrabold {% if p.completion_percentage >= 95 %}bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300{% else %}bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300{% endif %}">
-                                    {{ p.completion_percentage }}%
+                                    {{ p.completion_percentage|floatformat:1 }}%
                                 </span>
                             </td>
                             <td class="py-3 px-3 font-extrabold text-emerald-600 dark:text-emerald-400 font-mono text-sm">
@@ -298,7 +297,6 @@
                                 </a>
                             </td>
                         </tr>
-                        {% endif %}
                         {% empty %}
                         <tr>
                             <td colspan="7" class="py-8 text-center text-slate-400">

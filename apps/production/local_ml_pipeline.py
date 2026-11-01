@@ -21,7 +21,7 @@ DOW_MULTIPLIERS = {
     3: 1.030,  # Thu (high steady-state)
     4: 0.940,  # Fri (batch clearance & sanitization)
     5: 0.580,  # Sat (half-day operations & scheduled PM)
-    6: 0.000,  # Sun (cleanroom sanitation, autoclave & CIP)
+    6: 0.720,  # Sun (continuous cleanroom drying, autoclave & packaging operations)
 }
 
 PHARMA_MACHINE_PROFILES = [
@@ -102,15 +102,7 @@ class LocalPharmaMLForecastingPipeline:
 
             m_rng = random.Random((target_date.toordinal() * 100) + m.id)
 
-            if is_sunday:
-                m_out = 0.0
-                m_raw = 0.0
-                m_vib = 0.0
-                m_temp = round(24.0 + m_rng.uniform(-0.4, 0.4), 2)
-                m_rul = 75
-                m_health = 98.8
-                conf_pct = 95.0
-            elif m.status == 'UM' and has_open_ticket:
+            if m.status == 'UM' and has_open_ticket:
                 m_out = 0.0
                 m_raw = 0.0
                 m_vib = round(specs["base_vib"] + 2.4, 2)
@@ -222,45 +214,46 @@ class LocalPharmaMLForecastingPipeline:
                 defaults={'target_kg': unique_target_kg, 'is_rollover': False}
             )
 
-            if not is_sunday:
-                # B. UNIQUE NON-IDENTICAL ACTUAL OUTPUT (Local ML historical skill velocity)
-                past_logs = list(ProductionLog.objects.filter(
-                    employee=emp, date__lt=target_date, date__gte=target_date - timedelta(days=30)
-                ).values_list('output_kg', flat=True))
+            # B. UNIQUE NON-IDENTICAL ACTUAL OUTPUT (Local ML historical skill velocity)
+            past_logs = list(ProductionLog.objects.filter(
+                employee=emp, date__lt=target_date, date__gte=target_date - timedelta(days=30), output_kg__gt=0
+            ).values_list('output_kg', flat=True))
 
-                if past_logs and len(past_logs) >= 3:
-                    avg_past = float(np.mean([float(o) for o in past_logs if float(o) > 0]))
-                else:
-                    avg_past = unique_target_kg
+            if past_logs and len(past_logs) >= 3:
+                avg_past = float(np.mean([float(o) for o in past_logs if float(o) > 0]))
+            else:
+                avg_past = unique_target_kg
 
-                emp_eff = 0.94 + (((emp.id * 77) % 18) * 0.01)  # 0.94 - 1.11 efficiency
-                unique_actual_output = round(max(95.0, (avg_past * 0.4 + unique_target_kg * 0.6) * emp_eff * dow_mult + e_rng.uniform(-4.5, 4.5)), 1)
-                comp_pct = round((unique_actual_output / unique_target_kg) * 100, 1)
+            emp_eff = 0.94 + (((emp.id * 77) % 18) * 0.01)  # 0.94 - 1.11 efficiency
+            unique_actual_output = round(max(95.0, (avg_past * 0.4 + unique_target_kg * 0.6) * emp_eff * dow_mult + e_rng.uniform(-4.5, 4.5)), 1)
+            raw_comp = (unique_actual_output / unique_target_kg) * 100 if unique_target_kg > 0 else 96.5
+            comp_pct = min(100.0, max(0.0, round(raw_comp, 1)))
 
-                base_pay = 450.0
-                if comp_pct >= 95.0:
-                    bonus_factor = 1.10 + (min(25.0, comp_pct - 95.0) * 0.005)
-                    adj_pay = round(base_pay * bonus_factor, 2)
-                else:
-                    adj_pay = round(base_pay * max(0.85, comp_pct / 100.0), 2)
-                adj_pay = round(max(380.0, min(530.0, adj_pay)), 2)
+            base_pay = 450.0
+            if comp_pct >= 95.0:
+                bonus_factor = 1.10 + (min(5.0, comp_pct - 95.0) * 0.005)
+                adj_pay = round(base_pay * bonus_factor, 2)
+            else:
+                adj_pay = round(base_pay * max(0.85, comp_pct / 100.0), 2)
+            adj_pay = round(max(380.0, min(530.0, adj_pay)), 2)
 
-                # Assigned machine rotating by shift
-                assigned_machine = machines[(emp_idx + target_date.day) % len(machines)]
+            # Assigned machine rotating by shift
+            assigned_machine = machines[(emp_idx + target_date.day) % len(machines)]
 
-                # ProductionLog
-                ProductionLog.objects.update_or_create(
-                    date=target_date, employee=emp, machine=assigned_machine,
-                    defaults={
-                        'output_kg': unique_actual_output,
-                        'material_used': round(unique_actual_output / 0.952, 2),
-                        'is_auto_predicted': True
-                    }
-                )
+            # ProductionLog - always non-zero output
+            ProductionLog.objects.update_or_create(
+                date=target_date, employee=emp, machine=assigned_machine,
+                defaults={
+                    'output_kg': unique_actual_output,
+                    'material_used': round(unique_actual_output / 0.952, 2),
+                    'is_auto_predicted': True
+                }
+            )
 
         # Enforce Monthly Operational Payroll Cycle Distribution (Strictly Monthly)
-        from apps.production.monthly_payroll import sync_all_monthly_payrolls
-        sync_all_monthly_payrolls(start_date=date(2026, 8, 25), end_date=target_date, clear_daily_records=True)
+        if target_date >= self.today:
+            from apps.production.monthly_payroll import sync_all_monthly_payrolls
+            sync_all_monthly_payrolls(start_date=date(2026, 8, 25), end_date=self.today, clear_daily_records=True)
 
 
         # -----------------------------------------------------------------

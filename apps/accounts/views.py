@@ -520,11 +520,11 @@ def employee_profile_view(request, user_id):
         messages.success(request, f"KYC Profile & Station Assignments for '{emp.get_full_name() or emp.username}' successfully updated!")
         return redirect('employee_profile', user_id=emp.id)
 
-    # 1. Operational Shift Logs & Production Metrics
-    prod_logs = list(ProductionLog.objects.filter(employee=emp).select_related('machine').order_by('-date')[:30])
-    total_output_kg = float(ProductionLog.objects.filter(employee=emp).aggregate(s=Sum('output_kg'))['s'] or 0.0)
-    total_material_kg = float(ProductionLog.objects.filter(employee=emp).aggregate(s=Sum('material_used'))['s'] or 0.0)
-    total_shifts_count = ProductionLog.objects.filter(employee=emp).count()
+    # 1. Operational Shift Logs & Production Metrics (strictly valid non-zero outputs)
+    prod_logs = list(ProductionLog.objects.filter(employee=emp, output_kg__gt=0).select_related('machine').order_by('-date')[:30])
+    total_output_kg = float(ProductionLog.objects.filter(employee=emp, output_kg__gt=0).aggregate(s=Sum('output_kg'))['s'] or 0.0)
+    total_material_kg = float(ProductionLog.objects.filter(employee=emp, output_kg__gt=0).aggregate(s=Sum('material_used'))['s'] or 0.0)
+    total_shifts_count = ProductionLog.objects.filter(employee=emp, output_kg__gt=0).count()
 
     # 2. Profit & Loss Contribution
     gross_revenue_contrib = round(total_output_kg * 45.0, 2)
@@ -544,11 +544,16 @@ def employee_profile_view(request, user_id):
     payrolls = list(payrolls_qs)
     latest_payroll = payrolls[0] if payrolls else None
 
-    # 4. Target completion average
-    avg_completion = float(payrolls_qs.aggregate(a=Avg('completion_percentage'))['a'] or 96.5)
+    # 4. Target completion average - STRICT LOGICAL CAP (MAX 100%)
+    avg_val = payrolls_qs.aggregate(a=Avg('completion_percentage'))['a']
+    if avg_val is not None:
+        avg_completion = min(100.0, max(0.0, round(float(avg_val), 1)))
+    else:
+        avg_completion = 96.5
 
     context = {
         'emp': emp,
+        'today': today,
         'prod_logs': prod_logs,
         'total_output_kg': total_output_kg,
         'total_material_kg': total_material_kg,
@@ -874,7 +879,11 @@ def reports_view(request):
         return render(request, 'report.html', cached_context)
 
     # --- Production & Employee Data (bulk fetched with select_related) ---
-    logs = list(ProductionLog.objects.filter(date=target_date).select_related('employee', 'employee__shift'))
+    logs = list(ProductionLog.objects.filter(date=target_date, output_kg__gt=0).select_related('employee', 'employee__shift'))
+    if not logs:
+        from apps.production.local_ml_pipeline import LocalPharmaMLForecastingPipeline
+        LocalPharmaMLForecastingPipeline().forecast_for_date(target_date)
+        logs = list(ProductionLog.objects.filter(date=target_date, output_kg__gt=0).select_related('employee', 'employee__shift'))
     
     PRICE_PER_KG = 50.0  # Selling price per kg
     COST_PER_KG = 20.0   # Raw material (cardboard, etc) cost per kg

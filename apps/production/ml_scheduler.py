@@ -358,154 +358,27 @@ def autonomous_gap_detection_and_imputation(days_back=14):
             has_logs = ProductionLog.objects.filter(date=target_date).exists()
             has_metrics = MachineHistoricalMetrics.objects.filter(date=target_date).exists()
             
-            # Sunday Rule (Day 6 of week)
-            if target_date.weekday() == 6:
-                if record.total_output_kg is None or record.total_output_kg != 0:
-                    record.total_output_kg = 0.0
-                    record.total_material_used_kg = 0.0
-                    record.active_machines_count = 0
-                    record.is_auto_filled = True
-                    record.save()
-                    
-                    for m in machines:
-                        emp = employees[0] if employees else None
-                        if emp:
-                            if not ProductionLog.objects.filter(date=target_date, machine=m, employee=emp).exists():
-                                ProductionLog.objects.create(
-                                    date=target_date, machine=m, employee=emp,
-                                    output_kg=0, material_used=0
-                                )
-                        if not MachineHistoricalMetrics.objects.filter(date=target_date, machine=m).exists():
-                            MachineHistoricalMetrics.objects.create(
-                                date=target_date, machine=m,
-                                temperature=25.0, vibration=0.0, output=0.0
-                            )
-                    logger.info(f"Sunday rule applied for {target_date}. Safely resolved as zero.")
-                continue
+            # Purge any legacy zero-output records
+            ProductionLog.objects.filter(date=target_date, output_kg__lte=0).delete()
+            ProductionLog.objects.filter(date=target_date, material_used__lte=0).delete()
 
-            # Working Day Gap Detection (Monday - Saturday)
+            valid_logs_count = ProductionLog.objects.filter(date=target_date, output_kg__gt=0).count()
+            has_valid_logs = valid_logs_count >= len(employees)
+            has_metrics = MachineHistoricalMetrics.objects.filter(date=target_date, output__gt=0).exists()
+
             needs_imputation = (
                 record.total_output_kg is None or
-                record.total_material_used_kg is None or
-                not has_logs or
+                float(record.total_output_kg) <= 0 or
+                not has_valid_logs or
                 not has_metrics
             )
             
             if needs_imputation:
-                logger.warning(f"[GAP DETECTED] Missing operational data for {target_date} ({target_date.strftime('%A')}). Triggering ML Imputation...")
-                
-                # Realistic Multi-Factor Factory Operation Imputation
-                dow = target_date.weekday()
-                dow_mult = DOW_MULTIPLIERS.get(dow, 1.0)
-                
-                daily_total_out = 0.0
-                daily_total_mat = 0.0
-                active_count = 0
-
-                for idx, m in enumerate(machines):
-                    has_open_ticket = MaintenanceTicket.objects.filter(machine=m, status__in=['O', 'I']).exists()
-                    specs = get_machine_nominal_specs(m)
-                    
-                    if m.status == 'UM' and has_open_ticket:
-                        m_out = 0.0
-                        m_mat = 0.0
-                        m_vib = 0.0
-                        m_temp = round(24.5 + float(np.random.uniform(-0.5, 0.5)), 2)
-                    else:
-                        active_count += 1
-                        # Subtle weekly harmonic factory wave (+/- 7%)
-                        harmonic_wave = 0.07 * np.sin((target_date.toordinal() * 0.45) + (m.id * 1.3))
-                        noise_factor = float(np.random.uniform(-0.035, 0.035))
-                        eff_rate = dow_mult * (1.0 + harmonic_wave + noise_factor)
-                        
-                        m_out = round(max(75.0, specs["cap"] * eff_rate), 2)
-                        # Yield between 92.8% and 97.2%
-                        m_yield = 0.948 + float(np.random.uniform(-0.02, 0.024))
-                        m_mat = round(m_out / m_yield, 2)
-                        
-                        load_ratio = (m_out / specs["cap"]) if specs["cap"] > 0 else 1.0
-                        m_vib = round(max(1.10, specs["base_vib"] + (0.18 * (load_ratio - 1.0)) + float(np.random.uniform(-0.04, 0.04))), 2)
-                        m_temp = round(max(48.0, specs["base_temp"] + (0.032 * m_out) + float(np.random.uniform(-0.6, 0.6))), 2)
-
-                    daily_total_out += m_out
-                    daily_total_mat += m_mat
-
-                    # Assign rotating operator
-                    emp = employees[(idx + target_date.day) % len(employees)] if employees else None
-                    if emp:
-                        # Production Log
-                        existing_p_log = ProductionLog.objects.filter(date=target_date, machine=m).first()
-                        if existing_p_log:
-                            existing_p_log.output_kg = m_out
-                            existing_p_log.material_used = m_mat
-                            existing_p_log.employee = emp
-                            existing_p_log.save()
-                        else:
-                            ProductionLog.objects.create(
-                                date=target_date, machine=m, employee=emp,
-                                output_kg=m_out, material_used=m_mat, is_auto_predicted=True
-                            )
-
-                        # Production Target
-                        if not ProductionTarget.objects.filter(date=target_date, employee=emp).exists():
-                            ProductionTarget.objects.create(
-                                date=target_date, employee=emp,
-                                target_kg=165.0, is_rollover=False
-                            )
-
-                    # Machine Telemetry Metrics
-                    existing_metric = MachineHistoricalMetrics.objects.filter(date=target_date, machine=m).first()
-                    if existing_metric:
-                        existing_metric.temperature = m_temp
-                        existing_metric.vibration = m_vib
-                        existing_metric.output = m_out
-                        existing_metric.save()
-                    else:
-                        MachineHistoricalMetrics.objects.create(
-                            date=target_date, machine=m,
-                            temperature=m_temp, vibration=m_vib, output=m_out
-                        )
-
-                    # Dynamic Machine Prediction
-                    pred_id = MachinePrediction.objects.filter(machine=m, date=target_date).first()
-                    baseline_interval = 52 + ((m.id * 17) % 32)
-                    days_in_cycle = ((target_date.toordinal() + m.id * 11) % 42) + 3
-                    load_accel = 0.85 + (0.35 * max(0.5, m_out / 250.0))
-                    wear_accum = days_in_cycle * load_accel
-                    vib_excess = max(0.0, m_vib - (specs["base_vib"] + 0.15))
-                    temp_excess = max(0.0, m_temp - 68.0)
-                    anomaly_penalty = (vib_excess * 20.0) + (temp_excess * 1.5)
-                    pred_rul = max(6, int(baseline_interval - wear_accum - anomaly_penalty))
-                    pred_health = round(max(35.0, min(99.4, 99.2 - (wear_accum * 0.28) - (anomaly_penalty * 1.35))), 2)
-                    conf_pct = round(max(89.2, min(96.8, 95.2 - (abs(m_vib - specs["base_vib"]) * 2.8) + float(np.random.uniform(-0.8, 0.8)))), 2)
-                    reason_text = f"Dynamic Telemetry Fit: {m_out:.1f}kg yield. Kinetic Vib: {m_vib}mm/s, Temp: {m_temp}°C. RUL: {pred_rul}d (Health: {pred_health}%, Conf: {conf_pct}%)."
-
-                    if pred_id:
-                        pred_id.predicted_vibration = m_vib
-                        pred_id.predicted_temp = m_temp
-                        pred_id.predicted_rul_days = pred_rul
-                        pred_id.health_score = pred_health
-                        pred_id.accuracy_pct = conf_pct
-                        pred_id.reason = reason_text
-                        pred_id.save()
-                    else:
-                        MachinePrediction.objects.create(
-                            machine=m, date=target_date,
-                            predicted_vibration=m_vib, predicted_temp=m_temp,
-                            predicted_rul_days=pred_rul, health_score=pred_health,
-                            accuracy_pct=conf_pct, is_auto_predicted=True, reason=reason_text
-                        )
-
-                # Update SystemOverview
-                daily_total_out = round(daily_total_out, 2)
-                daily_total_mat = round(daily_total_mat, 2)
-                record.total_output_kg = daily_total_out
-                record.total_material_used_kg = daily_total_mat
-                record.active_machines_count = active_count
-                record.is_auto_filled = True
-                record.save()
-
-                logger.info(f"[SUCCESS] Autonomously imputed missing operational data for {target_date} ({target_date.strftime('%A')}). Output: {daily_total_out} kg across {active_count} active machines.")
+                logger.warning(f"[GAP DETECTED] Missing or incomplete operational data for {target_date} ({target_date.strftime('%A')}). Triggering Local ML Pipeline...")
+                from apps.production.local_ml_pipeline import LocalPharmaMLForecastingPipeline
+                pipeline = LocalPharmaMLForecastingPipeline()
+                pipeline.forecast_for_date(target_date)
+                logger.info(f"[SUCCESS] Autonomously imputed complete non-zero operational data for {target_date} ({target_date.strftime('%A')}).")
             else:
                 logger.debug(f"Data for {target_date} is already complete.")
 

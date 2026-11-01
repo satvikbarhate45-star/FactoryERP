@@ -23,3 +23,6 @@ python manage.py daily_imputation --days 14
 # Enforce monthly employee payroll distribution and purge legacy daily wages
 python manage.py sync_monthly_payroll --start-date 2026-08-25
 
+# Enforce continuous shift logs, zero-metric elimination, and monthly payroll history integrity
+python manage.py backfill_continuous_data
+
