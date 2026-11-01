@@ -745,8 +745,13 @@ def pl_dashboard_view(request):
     except ValueError:
         offset = 0
 
+    # Strictly disallow future navigation
+    offset = min(0, offset)
+
+    date_param = request.GET.get('date', '').strip()
+
     today = timezone.localdate()
-    cache_key = f'pl_dashboard_v2_{time_frame}_{category}_{offset}_{today}'
+    cache_key = f'pl_dashboard_v3_{time_frame}_{category}_{offset}_{date_param}_{today}'
     cached_context = cache.get(cache_key)
     if cached_context is not None:
         return render(request, 'pl.html', cached_context)
@@ -757,7 +762,8 @@ def pl_dashboard_view(request):
         base_date=today,
         requested_time_frame=time_frame,
         requested_category=category,
-        offset=offset
+        offset=offset,
+        target_date_str=date_param if time_frame == 'daily' else None
     )
 
     active_pkg = suite['active_pkg']
@@ -777,6 +783,8 @@ def pl_dashboard_view(request):
         'offset': offset,
         'week_offset': offset,  # Legacy URL parameter compatibility
         'today_str': today.strftime('%Y-%m-%d'),
+        'max_date_str': today.strftime('%Y-%m-%d'),
+        'selected_date': suite['selected_date'],
         # Active Package context variables for direct template rendering
         'label': active_pkg['label'],
         'start_date': active_pkg['start_date'],

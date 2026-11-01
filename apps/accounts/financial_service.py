@@ -26,29 +26,45 @@ SELLING_PRICE_PER_KG = 45.0
 RAW_MATERIAL_COST_PER_KG = 18.0
 
 
-def get_date_range_for_timeframe(time_frame='weekly', offset=0, base_date=None):
+def get_date_range_for_timeframe(time_frame='weekly', offset=0, base_date=None, target_date_str=None):
     """
     Returns (start_date, end_date, label, chart_intervals) for daily, weekly, and monthly timeframes.
+    Strictly restricted to past and current active days (<= base_date). Future dates are forbidden.
     """
     if base_date is None:
         base_date = timezone.localdate()
 
+    # Disallow future offsets
+    offset = min(0, int(offset or 0))
+
     if time_frame == 'daily':
-        target_date = base_date + timedelta(days=offset)
-        # If offset is 0 and target_date has no active production (e.g. Sunday/rest day),
-        # anchor to the most recent completed manufacturing shift day
-        if offset == 0:
-            latest_log = ProductionLog.objects.filter(output_kg__gt=0).order_by('-date').first()
-            if latest_log and not ProductionLog.objects.filter(date=target_date, output_kg__gt=0).exists():
-                target_date = latest_log.date
+        target_date = base_date
+        if target_date_str:
+            try:
+                parsed = datetime.strptime(str(target_date_str).strip(), '%Y-%m-%d').date()
+                target_date = min(parsed, base_date)
+            except (ValueError, TypeError):
+                target_date = base_date
+        else:
+            target_date = min(base_date + timedelta(days=offset), base_date)
+            # If offset is 0 and target_date has no active production (e.g. Sunday/rest day),
+            # anchor to the most recent completed manufacturing shift day <= base_date
+            if offset == 0:
+                has_today_yield = ProductionLog.objects.filter(date=target_date, output_kg__gt=0).exists()
+                if not has_today_yield:
+                    latest_log = ProductionLog.objects.filter(date__lte=base_date, output_kg__gt=0).order_by('-date').first()
+                    if latest_log:
+                        target_date = latest_log.date
+
         start_date = target_date
         end_date = target_date
         label = target_date.strftime('%A, %B %d, %Y')
         chart_intervals = [
             (target_date, target_date.strftime('%b %d'))
         ]
+
     elif time_frame == 'monthly':
-        # Month computation with offset
+        # Clamped strictly to past/current months
         year = base_date.year
         month = base_date.month + offset
         while month < 1:
@@ -57,23 +73,37 @@ def get_date_range_for_timeframe(time_frame='weekly', offset=0, base_date=None):
         while month > 12:
             month -= 12
             year += 1
-        num_days = calendar.monthrange(year, month)[1]
+
         start_date = date(year, month, 1)
-        end_date = date(year, month, num_days)
-        label = start_date.strftime('%B %Y')
-        
-        # 4 weekly intervals for monthly chart
+        num_days = calendar.monthrange(year, month)[1]
+        full_month_end = date(year, month, num_days)
+        # Clamped: cannot exceed base_date (today)
+        end_date = min(full_month_end, base_date)
+
+        is_current_month = (year == base_date.year and month == base_date.month)
+        if is_current_month and end_date < full_month_end:
+            label = f"{start_date.strftime('%B %Y')} (To Date: {end_date.strftime('%b %d')})"
+        else:
+            label = start_date.strftime('%B %Y')
+
+        # Chart intervals: only intervals <= base_date
         chart_intervals = []
-        cur = start_date
-        while cur <= end_date:
-            cur_end = min(cur + timedelta(days=6), end_date)
-            int_label = f"{cur.strftime('%b %d')} - {cur_end.strftime('%d')}"
-            chart_intervals.append((cur, int_label, cur_end))
-            cur = cur_end + timedelta(days=1)
+        if is_current_month and end_date.day <= 7:
+            for d in range(1, end_date.day + 1):
+                cur_day = date(year, month, d)
+                chart_intervals.append((cur_day, cur_day.strftime('%b %d')))
+        else:
+            cur = start_date
+            while cur <= end_date:
+                cur_end = min(cur + timedelta(days=6), end_date)
+                int_label = f"{cur.strftime('%b %d')} - {cur_end.strftime('%d')}"
+                chart_intervals.append((cur, int_label, cur_end))
+                cur = cur_end + timedelta(days=1)
+
     else:  # 'weekly' (default)
-        idx = (base_date.weekday() + 1) % 7
-        start_date = base_date - timedelta(days=idx) + timedelta(weeks=offset)
-        end_date = start_date + timedelta(days=6)
+        # Weekly view: Trailing 7 active days ending on base_date + 7*offset (<= base_date)
+        end_date = min(base_date + timedelta(days=7 * offset), base_date)
+        start_date = end_date - timedelta(days=6)
         label = f"{start_date.strftime('%b %d')} - {end_date.strftime('%b %d, %Y')}"
         chart_intervals = [
             (start_date + timedelta(days=i), (start_date + timedelta(days=i)).strftime('%a, %b %d'))
@@ -83,7 +113,7 @@ def get_date_range_for_timeframe(time_frame='weekly', offset=0, base_date=None):
     return start_date, end_date, label, chart_intervals
 
 
-def compute_timeframe_financial_package(start_date, end_date, chart_intervals, time_frame='weekly'):
+def compute_timeframe_financial_package(start_date, end_date, chart_intervals, time_frame='weekly', base_date=None):
     """
     Computes strictly separated financial categories for a given date range:
     1. Profit Data
@@ -91,7 +121,14 @@ def compute_timeframe_financial_package(start_date, end_date, chart_intervals, t
     3. Payroll Data (Strictly Monthly Basis Distribution)
     4. Material Usage Data
     And combined datasets for chart rendering.
+    Strictly bounded to base_date (today) so future dates never leak.
     """
+    if base_date is None:
+        base_date = timezone.localdate()
+
+    end_date = min(end_date, base_date)
+    start_date = min(start_date, end_date)
+
     # -------------------------------------------------------------
     # 1. PROFIT DATA (Production Gross Revenue & Finished Goods)
     # -------------------------------------------------------------
@@ -296,14 +333,18 @@ def compute_timeframe_financial_package(start_date, end_date, chart_intervals, t
     # -------------------------------------------------------------
     # 4. PAYROLL DATA (Strictly Monthly Basis Distribution)
     # -------------------------------------------------------------
-    # Determine corresponding monthly payout cycle
+    # Determine corresponding monthly payout cycle (strictly <= base_date)
     mid_date = start_date + (end_date - start_date) // 2
     month_last_day = calendar.monthrange(mid_date.year, mid_date.month)[1]
     payout_date = date(mid_date.year, mid_date.month, month_last_day)
+    if payout_date > base_date:
+        latest_pr = SalaryPayroll.objects.filter(payout_date__lte=base_date).order_by('-payout_date').first()
+        if latest_pr:
+            payout_date = latest_pr.payout_date
 
     payroll_qs = SalaryPayroll.objects.filter(payout_date=payout_date).select_related('employee').order_by('-salary_adjusted')
     if not payroll_qs.exists():
-        latest_pr = SalaryPayroll.objects.order_by('-payout_date').first()
+        latest_pr = SalaryPayroll.objects.filter(payout_date__lte=base_date).order_by('-payout_date').first()
         if latest_pr:
             payout_date = latest_pr.payout_date
             payroll_qs = SalaryPayroll.objects.filter(payout_date=payout_date).select_related('employee').order_by('-salary_adjusted')
@@ -397,6 +438,10 @@ def compute_timeframe_financial_package(start_date, end_date, chart_intervals, t
         else:
             int_start, int_label = item
             int_end = int_start
+
+        int_end = min(int_end, base_date)
+        if int_start > base_date:
+            continue
 
         chart_labels.append(int_label)
 
@@ -503,25 +548,42 @@ def compute_timeframe_financial_package(start_date, end_date, chart_intervals, t
     }
 
 
-def get_full_financial_pl_suite(base_date=None, requested_time_frame='weekly', requested_category='all', offset=0):
+def get_full_financial_pl_suite(base_date=None, requested_time_frame='weekly', requested_category='all', offset=0, target_date_str=None):
     """
     Returns pre-computed datasets for Daily, Weekly, and Monthly timeframes
     to enable instant, reactive header button toggles with zero latency,
     plus the active server-selected package.
+    Strictly clamped to base_date (today) - future offsets/dates are blocked.
     """
     if base_date is None:
         base_date = timezone.localdate()
 
-    d_start, d_end, d_label, d_intervals = get_date_range_for_timeframe('daily', offset if requested_time_frame == 'daily' else 0, base_date)
-    daily_pkg = compute_timeframe_financial_package(d_start, d_end, d_intervals, 'daily')
-    daily_pkg['label'] = d_label
+    offset = min(0, int(offset or 0))
 
-    w_start, w_end, w_label, w_intervals = get_date_range_for_timeframe('weekly', offset if requested_time_frame == 'weekly' else 0, base_date)
-    weekly_pkg = compute_timeframe_financial_package(w_start, w_end, w_intervals, 'weekly')
+    d_start, d_end, d_label, d_intervals = get_date_range_for_timeframe(
+        'daily',
+        offset if requested_time_frame == 'daily' else 0,
+        base_date,
+        target_date_str=target_date_str if requested_time_frame == 'daily' else None
+    )
+    daily_pkg = compute_timeframe_financial_package(d_start, d_end, d_intervals, 'daily', base_date=base_date)
+    daily_pkg['label'] = d_label
+    daily_pkg['selected_date'] = d_start.strftime('%Y-%m-%d')
+
+    w_start, w_end, w_label, w_intervals = get_date_range_for_timeframe(
+        'weekly',
+        offset if requested_time_frame == 'weekly' else 0,
+        base_date
+    )
+    weekly_pkg = compute_timeframe_financial_package(w_start, w_end, w_intervals, 'weekly', base_date=base_date)
     weekly_pkg['label'] = w_label
 
-    m_start, m_end, m_label, m_intervals = get_date_range_for_timeframe('monthly', offset if requested_time_frame == 'monthly' else 0, base_date)
-    monthly_pkg = compute_timeframe_financial_package(m_start, m_end, m_intervals, 'monthly')
+    m_start, m_end, m_label, m_intervals = get_date_range_for_timeframe(
+        'monthly',
+        offset if requested_time_frame == 'monthly' else 0,
+        base_date
+    )
+    monthly_pkg = compute_timeframe_financial_package(m_start, m_end, m_intervals, 'monthly', base_date=base_date)
     monthly_pkg['label'] = m_label
 
     timeframe_map = {
@@ -539,4 +601,5 @@ def get_full_financial_pl_suite(base_date=None, requested_time_frame='weekly', r
         'weekly_pkg': weekly_pkg,
         'monthly_pkg': monthly_pkg,
         'offset': offset,
+        'selected_date': d_start.strftime('%Y-%m-%d'),
     }

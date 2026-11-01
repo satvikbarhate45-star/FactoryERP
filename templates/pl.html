@@ -50,247 +50,247 @@
     }
     /* Modal smooth animation transitions */
     #financialHistoryModal {
-        transition: opacity 0.25s ease-out;
+        transition: opacity 0.2s ease-out;
     }
     #modalDialogContent {
-        transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease-out;
+        transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease-out;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<!-- Top Header & Period Navigation -->
-<div class="mb-6 md:mb-8 flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4">
-    <div>
-        <div class="flex items-center gap-2 mb-1.5">
-            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/80 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
-                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> 100% Real-Time Supabase Ledger
-            </span>
-            <span class="text-xs text-slate-400 font-semibold hidden sm:inline">Monthly-Basis Payroll & Segregated Financial Analytics</span>
+<!-- ========================================================================= -->
+<!-- TOP HEADER SECTION: HERO TITLE & PRIMARY INTERACTIVE FILTER CONTROLS -->
+<!-- ========================================================================= -->
+<div class="mb-6 static-card p-5 sm:p-6 rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 shadow-sm">
+    <!-- Header Top Row: Title, Real-Time Guard & Period Navigation -->
+    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 pb-5 border-b border-slate-100 dark:border-slate-700/60">
+        <div>
+            <div class="flex items-center gap-2 mb-1.5 flex-wrap">
+                <span class="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-extrabold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Active Operations & Ledger
+                </span>
+                <span class="text-xs text-slate-400 font-semibold">Strict Real-Time Dates (&le; {{ today_str }})</span>
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-2.5">
+                <span>💼</span> Financial Profit & Loss (P&L) Analytics
+            </h1>
+            <p id="periodSubtitle" class="text-slate-500 dark:text-slate-400 mt-1 font-medium text-xs sm:text-sm">
+                Cashflow performance, operational costs & gross profit spread (<span id="headerPeriodLabel" class="font-bold text-slate-700 dark:text-slate-200">{{ label }}</span>).
+            </p>
         </div>
-        <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-3">
-            <span>💼</span> Financial Profit & Loss (P&L) Analytics
-        </h1>
-        <p id="periodSubtitle" class="text-slate-500 dark:text-slate-400 mt-1 font-medium text-xs sm:text-sm">
-            Cashflow performance, operational costs & gross profit spread (<span id="headerPeriodLabel" class="font-bold text-slate-700 dark:text-slate-200">{{ label }}</span>).
-        </p>
+
+        <!-- Period Navigation & Actions -->
+        <div class="flex flex-wrap items-center gap-2 sm:gap-3 w-full lg:w-auto justify-between lg:justify-end">
+            <div class="flex items-center bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm overflow-hidden">
+                <a href="?time_frame={{ time_frame }}&category={{ category }}&offset={{ offset|add:'-1' }}" class="px-3 sm:px-4 py-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 border-r border-slate-200 dark:border-slate-700 transition" title="Previous Historical Period">
+                    <i class="fa-solid fa-chevron-left text-xs"></i>
+                </a>
+                <div id="navOffsetLabel" class="px-3 sm:px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800">
+                    {% if offset == 0 %}Current Period{% elif offset == -1 %}Previous Period{% else %}Offset: {{ offset }}{% endif %}
+                </div>
+                {% if offset < 0 %}
+                <a href="?time_frame={{ time_frame }}&category={{ category }}&offset={{ offset|add:'1' }}" class="px-3 sm:px-4 py-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 border-l border-slate-200 dark:border-slate-700 transition" title="Next Period (Up to Current Date)">
+                    <i class="fa-solid fa-chevron-right text-xs"></i>
+                </a>
+                {% else %}
+                <span class="px-3 sm:px-4 py-2 text-slate-300 dark:text-slate-600 border-l border-slate-200 dark:border-slate-700 cursor-not-allowed" title="Future periods restricted">
+                    <i class="fa-solid fa-chevron-right text-xs"></i>
+                </span>
+                {% endif %}
+            </div>
+
+            {% if offset != 0 %}
+            <a href="?time_frame={{ time_frame }}&category={{ category }}&offset=0" class="px-3 py-2 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 rounded-xl text-xs font-bold transition flex items-center gap-1.5" title="Reset to current active period">
+                <i class="fa-solid fa-clock-rotate-left"></i> Current
+            </a>
+            {% endif %}
+
+            <button onclick="window.print()" class="px-3.5 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold shadow-sm transition flex items-center gap-1.5">
+                <i class="fa-solid fa-print"></i> Print Report
+            </button>
+        </div>
     </div>
 
-    <!-- Period Navigation & Actions -->
-    <div class="flex flex-wrap items-center gap-2 sm:gap-3 w-full lg:w-auto">
-        <div class="flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm overflow-hidden">
-            <a href="?time_frame={{ time_frame }}&category={{ category }}&offset={{ offset|add:'-1' }}" class="px-3 sm:px-4 py-2 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 border-r border-slate-200 dark:border-slate-700 transition" title="Previous Period">
-                <i class="fa-solid fa-chevron-left text-xs"></i>
-            </a>
-            <div id="navOffsetLabel" class="px-3 sm:px-5 py-2 text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 bg-slate-50/50 dark:bg-slate-800/80">
-                {% if offset == 0 %}Current Period{% elif offset == -1 %}Previous Period{% elif offset == 1 %}Next Period{% else %}Offset: {{ offset }}{% endif %}
+    <!-- Header Bottom Row: INTERACTIVE HEADER-LEVEL FILTER BUTTONS & DYNAMIC DATE PICKER -->
+    <div class="pt-4 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
+        <!-- 1. TIMEFRAME TOGGLE BUTTONS (Daily / Weekly / Monthly) + CALENDAR PICKER -->
+        <div class="flex flex-wrap items-center gap-2 sm:gap-3 w-full xl:w-auto">
+            <span class="text-xs font-bold text-slate-500 uppercase tracking-wider shrink-0 flex items-center gap-1">
+                <i class="fa-regular fa-clock text-indigo-500"></i> Timeframe:
+            </span>
+            <div class="flex items-center p-1 bg-slate-100 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-inner">
+                <button type="button" id="btnTimeDaily" onclick="setTimeFrame('daily')" class="time-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white {% if time_frame == 'daily' %}filter-btn-active{% endif %}">
+                    <i class="fa-solid fa-calendar-day mr-1"></i> Daily Data
+                </button>
+                <button type="button" id="btnTimeWeekly" onclick="setTimeFrame('weekly')" class="time-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white {% if time_frame == 'weekly' %}filter-btn-active{% endif %}">
+                    <i class="fa-solid fa-calendar-week mr-1"></i> Weekly Data
+                </button>
+                <button type="button" id="btnTimeMonthly" onclick="setTimeFrame('monthly')" class="time-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white {% if time_frame == 'monthly' %}filter-btn-active{% endif %}">
+                    <i class="fa-solid fa-calendar-days mr-1"></i> Monthly Data
+                </button>
             </div>
-            <a href="?time_frame={{ time_frame }}&category={{ category }}&offset={{ offset|add:'1' }}" class="px-3 sm:px-4 py-2 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 border-l border-slate-200 dark:border-slate-700 transition" title="Next Period">
-                <i class="fa-solid fa-chevron-right text-xs"></i>
-            </a>
+
+            <!-- DYNAMIC CALENDAR INPUT BOX (Rendered when Daily Data is active) -->
+            <div id="dailyDatePickerContainer" class="{% if time_frame != 'daily' %}hidden{% endif %} flex items-center gap-2 px-3 py-1 bg-indigo-50/80 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800 rounded-xl shadow-sm transition-all">
+                <label for="dailyDatePicker" class="text-xs font-bold text-indigo-700 dark:text-indigo-300 flex items-center gap-1.5 cursor-pointer shrink-0">
+                    <i class="fa-regular fa-calendar-check text-indigo-600 dark:text-indigo-400"></i> Select Date:
+                </label>
+                <input type="date" id="dailyDatePicker" max="{{ max_date_str }}" value="{{ selected_date }}" onchange="onDailyDatePicked(this.value)" class="text-xs font-bold bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-700 rounded-lg px-2 py-1 text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer shadow-inner">
+            </div>
         </div>
 
-        {% if offset != 0 %}
-        <a href="?time_frame={{ time_frame }}&category={{ category }}&offset=0" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold transition flex items-center gap-1.5" title="Reset to current period">
-            <i class="fa-solid fa-clock-rotate-left"></i> Current
-        </a>
-        {% endif %}
+        <!-- 2. CATEGORY CLASSIFICATION BUTTONS (All / Profit / Loss / Payroll / Materials) -->
+        <div class="flex flex-wrap items-center gap-2 sm:gap-2.5 w-full xl:w-auto">
+            <span class="text-xs font-bold text-slate-500 uppercase tracking-wider shrink-0 flex items-center gap-1">
+                <i class="fa-solid fa-filter text-indigo-500"></i> Category:
+            </span>
+            <div class="flex flex-wrap items-center p-1 bg-slate-100 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-inner">
+                <button type="button" id="btnCatAll" onclick="setCategory('all')" class="cat-filter-btn px-2.5 py-1.5 rounded-lg text-xs font-bold transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white {% if category == 'all' %}cat-btn-active-all{% endif %}">
+                    All
+                </button>
+                <button type="button" id="btnCatProfit" onclick="setCategory('profit')" class="cat-filter-btn px-2.5 py-1.5 rounded-lg text-xs font-bold transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white {% if category == 'profit' %}cat-btn-active-profit{% endif %}">
+                    💼 Profit
+                </button>
+                <button type="button" id="btnCatLoss" onclick="setCategory('loss')" class="cat-filter-btn px-2.5 py-1.5 rounded-lg text-xs font-bold transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white {% if category == 'loss' %}cat-btn-active-loss{% endif %}">
+                    📉 Loss
+                </button>
+                <button type="button" id="btnCatPayroll" onclick="setCategory('payroll')" class="cat-filter-btn px-2.5 py-1.5 rounded-lg text-xs font-bold transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white {% if category == 'payroll' %}cat-btn-active-payroll{% endif %}">
+                    👥 Payroll
+                </button>
+                <button type="button" id="btnCatMaterials" onclick="setCategory('materials')" class="cat-filter-btn px-2.5 py-1.5 rounded-lg text-xs font-bold transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white {% if category == 'materials' %}cat-btn-active-materials{% endif %}">
+                    📦 Materials
+                </button>
+            </div>
 
-        <button onclick="window.print()" class="px-3.5 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold shadow-sm transition flex items-center gap-1.5">
-            <i class="fa-solid fa-print"></i> Print Report
-        </button>
+            <!-- Header Transaction Count Badge -->
+            <span id="recordCountBadge" class="px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-xs font-bold shrink-0">
+                {{ transaction_count }} Records
+            </span>
+        </div>
     </div>
 </div>
 
-<!-- SECTION 1: MASTER FINANCIAL HEADLINE KPI CARDS (NET PROFIT, TOTAL OPEX, REVENUE, MARGIN) -->
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6">
-    <!-- 1. GROSS REVENUE CARD -->
-    <div onclick="openHistoryModal('revenue')" class="kpi-headline-card static-card p-5 sm:p-6 rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 border-l-4 border-l-emerald-500 cursor-pointer flex flex-col justify-between shadow-sm group">
+<!-- ========================================================================= -->
+<!-- STREAMLINED 5-METRIC FINANCIAL OVERVIEW CARDS (UNIFIED & UNCLUTTERED) -->
+<!-- ========================================================================= -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-5 mb-8">
+    <!-- CARD 1: GROSS REVENUE -->
+    <div onclick="openHistoryModal('revenue')" class="kpi-headline-card static-card p-5 rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 border-l-4 border-l-emerald-500 cursor-pointer flex flex-col justify-between shadow-sm group">
         <div>
             <div class="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
                 <span>Gross Revenue</span>
                 <span class="p-1.5 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 rounded-lg text-sm">📈</span>
             </div>
-            <p id="kpiGrossRevenue" class="text-2xl sm:text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">
+            <p id="kpiGrossRevenue" class="text-xl sm:text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">
                 ₹{{ gross_revenue|floatformat:2 }}
             </p>
-            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
-                Realized Finished Goods Yield @ ₹45.00/kg
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1.5 font-medium truncate">
+                <span id="kpiGrossOutput">{{ tot_output_kg|floatformat:1 }}</span> kg output @ ₹45.00/kg
             </p>
         </div>
-        <div class="pt-3 mt-3 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-[11px] text-slate-400 font-semibold">
-            <span><i class="fa-solid fa-boxes-stacked text-emerald-500 mr-1"></i> <span id="kpiGrossOutput">{{ tot_output_kg|floatformat:1 }}</span> kg yield</span>
+        <div class="pt-2.5 mt-2.5 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-[11px] text-slate-400 font-semibold">
+            <span>Finished Goods Yield</span>
             <span class="text-indigo-600 dark:text-indigo-400 font-bold group-hover:underline flex items-center gap-1">
-                Logs <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                History &rarr;
             </span>
         </div>
     </div>
 
-    <!-- 2. TOTAL OPERATIONAL EXPENSES (TOTAL OPEX) CARD -->
-    <div onclick="openHistoryModal('opex')" class="kpi-headline-card static-card p-5 sm:p-6 rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 border-l-4 border-l-rose-500 cursor-pointer flex flex-col justify-between shadow-sm group">
+    <!-- CARD 2: TOTAL OPEX (OPERATIONAL COSTS) -->
+    <div onclick="openHistoryModal('opex')" class="kpi-headline-card static-card p-5 rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 border-l-4 border-l-rose-500 cursor-pointer flex flex-col justify-between shadow-sm group">
         <div>
             <div class="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
                 <span>Total OPEX</span>
                 <span class="p-1.5 bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 rounded-lg text-sm">📉</span>
             </div>
-            <p id="kpiTotalOpex" class="text-2xl sm:text-3xl font-extrabold text-rose-600 dark:text-rose-400 mt-1">
+            <p id="kpiTotalOpex" class="text-xl sm:text-2xl font-extrabold text-rose-600 dark:text-rose-400 mt-1">
                 ₹{{ total_opex|floatformat:2 }}
             </p>
-            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1.5 font-medium truncate">
                 Materials + Labor + Repairs + Freight
             </p>
         </div>
-        <div class="pt-3 mt-3 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-[11px] text-slate-400 font-semibold">
-            <span><i class="fa-solid fa-receipt text-rose-500 mr-1"></i> All Operational Overhead</span>
+        <div class="pt-2.5 mt-2.5 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-[11px] text-slate-400 font-semibold">
+            <span>All Overheads</span>
             <span class="text-indigo-600 dark:text-indigo-400 font-bold group-hover:underline flex items-center gap-1">
-                Breakdown <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                Breakdown &rarr;
             </span>
         </div>
     </div>
 
-    <!-- 3. NET PROFIT / DEFICIT CARD -->
-    <div onclick="openHistoryModal('profit')" class="kpi-headline-card static-card p-5 sm:p-6 rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 border-l-4 {% if is_profitable %}border-l-indigo-600{% else %}border-l-rose-600{% endif %} cursor-pointer flex flex-col justify-between shadow-sm group">
+    <!-- CARD 3: NET PROFIT / OPERATING MARGIN -->
+    <div onclick="openHistoryModal('profit')" class="kpi-headline-card static-card p-5 rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 border-l-4 {% if is_profitable %}border-l-indigo-600{% else %}border-l-rose-600{% endif %} cursor-pointer flex flex-col justify-between shadow-sm group">
         <div>
             <div class="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
-                <span>Net Profit / Margin</span>
+                <span>Net Profit</span>
                 <span id="kpiNetProfitBadge" class="px-2 py-0.5 rounded text-[10px] font-extrabold {% if is_profitable %}bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300{% else %}bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300{% endif %}">
                     {% if is_profitable %}+ PROFIT{% else %}- DEFICIT{% endif %}
                 </span>
             </div>
-            <p id="kpiNetProfit" class="text-2xl sm:text-3xl font-extrabold {% if is_profitable %}text-indigo-600 dark:text-indigo-400{% else %}text-rose-600 dark:text-rose-400{% endif %} mt-1">
+            <p id="kpiNetProfit" class="text-xl sm:text-2xl font-extrabold {% if is_profitable %}text-indigo-600 dark:text-indigo-400{% else %}text-rose-600 dark:text-rose-400{% endif %} mt-1">
                 {% if is_profitable %}+{% endif %}₹{{ net_profit|floatformat:2 }}
             </p>
-            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
-                Revenue Minus Tracked Facility Expenditure
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1.5 font-medium truncate">
+                <span id="kpiOperatingMargin" class="font-bold text-slate-700 dark:text-slate-200">{{ operating_margin }}%</span> Margin (<span id="kpiMarginLabel">{% if operating_margin >= 15 %}High Efficiency{% else %}Standard Spread{% endif %}</span>)
             </p>
         </div>
-        <div class="pt-3 mt-3 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-[11px] text-slate-400 font-semibold">
-            <span><i class="fa-solid fa-scale-balanced text-indigo-500 mr-1"></i> Net Operating Margin</span>
+        <div class="pt-2.5 mt-2.5 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-[11px] text-slate-400 font-semibold">
+            <span>Bottom Line</span>
             <span class="text-indigo-600 dark:text-indigo-400 font-bold group-hover:underline flex items-center gap-1">
-                Cashflow <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                Cashflow &rarr;
             </span>
         </div>
     </div>
 
-    <!-- 4. OPERATING PROFIT MARGIN CARD -->
-    <div onclick="openHistoryModal('margin')" class="kpi-headline-card static-card p-5 sm:p-6 rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 border-l-4 border-l-amber-500 cursor-pointer flex flex-col justify-between shadow-sm group">
-        <div>
-            <div class="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
-                <span>Operating Margin</span>
-                <span class="p-1.5 bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 rounded-lg text-sm">⚡</span>
-            </div>
-            <p id="kpiOperatingMargin" class="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mt-1">
-                {{ operating_margin }}%
-            </p>
-            <p id="kpiMarginLabel" class="text-xs {% if operating_margin >= 15 %}text-emerald-600 dark:text-emerald-400{% else %}text-amber-600 dark:text-amber-400{% endif %} font-semibold mt-1.5">
-                {% if operating_margin >= 15 %}High Efficiency Profit Spread{% else %}Standard Operational Spread{% endif %}
-            </p>
-        </div>
-        <div class="pt-3 mt-3 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-[11px] text-slate-400 font-semibold">
-            <span><i class="fa-solid fa-chart-line text-amber-500 mr-1"></i> Operational Efficiency</span>
-            <span class="text-indigo-600 dark:text-indigo-400 font-bold group-hover:underline flex items-center gap-1">
-                Efficiency <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
-            </span>
-        </div>
-    </div>
-</div>
-
-<!-- SECTION 2: 4 DISTINCT FINANCIAL DATA CATEGORY CARDS -->
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
-    <!-- 1. PROFIT DATA CARD -->
-    <div onclick="openHistoryModal('profit_cat')" class="kpi-interactive-card static-card p-5 rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 border-l-4 border-l-emerald-500 cursor-pointer flex flex-col justify-between shadow-sm group">
-        <div>
-            <div class="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
-                <span class="flex items-center gap-1.5">
-                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Profit Data
-                </span>
-                <span class="px-2 py-0.5 rounded font-extrabold text-[10px] bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">Revenue Stream</span>
-            </div>
-            <p id="catProfitRevenue" class="text-xl sm:text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">
-                ₹{{ profit_data.revenue|floatformat:2 }}
-            </p>
-            <div class="flex items-center justify-between text-xs mt-2 text-slate-600 dark:text-slate-300">
-                <span>Output Volume:</span>
-                <span id="catProfitOutput" class="font-bold">{{ profit_data.output_kg|floatformat:1 }} kg</span>
-            </div>
-        </div>
-        <div class="pt-2.5 mt-2.5 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-[11px] text-slate-400">
-            <span>{{ profit_data.count }} Production Batches</span>
-            <span class="text-emerald-600 dark:text-emerald-400 font-bold group-hover:underline">History Modal &rarr;</span>
-        </div>
-    </div>
-
-    <!-- 2. LOSS DATA CARD -->
-    <div onclick="openHistoryModal('loss_cat')" class="kpi-interactive-card static-card p-5 rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 border-l-4 border-l-rose-500 cursor-pointer flex flex-col justify-between shadow-sm group">
-        <div>
-            <div class="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
-                <span class="flex items-center gap-1.5">
-                    <span class="w-2 h-2 rounded-full bg-rose-500"></span> Loss & Deficit Data
-                </span>
-                <span class="px-2 py-0.5 rounded font-extrabold text-[10px] bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300">Deficits</span>
-            </div>
-            <p id="catLossTotal" class="text-xl sm:text-2xl font-extrabold text-rose-600 dark:text-rose-400 mt-1">
-                ₹{{ loss_data.total_loss|floatformat:2 }}
-            </p>
-            <div class="flex items-center justify-between text-xs mt-2 text-slate-600 dark:text-slate-300">
-                <span>Shrinkage Deficit:</span>
-                <span id="catLossShrinkage" class="font-bold text-rose-500">₹{{ loss_data.shrinkage_loss|floatformat:2 }}</span>
-            </div>
-        </div>
-        <div class="pt-2.5 mt-2.5 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-[11px] text-slate-400">
-            <span>Repairs: ₹<span id="catLossMaint">{{ loss_data.maint_loss|floatformat:0 }}</span></span>
-            <span class="text-rose-600 dark:text-rose-400 font-bold group-hover:underline">History Modal &rarr;</span>
-        </div>
-    </div>
-
-    <!-- 3. PAYROLL DATA CARD (STRICTLY MONTHLY BASIS) -->
+    <!-- CARD 4: WORKFORCE PAYROLL (MONTHLY BASIS) -->
     <div onclick="openHistoryModal('payroll_cat')" class="kpi-interactive-card static-card p-5 rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 border-l-4 border-l-cyan-500 cursor-pointer flex flex-col justify-between shadow-sm group">
         <div>
             <div class="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
-                <span class="flex items-center gap-1.5">
-                    <span class="w-2 h-2 rounded-full bg-cyan-500"></span> Monthly Payroll
-                </span>
-                <span class="px-2 py-0.5 rounded font-extrabold text-[10px] bg-cyan-100 dark:bg-cyan-950 text-cyan-800 dark:text-cyan-300">Monthly Cycle</span>
+                <span>Payroll</span>
+                <span class="px-2 py-0.5 rounded font-extrabold text-[10px] bg-cyan-100 dark:bg-cyan-950 text-cyan-800 dark:text-cyan-300">Monthly Basis</span>
             </div>
             <p id="catPayrollTotal" class="text-xl sm:text-2xl font-extrabold text-cyan-600 dark:text-cyan-400 mt-1">
                 ₹{{ payroll_data.total_disbursed|floatformat:2 }}
             </p>
-            <div class="flex items-center justify-between text-xs mt-2 text-slate-600 dark:text-slate-300">
-                <span>Active Operators:</span>
-                <span id="catPayrollStaff" class="font-bold">{{ payroll_data.active_employees }} Staff</span>
-            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1.5 font-medium truncate">
+                <span id="catPayrollStaff" class="font-bold text-slate-700 dark:text-slate-300">{{ payroll_data.active_employees }} Staff</span> | Deductions: -₹<span id="catPayrollDeductions">{{ payroll_data.deductions|floatformat:0 }}</span>
+            </p>
         </div>
-        <div class="pt-2.5 mt-2.5 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-[11px] text-slate-400">
-            <span>Deductions: ₹<span id="catPayrollDeductions">{{ payroll_data.deductions|floatformat:0 }}</span></span>
-            <span class="text-cyan-600 dark:text-cyan-400 font-bold group-hover:underline">History Modal &rarr;</span>
+        <div class="pt-2.5 mt-2.5 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-[11px] text-slate-400 font-semibold">
+            <span>Disbursed Cycle</span>
+            <span class="text-cyan-600 dark:text-cyan-400 font-bold group-hover:underline flex items-center gap-1">
+                Slips &rarr;
+            </span>
         </div>
     </div>
 
-    <!-- 4. MATERIAL USAGE DATA CARD -->
+    <!-- CARD 5: RAW MATERIAL USAGE -->
     <div onclick="openHistoryModal('materials_cat')" class="kpi-interactive-card static-card p-5 rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 border-l-4 border-l-blue-500 cursor-pointer flex flex-col justify-between shadow-sm group">
         <div>
             <div class="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
-                <span class="flex items-center gap-1.5">
-                    <span class="w-2 h-2 rounded-full bg-blue-500"></span> Material Usage
-                </span>
-                <span class="px-2 py-0.5 rounded font-extrabold text-[10px] bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300">Raw Inputs</span>
+                <span>Material Usage</span>
+                <span class="px-2 py-0.5 rounded font-extrabold text-[10px] bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300">Active Inputs</span>
             </div>
             <p id="catMaterialTotal" class="text-xl sm:text-2xl font-extrabold text-blue-600 dark:text-blue-400 mt-1">
                 ₹{{ materials_data.total_expenditure|floatformat:2 }}
             </p>
-            <div class="flex items-center justify-between text-xs mt-2 text-slate-600 dark:text-slate-300">
-                <span>Volume Inward:</span>
-                <span id="catMaterialQty" class="font-bold">{{ materials_data.total_kg|floatformat:1 }} kg</span>
-            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1.5 font-medium truncate">
+                <span id="catMaterialQty" class="font-bold text-slate-700 dark:text-slate-300">{{ materials_data.total_kg|floatformat:1 }} kg</span> | Yield: <span id="catMaterialYield" class="font-bold text-emerald-600">{{ materials_data.conversion_rate }}%</span>
+            </p>
         </div>
-        <div class="pt-2.5 mt-2.5 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-[11px] text-slate-400">
-            <span>Conversion: <span id="catMaterialYield">{{ materials_data.conversion_rate }}%</span></span>
-            <span class="text-blue-600 dark:text-blue-400 font-bold group-hover:underline">History Modal &rarr;</span>
+        <div class="pt-2.5 mt-2.5 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-[11px] text-slate-400 font-semibold">
+            <span>Inward Receipts</span>
+            <span class="text-blue-600 dark:text-blue-400 font-bold group-hover:underline flex items-center gap-1">
+                Batches &rarr;
+            </span>
         </div>
     </div>
 </div>
 
-<!-- SECTION 3: INTERACTIVE MULTI-STREAM FINANCIAL CHART -->
+<!-- ========================================================================= -->
+<!-- SECTION 3: MULTI-STREAM FINANCIAL TRAJECTORY & MARGIN CHART -->
+<!-- ========================================================================= -->
 <div class="static-card p-5 sm:p-6 rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 shadow-sm mb-8">
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
         <div>
@@ -312,12 +312,13 @@
     </div>
 </div>
 
-<!-- SECTION 4: FINANCIAL AUDIT LEDGER WITH HEADER-LEVEL TIME & CATEGORY FILTERS -->
+<!-- ========================================================================= -->
+<!-- SECTION 4: REAL-TIME FINANCIAL AUDIT LEDGER -->
+<!-- ========================================================================= -->
 <div class="static-card p-5 sm:p-6 rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 shadow-sm mb-8">
-    <!-- HEADER SECTION: Table Title & Interactive Header Filter Buttons -->
-    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6 pb-5 border-b border-slate-100 dark:border-slate-700/60">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 pb-4 border-b border-slate-100 dark:border-slate-700/60">
         <div>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 flex-wrap">
                 <h3 id="tableCategoryTitle" class="font-bold text-slate-800 dark:text-white text-lg flex items-center gap-2">
                     <span>📋</span> Real-Time Financial Ledger
                 </h3>
@@ -329,65 +330,20 @@
                 </span>
             </div>
             <p id="tableCategorySubtitle" class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                Viewing classified financial journal entries for <span id="tablePeriodLabel" class="font-bold">{{ label }}</span>.
+                Viewing classified financial journal entries for <span id="tablePeriodLabel" class="font-bold text-slate-700 dark:text-slate-200">{{ label }}</span>.
             </p>
         </div>
 
-        <!-- HEADER-LEVEL FILTER BUTTON SUITE (Time Classification & Category Filters) -->
-        <div class="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-3 w-full lg:w-auto">
-            <!-- 1. TIME-BASED CLASSIFICATION BUTTONS (Daily / Weekly / Monthly) -->
-            <div class="flex items-center p-1 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-inner">
-                <button type="button" id="btnTimeDaily" onclick="setTimeFrame('daily')" class="time-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white {% if time_frame == 'daily' %}filter-btn-active{% endif %}">
-                    <i class="fa-solid fa-calendar-day mr-1"></i> Daily Data
-                </button>
-                <button type="button" id="btnTimeWeekly" onclick="setTimeFrame('weekly')" class="time-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white {% if time_frame == 'weekly' %}filter-btn-active{% endif %}">
-                    <i class="fa-solid fa-calendar-week mr-1"></i> Weekly Data
-                </button>
-                <button type="button" id="btnTimeMonthly" onclick="setTimeFrame('monthly')" class="time-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white {% if time_frame == 'monthly' %}filter-btn-active{% endif %}">
-                    <i class="fa-solid fa-calendar-days mr-1"></i> Monthly Data
-                </button>
-            </div>
-
-            <!-- 2. CATEGORY CLASSIFICATION BUTTONS (All / Profit / Loss / Payroll / Materials) -->
-            <div class="flex flex-wrap items-center p-1 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-inner">
-                <button type="button" id="btnCatAll" onclick="setCategory('all')" class="cat-filter-btn px-2.5 py-1.5 rounded-lg text-xs font-bold transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white {% if category == 'all' %}cat-btn-active-all{% endif %}">
-                    All
-                </button>
-                <button type="button" id="btnCatProfit" onclick="setCategory('profit')" class="cat-filter-btn px-2.5 py-1.5 rounded-lg text-xs font-bold transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white {% if category == 'profit' %}cat-btn-active-profit{% endif %}">
-                    💼 Profit
-                </button>
-                <button type="button" id="btnCatLoss" onclick="setCategory('loss')" class="cat-filter-btn px-2.5 py-1.5 rounded-lg text-xs font-bold transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white {% if category == 'loss' %}cat-btn-active-loss{% endif %}">
-                    📉 Loss
-                </button>
-                <button type="button" id="btnCatPayroll" onclick="setCategory('payroll')" class="cat-filter-btn px-2.5 py-1.5 rounded-lg text-xs font-bold transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white {% if category == 'payroll' %}cat-btn-active-payroll{% endif %}">
-                    👥 Payroll
-                </button>
-                <button type="button" id="btnCatMaterials" onclick="setCategory('materials')" class="cat-filter-btn px-2.5 py-1.5 rounded-lg text-xs font-bold transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white {% if category == 'materials' %}cat-btn-active-materials{% endif %}">
-                    📦 Materials
-                </button>
-            </div>
-
-            <!-- Transaction Counter Badge -->
-            <span id="recordCountBadge" class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-xs font-bold">
-                {{ transaction_count }} Records
-            </span>
-        </div>
-    </div>
-
-    <!-- Quick Search Filter -->
-    <div class="mb-4 flex justify-between items-center">
-        <div class="relative w-full max-w-sm">
+        <!-- Quick Search Filter -->
+        <div class="relative w-full sm:w-72">
             <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400 text-xs">
                 <i class="fa-solid fa-magnifying-glass"></i>
             </span>
-            <input type="text" id="ledgerSearchInput" onkeyup="filterLedgerTable()" placeholder="Search reference, employee, line, material..." class="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-        </div>
-        <div class="text-[11px] text-slate-400 font-semibold hidden sm:block">
-            Auto-synced with Supabase PostgreSQL
+            <input type="text" id="ledgerSearchInput" onkeyup="filterLedgerTable()" placeholder="Search reference, employee, line..." class="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500">
         </div>
     </div>
 
-    <!-- DYNAMIC CATEGORIZED TABLE CONTAINER -->
+    <!-- Dynamic Categorized Table -->
     <div class="overflow-x-auto">
         <table class="w-full text-left text-xs sm:text-sm" id="mainLedgerTable">
             <thead id="ledgerTableHead" class="bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 font-bold uppercase text-[11px] border-y border-slate-200 dark:border-slate-700">
@@ -409,17 +365,19 @@
     </div>
 </div>
 
-<!-- SECTION 5: INTERACTIVE ANIMATED POPUP MODAL FOR CARD CLICK HISTORY -->
-<div id="financialHistoryModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto bg-slate-900/60 backdrop-blur-md opacity-0">
-    <div id="modalDialogContent" class="relative w-full max-w-4xl max-h-[90vh] bg-white dark:bg-slate-800 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col overflow-hidden transform scale-95 opacity-0">
+<!-- ========================================================================= -->
+<!-- SECTION 5: IN-PLACE ANIMATED CARD CLICK POPUP MODAL (ACCESSIBLE OVERLAY) -->
+<!-- ========================================================================= -->
+<div id="financialHistoryModal" class="hidden fixed inset-0 z-[100] flex items-start sm:items-center justify-center p-3 sm:p-6 overflow-y-auto bg-slate-900/70 backdrop-blur-sm opacity-0 transition-opacity duration-200">
+    <div id="modalDialogContent" class="relative w-full max-w-4xl max-h-[88vh] bg-white dark:bg-slate-800 rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col overflow-hidden transform scale-95 opacity-0 transition-all duration-200 my-auto">
         <!-- Modal Header -->
-        <div class="px-6 py-5 border-b border-slate-100 dark:border-slate-700/60 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
+        <div class="px-6 py-4 sm:py-5 border-b border-slate-100 dark:border-slate-700/60 flex items-center justify-between bg-slate-50/70 dark:bg-slate-800/70 shrink-0">
             <div class="flex items-center gap-3">
                 <span id="modalHeaderIcon" class="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 text-lg">
                     📈
                 </span>
                 <div>
-                    <h3 id="modalHeaderTitle" class="text-lg font-extrabold text-slate-900 dark:text-white leading-tight">
+                    <h3 id="modalHeaderTitle" class="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white leading-tight">
                         Gross Production Revenue History
                     </h3>
                     <p id="modalHeaderSubtitle" class="text-xs text-slate-400 mt-0.5">
@@ -427,7 +385,7 @@
                     </p>
                 </div>
             </div>
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2 sm:gap-3">
                 <span id="modalPeriodBadge" class="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
                     Weekly Data
                 </span>
@@ -437,13 +395,13 @@
             </div>
         </div>
 
-        <!-- Modal Summary Banner -->
-        <div id="modalSummaryBanner" class="px-6 py-3.5 bg-indigo-50/50 dark:bg-indigo-950/30 border-b border-indigo-100/60 dark:border-indigo-900/40 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+        <!-- Modal Summary Ribbon -->
+        <div id="modalSummaryBanner" class="px-6 py-3 bg-indigo-50/50 dark:bg-indigo-950/30 border-b border-indigo-100/60 dark:border-indigo-900/40 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs shrink-0">
             <!-- Dynamic stats populated by openHistoryModal() -->
         </div>
 
-        <!-- Modal Search / Filter -->
-        <div class="px-6 py-3 border-b border-slate-100 dark:border-slate-700/60 flex items-center justify-between">
+        <!-- Modal Search / Filter Bar -->
+        <div class="px-6 py-2.5 border-b border-slate-100 dark:border-slate-700/60 flex items-center justify-between shrink-0 bg-white dark:bg-slate-800">
             <div class="relative w-full max-w-xs">
                 <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
                 <input type="text" id="modalSearchInput" onkeyup="filterModalTable()" placeholder="Search in history..." class="w-full pl-8 pr-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-500">
@@ -453,8 +411,8 @@
             </span>
         </div>
 
-        <!-- Modal Table Body -->
-        <div class="p-6 overflow-y-auto flex-grow max-h-[55vh]">
+        <!-- Modal Table Body (Scrolls cleanly inside dialog) -->
+        <div id="modalTableScrollContainer" class="p-4 sm:p-6 overflow-y-auto flex-grow max-h-[50vh]">
             <table class="w-full text-left text-xs sm:text-sm" id="modalHistoryTable">
                 <thead id="modalTableHead" class="bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 font-bold uppercase text-[11px] sticky top-0 border-b border-slate-200 dark:border-slate-700">
                     <!-- Head cells populated dynamically -->
@@ -466,7 +424,7 @@
         </div>
 
         <!-- Modal Footer -->
-        <div class="px-6 py-4 border-t border-slate-100 dark:border-slate-700/60 bg-slate-50/50 dark:bg-slate-800/50 flex justify-end gap-3">
+        <div class="px-6 py-3.5 border-t border-slate-100 dark:border-slate-700/60 bg-slate-50/70 dark:bg-slate-800/70 flex justify-end gap-3 shrink-0">
             <button type="button" onclick="window.print()" class="px-4 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl transition flex items-center gap-1.5">
                 <i class="fa-solid fa-print"></i> Print Statement
             </button>
@@ -477,7 +435,9 @@
     </div>
 </div>
 
+<!-- ========================================================================= -->
 <!-- EMBEDDED PRECOMPUTED JSON DATASETS -->
+<!-- ========================================================================= -->
 <script id="dailyPkgData" type="application/json">{{ daily_pkg_json|safe }}</script>
 <script id="weeklyPkgData" type="application/json">{{ weekly_pkg_json|safe }}</script>
 <script id="monthlyPkgData" type="application/json">{{ monthly_pkg_json|safe }}</script>
@@ -505,7 +465,9 @@
     let plChart = null;
 
     function initChart() {
-        const ctx = document.getElementById('plInteractiveChart').getContext('2d');
+        const canvas = document.getElementById('plInteractiveChart');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
         const activePkg = pkgs[currentTimeFrame];
 
         plChart = new Chart(ctx, {
@@ -620,7 +582,7 @@
     }
 
     // -------------------------------------------------------------
-    // 2. HEADER-LEVEL FILTER ENGINE (TIME & CATEGORY TOGGLES)
+    // 2. HEADER-LEVEL FILTER ENGINE (TIME, CALENDAR & CATEGORY)
     // -------------------------------------------------------------
     function setTimeFrame(tf) {
         if (!pkgs[tf]) return;
@@ -638,17 +600,27 @@
             }
         });
 
-        // 2. Update Header Subtitles
+        // 2. Toggle Dynamic Calendar Picker for Daily Data
+        const datePickerBox = document.getElementById('dailyDatePickerContainer');
+        if (datePickerBox) {
+            if (tf === 'daily') {
+                datePickerBox.classList.remove('hidden');
+            } else {
+                datePickerBox.classList.add('hidden');
+            }
+        }
+
+        // 3. Update Header Subtitles & Labels
         const pkg = pkgs[tf];
         document.getElementById('headerPeriodLabel').textContent = pkg.label;
         document.getElementById('tablePeriodLabel').textContent = pkg.label;
         document.getElementById('activeTimePill').textContent = tf.charAt(0).toUpperCase() + tf.slice(1) + ' Data';
         document.getElementById('chartTimeSubtitle').textContent = `Showing ${tf} comparative streams for ${pkg.label}`;
 
-        // 3. Update Headline & Category Metric Cards
+        // 4. Update Streamlined Metric Cards
         updateMetricCards(pkg);
 
-        // 4. Update Chart
+        // 5. Update Chart
         if (plChart) {
             plChart.data.labels = pkg.chart.labels;
             plChart.data.datasets[0].data = pkg.chart.revenues;
@@ -659,11 +631,17 @@
             plChart.update();
         }
 
-        // 5. Update Table
+        // 6. Update Table
         renderTable();
 
-        // 6. Update URL query params without full reload
+        // 7. Update URL query params without reload
         updateUrlParams();
+    }
+
+    function onDailyDatePicked(pickedDate) {
+        if (!pickedDate) return;
+        // Navigate directly to exact date view
+        window.location.href = `?time_frame=daily&category=${currentCategory}&date=${pickedDate}`;
     }
 
     function setCategory(cat) {
@@ -700,19 +678,21 @@
     }
 
     function updateMetricCards(pkg) {
-        // Section 1: Headline Cards
+        // Card 1: Gross Revenue
         document.getElementById('kpiGrossRevenue').textContent = '₹' + Number(pkg.gross_revenue).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
         document.getElementById('kpiGrossOutput').textContent = Number(pkg.tot_output_kg).toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1});
 
+        // Card 2: Total OPEX
         document.getElementById('kpiTotalOpex').textContent = '₹' + Number(pkg.total_opex).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
 
+        // Card 3: Net Profit & Operating Margin
         const isProf = pkg.is_profitable;
         const netProfEl = document.getElementById('kpiNetProfit');
         netProfEl.textContent = (isProf ? '+' : '') + '₹' + Number(pkg.net_profit).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
         if (isProf) {
-            netProfEl.className = "text-2xl sm:text-3xl font-extrabold text-indigo-600 dark:text-indigo-400 mt-1";
+            netProfEl.className = "text-xl sm:text-2xl font-extrabold text-indigo-600 dark:text-indigo-400 mt-1";
         } else {
-            netProfEl.className = "text-2xl sm:text-3xl font-extrabold text-rose-600 dark:text-rose-400 mt-1";
+            netProfEl.className = "text-xl sm:text-2xl font-extrabold text-rose-600 dark:text-rose-400 mt-1";
         }
 
         const badgeEl = document.getElementById('kpiNetProfitBadge');
@@ -722,25 +702,17 @@
         document.getElementById('kpiOperatingMargin').textContent = pkg.operating_margin + '%';
         const marginLbl = document.getElementById('kpiMarginLabel');
         if (pkg.operating_margin >= 15) {
-            marginLbl.textContent = 'High Efficiency Profit Spread';
-            marginLbl.className = 'text-xs text-emerald-600 dark:text-emerald-400 font-semibold mt-1.5';
+            marginLbl.textContent = 'High Efficiency';
         } else {
-            marginLbl.textContent = 'Standard Operational Spread';
-            marginLbl.className = 'text-xs text-amber-600 dark:text-amber-400 font-semibold mt-1.5';
+            marginLbl.textContent = 'Standard Spread';
         }
 
-        // Section 2: Category Cards
-        document.getElementById('catProfitRevenue').textContent = '₹' + Number(pkg.profit.revenue).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-        document.getElementById('catProfitOutput').textContent = Number(pkg.profit.output_kg).toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1}) + ' kg';
-
-        document.getElementById('catLossTotal').textContent = '₹' + Number(pkg.loss.total_loss).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-        document.getElementById('catLossShrinkage').textContent = '₹' + Number(pkg.loss.shrinkage_loss).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-        document.getElementById('catLossMaint').textContent = Number(pkg.loss.maint_loss).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
-
+        // Card 4: Workforce Payroll
         document.getElementById('catPayrollTotal').textContent = '₹' + Number(pkg.payroll.total_disbursed).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
         document.getElementById('catPayrollStaff').textContent = pkg.payroll.active_employees + ' Staff';
         document.getElementById('catPayrollDeductions').textContent = Number(pkg.payroll.deductions).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
 
+        // Card 5: Material Usage
         document.getElementById('catMaterialTotal').textContent = '₹' + Number(pkg.materials.total_expenditure).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
         document.getElementById('catMaterialQty').textContent = Number(pkg.materials.total_kg).toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1}) + ' kg';
         document.getElementById('catMaterialYield').textContent = pkg.materials.conversion_rate + '%';
@@ -831,7 +803,7 @@
                     <th class="py-3 px-4">Payroll Ref</th>
                     <th class="py-3 px-4">Employee / Beneficiary</th>
                     <th class="py-3 px-4">Role / Station</th>
-                    <th class="py-3 px-4 text-center">Output (kg)</th>
+                    <th class="py-3 px-4 text-center">Output / Target</th>
                     <th class="py-3 px-4 text-center">Statutory Deductions</th>
                     <th class="py-3 px-4 text-center">Status</th>
                     <th class="py-3 px-4 text-right">Disbursed (₹)</th>
@@ -843,36 +815,36 @@
                     <td class="py-3.5 px-4 font-mono font-bold text-slate-800 dark:text-slate-200 whitespace-nowrap">${r.ref}</td>
                     <td class="py-3.5 px-4 font-bold text-slate-800 dark:text-slate-100 whitespace-nowrap">${r.employee_name}</td>
                     <td class="py-3.5 px-4 text-slate-600 dark:text-slate-400 whitespace-nowrap">${r.role}</td>
-                    <td class="py-3.5 px-4 text-center font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">${Number(r.output_kg || 0).toFixed(1)} kg</td>
+                    <td class="py-3.5 px-4 text-center font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">${Number(r.output_kg || 0).toFixed(1)} / ${Number(r.target_kg || 0).toFixed(0)} kg</td>
                     <td class="py-3.5 px-4 text-center font-semibold text-rose-500 whitespace-nowrap">-₹${Number(r.deductions || 0).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}</td>
                     <td class="py-3.5 px-4 text-center whitespace-nowrap">
                         <span class="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-cyan-100 text-cyan-800 dark:bg-cyan-950 dark:text-cyan-300 border border-cyan-300">
                             ${r.status}
                         </span>
                     </td>
-                    <td class="py-3.5 px-4 text-right font-extrabold text-cyan-600 dark:text-cyan-400 whitespace-nowrap">-₹${Number(r.amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td class="py-3.5 px-4 text-right font-extrabold text-cyan-600 dark:text-cyan-400 whitespace-nowrap">₹${Number(r.amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                 </tr>
             `).join('');
         } else if (currentCategory === 'materials') {
             records = pkg.materials.transactions;
             thead.innerHTML = `
                 <tr>
-                    <th class="py-3 px-4">Date</th>
-                    <th class="py-3 px-4">PO / Batch Ref</th>
-                    <th class="py-3 px-4">Raw Material Active Formulation</th>
-                    <th class="py-3 px-4">Supplier / Source</th>
-                    <th class="py-3 px-4 text-center">Volume (kg)</th>
+                    <th class="py-3 px-4">Received On</th>
+                    <th class="py-3 px-4">PO Ref</th>
+                    <th class="py-3 px-4">Material Formulation</th>
+                    <th class="py-3 px-4">Supplier</th>
+                    <th class="py-3 px-4 text-center">Quantity (kg)</th>
                     <th class="py-3 px-4 text-center">Unit Rate</th>
                     <th class="py-3 px-4 text-center">Status</th>
-                    <th class="py-3 px-4 text-right">Total Cost (₹)</th>
+                    <th class="py-3 px-4 text-right">Cost (₹)</th>
                 </tr>
             `;
             tbody.innerHTML = records.map(r => `
                 <tr class="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
                     <td class="py-3.5 px-4 font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">${r.date_str}</td>
                     <td class="py-3.5 px-4 font-mono font-bold text-slate-800 dark:text-slate-200 whitespace-nowrap">${r.ref}</td>
-                    <td class="py-3.5 px-4 font-bold text-slate-800 dark:text-slate-100 whitespace-nowrap">${r.material_name}</td>
-                    <td class="py-3.5 px-4 text-slate-600 dark:text-slate-400 whitespace-nowrap">${r.supplier}</td>
+                    <td class="py-3.5 px-4 font-bold text-slate-800 dark:text-slate-100">${r.material_name}</td>
+                    <td class="py-3.5 px-4 text-slate-600 dark:text-slate-400">${r.supplier}</td>
                     <td class="py-3.5 px-4 text-center font-bold text-slate-800 dark:text-slate-200 whitespace-nowrap">${Number(r.quantity_kg || 0).toFixed(1)} kg</td>
                     <td class="py-3.5 px-4 text-center font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">₹${r.rate}/kg</td>
                     <td class="py-3.5 px-4 text-center whitespace-nowrap">
@@ -884,16 +856,17 @@
                 </tr>
             `).join('');
         } else {
-            // Consolidated 'all'
+            // 'all' consolidated ledger
             records = pkg.all_transactions;
             thead.innerHTML = `
                 <tr>
                     <th class="py-3 px-4">Date</th>
                     <th class="py-3 px-4">Ref Code</th>
-                    <th class="py-3 px-4">Financial Stream</th>
+                    <th class="py-3 px-4">Category</th>
                     <th class="py-3 px-4">Description / Particulars</th>
+                    <th class="py-3 px-4 text-center">Type</th>
                     <th class="py-3 px-4 text-center">Status</th>
-                    <th class="py-3 px-4 text-right">Net Impact (₹)</th>
+                    <th class="py-3 px-4 text-right">Amount (₹)</th>
                 </tr>
             `;
             tbody.innerHTML = records.map(r => `
@@ -901,21 +874,23 @@
                     <td class="py-3.5 px-4 font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">${r.date_str}</td>
                     <td class="py-3.5 px-4 font-mono font-bold text-slate-800 dark:text-slate-200 whitespace-nowrap">${r.ref}</td>
                     <td class="py-3.5 px-4 whitespace-nowrap">
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-extrabold border ${r.badge_class}">
+                        <span class="px-2.5 py-0.5 rounded-full text-xs font-extrabold border ${r.badge_class}">
                             ${r.category}
                         </span>
                     </td>
-                    <td class="py-3.5 px-4 text-slate-700 dark:text-slate-300 max-w-md">${r.description}</td>
+                    <td class="py-3.5 px-4 text-slate-700 dark:text-slate-300 max-w-sm truncate" title="${r.description}">${r.description}</td>
+                    <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-extrabold ${r.type === 'INCOME' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'}">
+                            ${r.type}
+                        </span>
+                    </td>
                     <td class="py-3.5 px-4 text-center whitespace-nowrap">
                         <span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
                             ${r.status}
                         </span>
                     </td>
-                    <td class="py-3.5 px-4 text-right font-extrabold whitespace-nowrap">
-                        ${r.type === 'INCOME' 
-                            ? `<span class="text-emerald-600 dark:text-emerald-400">+₹${Number(r.amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>`
-                            : `<span class="text-rose-600 dark:text-rose-400">-₹${Number(r.amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>`
-                        }
+                    <td class="py-3.5 px-4 text-right font-extrabold ${r.type === 'INCOME' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'} whitespace-nowrap">
+                        ${r.type === 'INCOME' ? '+' : '-'}₹${Number(r.amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                     </td>
                 </tr>
             `).join('');
@@ -931,12 +906,13 @@
     }
 
     // -------------------------------------------------------------
-    // 4. INTERACTIVE ANIMATED POPUP MODAL FOR CARD CLICK HISTORY
+    // 4. IN-PLACE ANIMATED CARD CLICK POPUP MODAL ENGINE
     // -------------------------------------------------------------
     function openHistoryModal(metricKey) {
         const pkg = pkgs[currentTimeFrame];
         const modal = document.getElementById('financialHistoryModal');
         const dialog = document.getElementById('modalDialogContent');
+        const scrollBox = document.getElementById('modalTableScrollContainer');
         const titleEl = document.getElementById('modalHeaderTitle');
         const subtitleEl = document.getElementById('modalHeaderSubtitle');
         const iconEl = document.getElementById('modalHeaderIcon');
@@ -945,33 +921,34 @@
         const thead = document.getElementById('modalTableHead');
         const tbody = document.getElementById('modalTableBody');
         const rowBadge = document.getElementById('modalRowCountBadge');
+        const searchInput = document.getElementById('modalSearchInput');
 
-        periodBadge.textContent = `${currentTimeFrame.toUpperCase()} (${pkg.label})`;
-        document.getElementById('modalSearchInput').value = '';
+        if (searchInput) searchInput.value = '';
+        periodBadge.textContent = `${currentTimeFrame.toUpperCase()} DATA (${pkg.label})`;
 
         let records = [];
 
         if (metricKey === 'revenue' || metricKey === 'profit_cat') {
-            titleEl.textContent = 'Gross Production Revenue & Yield History';
-            subtitleEl.textContent = `Completed finished goods batches & realized market revenue (${pkg.label})`;
+            titleEl.textContent = 'Gross Production Revenue History';
+            subtitleEl.textContent = `Realized finished goods batches @ ₹45.00/kg (${pkg.label})`;
             iconEl.textContent = '📈';
             iconEl.className = 'p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 text-lg';
 
             bannerEl.innerHTML = `
-                <div><span class="text-slate-400">Gross Revenue:</span> <b class="text-emerald-600 dark:text-emerald-400 block text-sm">₹${Number(pkg.gross_revenue).toLocaleString(undefined, {minimumFractionDigits: 2})}</b></div>
-                <div><span class="text-slate-400">Yield Output:</span> <b class="text-slate-800 dark:text-white block text-sm">${Number(pkg.tot_output_kg).toLocaleString(undefined, {minimumFractionDigits: 1})} kg</b></div>
-                <div><span class="text-slate-400">Selling Price:</span> <b class="text-slate-800 dark:text-white block text-sm">₹45.00/kg</b></div>
-                <div><span class="text-slate-400">Batches Realized:</span> <b class="text-indigo-600 dark:text-indigo-400 block text-sm">${pkg.profit.count} Records</b></div>
+                <div><span class="text-slate-400">Total Revenue:</span> <b class="text-emerald-600 dark:text-emerald-400 block text-sm">₹${Number(pkg.gross_revenue).toLocaleString(undefined, {minimumFractionDigits: 2})}</b></div>
+                <div><span class="text-slate-400">Total Output:</span> <b class="text-slate-800 dark:text-white block text-sm">${Number(pkg.tot_output_kg).toLocaleString(undefined, {minimumFractionDigits: 1})} kg</b></div>
+                <div><span class="text-slate-400">Batches Produced:</span> <b class="text-indigo-600 dark:text-indigo-400 block text-sm">${pkg.profit.count} Records</b></div>
+                <div><span class="text-slate-400">Benchmark Rate:</span> <b class="text-slate-800 dark:text-white block text-sm">₹45.00 / kg</b></div>
             `;
 
             records = pkg.profit.transactions;
             thead.innerHTML = `
                 <tr>
                     <th class="py-3 px-4">Date</th>
-                    <th class="py-3 px-4">Batch Ref</th>
-                    <th class="py-3 px-4">Line / Operator</th>
-                    <th class="py-3 px-4 text-center">Yield (kg)</th>
-                    <th class="py-3 px-4 text-center">Status</th>
+                    <th class="py-3 px-4">Batch ID</th>
+                    <th class="py-3 px-4">Production Line</th>
+                    <th class="py-3 px-4 text-center">Output (kg)</th>
+                    <th class="py-3 px-4 text-center">Selling Rate</th>
                     <th class="py-3 px-4 text-right">Revenue (₹)</th>
                 </tr>
             `;
@@ -979,24 +956,24 @@
                 <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/40">
                     <td class="py-3 px-4 font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">${r.date_str}</td>
                     <td class="py-3 px-4 font-mono font-bold text-slate-800 dark:text-slate-200 whitespace-nowrap">${r.ref}</td>
-                    <td class="py-3 px-4 font-medium text-slate-600 dark:text-slate-400">${r.source || 'Facility Line'}</td>
+                    <td class="py-3 px-4 text-slate-700 dark:text-slate-300">${r.source}</td>
                     <td class="py-3 px-4 text-center font-bold text-slate-800 dark:text-slate-200">${Number(r.output_kg || 0).toFixed(1)} kg</td>
-                    <td class="py-3 px-4 text-center"><span class="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">${r.status}</span></td>
+                    <td class="py-3 px-4 text-center text-slate-500">₹${r.rate}/kg</td>
                     <td class="py-3 px-4 text-right font-extrabold text-emerald-600 dark:text-emerald-400">+₹${Number(r.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
                 </tr>
             `).join('');
 
         } else if (metricKey === 'opex') {
-            titleEl.textContent = 'Total Operational Expenses (OPEX) History';
-            subtitleEl.textContent = `Itemized overheads: Materials, Payroll, Maintenance, Logistics (${pkg.label})`;
+            titleEl.textContent = 'Total Operational Costs (OPEX) Breakdown';
+            subtitleEl.textContent = `Materials, Workforce Payroll, Equipment Maintenance & Shipping (${pkg.label})`;
             iconEl.textContent = '📉';
             iconEl.className = 'p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 text-lg';
 
             bannerEl.innerHTML = `
                 <div><span class="text-slate-400">Total OPEX:</span> <b class="text-rose-600 dark:text-rose-400 block text-sm">₹${Number(pkg.total_opex).toLocaleString(undefined, {minimumFractionDigits: 2})}</b></div>
-                <div><span class="text-slate-400">Raw Materials:</span> <b class="text-blue-600 dark:text-blue-400 block text-sm">₹${Number(pkg.materials.total_expenditure).toLocaleString(undefined, {minimumFractionDigits: 0})}</b></div>
-                <div><span class="text-slate-400">Workforce Payroll:</span> <b class="text-cyan-600 dark:text-cyan-400 block text-sm">₹${Number(pkg.payroll.total_disbursed).toLocaleString(undefined, {minimumFractionDigits: 0})}</b></div>
-                <div><span class="text-slate-400">Loss / Overhauls:</span> <b class="text-rose-500 block text-sm">₹${Number(pkg.loss.total_loss).toLocaleString(undefined, {minimumFractionDigits: 0})}</b></div>
+                <div><span class="text-slate-400">Materials:</span> <b class="text-blue-600 dark:text-blue-400 block text-sm">₹${Number(pkg.materials.total_expenditure).toLocaleString(undefined, {minimumFractionDigits: 0})}</b></div>
+                <div><span class="text-slate-400">Workforce Payroll:</span> <b class="text-cyan-600 dark:text-cyan-400 block text-sm">₹${Number(pkg.period_payroll_expense).toLocaleString(undefined, {minimumFractionDigits: 0})}</b></div>
+                <div><span class="text-slate-400">Loss & Repairs:</span> <b class="text-amber-600 dark:text-amber-400 block text-sm">₹${Number(pkg.loss.total_loss).toLocaleString(undefined, {minimumFractionDigits: 0})}</b></div>
             `;
 
             records = pkg.all_transactions.filter(t => t.type === 'EXPENSE');
@@ -1015,7 +992,7 @@
                     <td class="py-3 px-4 font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">${r.date_str}</td>
                     <td class="py-3 px-4 font-mono font-bold text-slate-800 dark:text-slate-200 whitespace-nowrap">${r.ref}</td>
                     <td class="py-3 px-4 whitespace-nowrap"><span class="px-2 py-0.5 rounded text-[11px] font-bold border ${r.badge_class}">${r.category}</span></td>
-                    <td class="py-3 px-4 text-slate-600 dark:text-slate-400 max-w-xs">${r.description}</td>
+                    <td class="py-3 px-4 text-slate-600 dark:text-slate-400 max-w-xs truncate">${r.description}</td>
                     <td class="py-3 px-4 text-center"><span class="px-2 py-0.5 rounded text-[11px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">${r.status}</span></td>
                     <td class="py-3 px-4 text-right font-extrabold text-rose-600 dark:text-rose-400">-₹${Number(r.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
                 </tr>
@@ -1050,7 +1027,7 @@
                     <td class="py-3 px-4 font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">${r.date_str}</td>
                     <td class="py-3 px-4 font-mono font-bold text-slate-800 dark:text-slate-200 whitespace-nowrap">${r.ref}</td>
                     <td class="py-3 px-4 whitespace-nowrap"><span class="px-2 py-0.5 rounded text-[11px] font-bold border ${r.badge_class}">${r.category}</span></td>
-                    <td class="py-3 px-4 text-slate-600 dark:text-slate-400 max-w-xs">${r.description}</td>
+                    <td class="py-3 px-4 text-slate-600 dark:text-slate-400 max-w-xs truncate">${r.description}</td>
                     <td class="py-3 px-4 text-center"><span class="px-2 py-0.5 rounded text-[10px] font-extrabold ${r.type === 'INCOME' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">${r.type}</span></td>
                     <td class="py-3 px-4 text-right font-extrabold whitespace-nowrap">${r.type === 'INCOME' ? '+' : '-'}₹${Number(r.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
                 </tr>
@@ -1090,41 +1067,6 @@
                     <td class="py-3 px-4 text-center font-medium">${Number(r.output_kg || 0).toFixed(1)} / ${Number(r.target_kg || 0).toFixed(0)} kg</td>
                     <td class="py-3 px-4 text-center text-rose-500 font-semibold">-₹${Number(r.deductions || 0).toLocaleString(undefined, {minimumFractionDigits: 0})}</td>
                     <td class="py-3 px-4 text-right font-extrabold text-cyan-600 dark:text-cyan-400 whitespace-nowrap">₹${Number(r.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                </tr>
-            `).join('');
-
-        } else if (metricKey === 'loss_cat') {
-            titleEl.textContent = 'Operational Loss & Overhauls Breakdown';
-            subtitleEl.textContent = `Conversion shrinkage, breakdown repairs, and freight logs (${pkg.label})`;
-            iconEl.textContent = '📉';
-            iconEl.className = 'p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 text-lg';
-
-            bannerEl.innerHTML = `
-                <div><span class="text-slate-400">Total Loss:</span> <b class="text-rose-600 dark:text-rose-400 block text-sm">₹${Number(pkg.loss.total_loss).toLocaleString(undefined, {minimumFractionDigits: 2})}</b></div>
-                <div><span class="text-slate-400">Material Shrinkage:</span> <b class="text-rose-500 block text-sm">₹${Number(pkg.loss.shrinkage_loss).toLocaleString(undefined, {minimumFractionDigits: 0})} (${Number(pkg.loss.shrinkage_kg).toFixed(1)} kg)</b></div>
-                <div><span class="text-slate-400">Machine Repairs:</span> <b class="text-amber-600 dark:text-amber-400 block text-sm">₹${Number(pkg.loss.maint_loss).toLocaleString(undefined, {minimumFractionDigits: 0})}</b></div>
-                <div><span class="text-slate-400">Freight Cost:</span> <b class="text-purple-600 dark:text-purple-400 block text-sm">₹${Number(pkg.loss.freight_loss).toLocaleString(undefined, {minimumFractionDigits: 0})}</b></div>
-            `;
-
-            records = pkg.loss.transactions;
-            thead.innerHTML = `
-                <tr>
-                    <th class="py-3 px-4">Date</th>
-                    <th class="py-3 px-4">Incident Ref</th>
-                    <th class="py-3 px-4">Loss Category</th>
-                    <th class="py-3 px-4">Deficit Particulars</th>
-                    <th class="py-3 px-4 text-center">Status</th>
-                    <th class="py-3 px-4 text-right">Loss Amount (₹)</th>
-                </tr>
-            `;
-            tbody.innerHTML = records.map(r => `
-                <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/40">
-                    <td class="py-3 px-4 font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">${r.date_str}</td>
-                    <td class="py-3 px-4 font-mono font-bold text-slate-800 dark:text-slate-200 whitespace-nowrap">${r.ref}</td>
-                    <td class="py-3 px-4 whitespace-nowrap"><span class="px-2 py-0.5 rounded text-[11px] font-bold border ${r.badge_class}">${r.loss_type || 'Deficit'}</span></td>
-                    <td class="py-3 px-4 text-slate-600 dark:text-slate-400 max-w-xs">${r.description}</td>
-                    <td class="py-3 px-4 text-center"><span class="px-2 py-0.5 rounded text-[11px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">${r.status}</span></td>
-                    <td class="py-3 px-4 text-right font-extrabold text-rose-600 dark:text-rose-400 whitespace-nowrap">-₹${Number(r.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
                 </tr>
             `).join('');
 
@@ -1168,7 +1110,11 @@
 
         rowBadge.textContent = `${records.length} Records Logged`;
 
-        // Smooth opening animation
+        // IN-PLACE MODAL LAUNCH: Lock body scroll to avoid background jumps
+        document.body.style.overflow = 'hidden';
+        modal.scrollTop = 0;
+        if (scrollBox) scrollBox.scrollTop = 0;
+
         modal.classList.remove('hidden');
         requestAnimationFrame(() => {
             modal.classList.remove('opacity-0');
@@ -1182,13 +1128,16 @@
         const dialog = document.getElementById('modalDialogContent');
         if (!modal) return;
 
+        // Restore body scroll
+        document.body.style.overflow = '';
+
         dialog.classList.remove('scale-100', 'opacity-100');
         dialog.classList.add('scale-95', 'opacity-0');
         modal.classList.add('opacity-0');
 
         setTimeout(() => {
             modal.classList.add('hidden');
-        }, 250);
+        }, 200);
     }
 
     // Modal Search Filter
