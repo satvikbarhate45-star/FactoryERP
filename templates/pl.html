@@ -2,39 +2,89 @@
 
 {% block title %}Financial Profit & Loss (P&L) | FactoryERP{% endblock %}
 
+{% block extra_head %}
+<style>
+    /* Strictly enforce zero layout shifts on hover or click */
+    .static-card, .time-filter-btn, .cat-filter-btn, .kpi-interactive-card {
+        transform: none !important;
+        transition: box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.2s ease !important;
+    }
+    .kpi-interactive-card:hover {
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+    }
+    .filter-btn-active {
+        background-color: #4f46e5 !important;
+        color: #ffffff !important;
+        border-color: #4f46e5 !important;
+        box-shadow: 0 2px 4px rgba(79, 70, 229, 0.3) !important;
+    }
+    .cat-btn-active-profit {
+        background-color: #10b981 !important;
+        color: #ffffff !important;
+        border-color: #10b981 !important;
+        box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3) !important;
+    }
+    .cat-btn-active-loss {
+        background-color: #f43f5e !important;
+        color: #ffffff !important;
+        border-color: #f43f5e !important;
+        box-shadow: 0 2px 4px rgba(244, 63, 94, 0.3) !important;
+    }
+    .cat-btn-active-payroll {
+        background-color: #06b6d4 !important;
+        color: #ffffff !important;
+        border-color: #06b6d4 !important;
+        box-shadow: 0 2px 4px rgba(6, 182, 212, 0.3) !important;
+    }
+    .cat-btn-active-materials {
+        background-color: #3b82f6 !important;
+        color: #ffffff !important;
+        border-color: #3b82f6 !important;
+        box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3) !important;
+    }
+    .cat-btn-active-all {
+        background-color: #334155 !important;
+        color: #ffffff !important;
+        border-color: #334155 !important;
+        box-shadow: 0 2px 4px rgba(51, 65, 85, 0.3) !important;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
+<!-- Top Header & Navigation -->
 <div class="mb-6 md:mb-8 flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4">
     <div>
         <div class="flex items-center gap-2 mb-1.5">
             <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/80 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
                 <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> 100% Real-Time Supabase Ledger
             </span>
-            <span class="text-xs text-slate-400 font-semibold hidden sm:inline">Zero Placeholder Data</span>
+            <span class="text-xs text-slate-400 font-semibold hidden sm:inline">Strict Data Category Separation</span>
         </div>
         <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-3">
             <span>💼</span> Financial Profit & Loss (P&L) Analytics
         </h1>
-        <p class="text-slate-500 dark:text-slate-400 mt-1 font-medium text-xs sm:text-sm">
-            Operational cashflow analysis, equipment overhaul expenditure, freight outlays, payroll, and gross margins ({{ start_of_week|date:"M d" }} - {{ end_of_week|date:"M d, Y" }}).
+        <p id="periodSubtitle" class="text-slate-500 dark:text-slate-400 mt-1 font-medium text-xs sm:text-sm">
+            Cashflow & financial performance ledger (<span id="headerPeriodLabel" class="font-bold text-slate-700 dark:text-slate-200">{{ label }}</span>).
         </p>
     </div>
 
-    <!-- Week Navigation & Actions -->
+    <!-- Period Navigation & Actions -->
     <div class="flex flex-wrap items-center gap-2 sm:gap-3 w-full lg:w-auto">
         <div class="flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm overflow-hidden">
-            <a href="?week_offset={{ week_offset|add:'-1' }}" class="px-3 sm:px-4 py-2 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 border-r border-slate-200 dark:border-slate-700 transition" title="Previous Week">
+            <a href="?time_frame={{ time_frame }}&category={{ category }}&offset={{ offset|add:'-1' }}" class="px-3 sm:px-4 py-2 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 border-r border-slate-200 dark:border-slate-700 transition" title="Previous Period">
                 <i class="fa-solid fa-chevron-left text-xs"></i>
             </a>
-            <div class="px-3 sm:px-5 py-2 text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 bg-slate-50/50 dark:bg-slate-800/80">
-                {% if week_offset == 0 %}Current Week{% elif week_offset == -1 %}Last Week{% elif week_offset == 1 %}Next Week{% else %}Week {{ week_offset }}{% endif %}
+            <div id="navOffsetLabel" class="px-3 sm:px-5 py-2 text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 bg-slate-50/50 dark:bg-slate-800/80">
+                {% if offset == 0 %}Current Period{% elif offset == -1 %}Previous Period{% elif offset == 1 %}Next Period{% else %}Offset: {{ offset }}{% endif %}
             </div>
-            <a href="?week_offset={{ week_offset|add:'1' }}" class="px-3 sm:px-4 py-2 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 border-l border-slate-200 dark:border-slate-700 transition" title="Next Week">
+            <a href="?time_frame={{ time_frame }}&category={{ category }}&offset={{ offset|add:'1' }}" class="px-3 sm:px-4 py-2 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 border-l border-slate-200 dark:border-slate-700 transition" title="Next Period">
                 <i class="fa-solid fa-chevron-right text-xs"></i>
             </a>
         </div>
 
-        {% if week_offset != 0 %}
-        <a href="?week_offset=0" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold transition flex items-center gap-1.5" title="Reset to current week">
+        {% if offset != 0 %}
+        <a href="?time_frame={{ time_frame }}&category={{ category }}&offset=0" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold transition flex items-center gap-1.5" title="Reset to current period">
             <i class="fa-solid fa-clock-rotate-left"></i> Current
         </a>
         {% endif %}
@@ -45,353 +95,688 @@
     </div>
 </div>
 
-<!-- Financial Headline KPI Cards -->
+<!-- 4 DISTINCT FINANCIAL DATA CATEGORY CARDS -->
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
-    <!-- Gross Revenue -->
-    <div class="premium-card p-5 sm:p-6 border-l-4 border-l-emerald-500 flex flex-col justify-between">
+    <!-- 1. PROFIT DATA CARD -->
+    <div onclick="setCategory('profit')" class="kpi-interactive-card static-card p-5 sm:p-6 rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 border-l-4 border-l-emerald-500 cursor-pointer flex flex-col justify-between shadow-sm">
         <div>
             <div class="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
-                <span>Gross Revenue</span>
+                <span class="flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Profit Data
+                </span>
                 <span class="p-1.5 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 rounded-lg text-sm">📈</span>
             </div>
-            <p class="text-2xl sm:text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">
-                ₹{{ kpi_gross_revenue|floatformat:2 }}
+            <p id="kpiProfitRevenue" class="text-2xl sm:text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">
+                ₹{{ profit_data.revenue|floatformat:2 }}
             </p>
+            <div class="flex items-center justify-between text-xs mt-2">
+                <span class="text-slate-500 dark:text-slate-400">Net Profit:</span>
+                <span id="kpiProfitNet" class="font-extrabold text-slate-800 dark:text-white">
+                    {% if profit_data.net_profit >= 0 %}+{% endif %}₹{{ profit_data.net_profit|floatformat:2 }}
+                </span>
+            </div>
         </div>
-        <p class="text-[11px] text-slate-400 mt-3 font-semibold flex items-center gap-1">
-            <i class="fa-solid fa-boxes-stacked text-emerald-500"></i> Realized Finished Goods Yield
-        </p>
+        <div class="pt-3 mt-3 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-[11px] text-slate-400 font-semibold">
+            <span><i class="fa-solid fa-boxes-stacked text-emerald-500 mr-1"></i> <span id="kpiProfitOutput">{{ profit_data.output_kg|floatformat:1 }}</span> kg yield</span>
+            <span id="kpiProfitMargin" class="px-2 py-0.5 rounded font-extrabold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">{{ profit_data.margin_pct }}% Margin</span>
+        </div>
     </div>
 
-    <!-- Total Operational Expenses -->
-    <div class="premium-card p-5 sm:p-6 border-l-4 border-l-rose-500 flex flex-col justify-between">
+    <!-- 2. LOSS DATA CARD -->
+    <div onclick="setCategory('loss')" class="kpi-interactive-card static-card p-5 sm:p-6 rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 border-l-4 border-l-rose-500 cursor-pointer flex flex-col justify-between shadow-sm">
         <div>
             <div class="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
-                <span>Total OPEX</span>
+                <span class="flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-rose-500"></span> Loss & Deficit Data
+                </span>
                 <span class="p-1.5 bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 rounded-lg text-sm">📉</span>
             </div>
-            <p class="text-2xl sm:text-3xl font-extrabold text-rose-600 dark:text-rose-400 mt-1">
-                ₹{{ kpi_total_opex|floatformat:2 }}
+            <p id="kpiLossTotal" class="text-2xl sm:text-3xl font-extrabold text-rose-600 dark:text-rose-400 mt-1">
+                ₹{{ loss_data.total_loss|floatformat:2 }}
             </p>
+            <div class="flex items-center justify-between text-xs mt-2">
+                <span class="text-slate-500 dark:text-slate-400">Shrinkage Loss:</span>
+                <span id="kpiLossShrinkage" class="font-extrabold text-rose-600 dark:text-rose-400">
+                    ₹{{ loss_data.shrinkage_loss|floatformat:2 }}
+                </span>
+            </div>
         </div>
-        <p class="text-[11px] text-slate-400 mt-3 font-semibold flex items-center gap-1">
-            <i class="fa-solid fa-file-invoice text-rose-500"></i> Materials + Repairs + Freight + Wages
-        </p>
+        <div class="pt-3 mt-3 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-[11px] text-slate-400 font-semibold">
+            <span><i class="fa-solid fa-wrench text-rose-500 mr-1"></i> Repairs: ₹<span id="kpiLossMaint">{{ loss_data.maint_loss|floatformat:0 }}</span></span>
+            <span class="px-2 py-0.5 rounded font-extrabold bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300"><span id="kpiLossShrinkKg">{{ loss_data.shrinkage_kg|floatformat:1 }}</span> kg waste</span>
+        </div>
     </div>
 
-    <!-- Net Profit / Loss -->
-    <div class="premium-card p-5 sm:p-6 border-l-4 {% if is_profitable %}border-l-indigo-600{% else %}border-l-rose-600{% endif %} flex flex-col justify-between">
+    <!-- 3. PAYROLL DATA CARD -->
+    <div onclick="setCategory('payroll')" class="kpi-interactive-card static-card p-5 sm:p-6 rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 border-l-4 border-l-cyan-500 cursor-pointer flex flex-col justify-between shadow-sm">
         <div>
             <div class="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
-                <span>Net Profit / Loss</span>
-                {% if is_profitable %}
-                <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                    + PROFIT
+                <span class="flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-cyan-500"></span> Payroll Data
                 </span>
-                {% else %}
-                <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300">
-                    - DEFICIT
-                </span>
-                {% endif %}
+                <span class="p-1.5 bg-cyan-50 dark:bg-cyan-950/60 text-cyan-600 dark:text-cyan-400 rounded-lg text-sm">👥</span>
             </div>
-            <p class="text-2xl sm:text-3xl font-extrabold {% if is_profitable %}text-indigo-600 dark:text-indigo-400{% else %}text-rose-600 dark:text-rose-400{% endif %} mt-1">
-                {% if is_profitable %}+{% endif %}₹{{ kpi_net_profit|floatformat:2 }}
+            <p id="kpiPayrollTotal" class="text-2xl sm:text-3xl font-extrabold text-cyan-600 dark:text-cyan-400 mt-1">
+                ₹{{ payroll_data.total_disbursed|floatformat:2 }}
             </p>
+            <div class="flex items-center justify-between text-xs mt-2">
+                <span class="text-slate-500 dark:text-slate-400">Statutory Deductions:</span>
+                <span id="kpiPayrollDeductions" class="font-extrabold text-slate-800 dark:text-white">
+                    ₹{{ payroll_data.deductions|floatformat:2 }}
+                </span>
+            </div>
         </div>
-        <p class="text-[11px] text-slate-400 mt-3 font-semibold flex items-center gap-1">
-            <i class="fa-solid fa-scale-balanced text-indigo-500"></i> After All Operational Overheads
-        </p>
+        <div class="pt-3 mt-3 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-[11px] text-slate-400 font-semibold">
+            <span><i class="fa-solid fa-users text-cyan-500 mr-1"></i> <span id="kpiPayrollStaff">{{ payroll_data.active_employees }}</span> Active Staff</span>
+            <span class="px-2 py-0.5 rounded font-extrabold bg-cyan-100 dark:bg-cyan-950 text-cyan-800 dark:text-cyan-300">Avg ₹<span id="kpiPayrollAvg">{{ payroll_data.avg_salary|floatformat:0 }}</span></span>
+        </div>
     </div>
 
-    <!-- Operating Margin -->
-    <div class="premium-card p-5 sm:p-6 border-l-4 border-l-amber-500 flex flex-col justify-between">
+    <!-- 4. MATERIAL USAGE DATA CARD -->
+    <div onclick="setCategory('materials')" class="kpi-interactive-card static-card p-5 sm:p-6 rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 border-l-4 border-l-blue-500 cursor-pointer flex flex-col justify-between shadow-sm">
         <div>
             <div class="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
-                <span>Operating Margin</span>
-                <span class="p-1.5 bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 rounded-lg text-sm">⚡</span>
+                <span class="flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-blue-500"></span> Material Usage Data
+                </span>
+                <span class="p-1.5 bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 rounded-lg text-sm">📦</span>
             </div>
-            <p class="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mt-1">
-                {{ kpi_operating_margin }}%
+            <p id="kpiMaterialTotal" class="text-2xl sm:text-3xl font-extrabold text-blue-600 dark:text-blue-400 mt-1">
+                ₹{{ materials_data.total_expenditure|floatformat:2 }}
             </p>
-        </div>
-        <p class="text-[11px] {% if kpi_operating_margin >= 15 %}text-emerald-600 dark:text-emerald-400{% else %}text-amber-600 dark:text-amber-400{% endif %} mt-3 font-semibold flex items-center gap-1">
-            <i class="fa-solid fa-chart-line"></i> {% if kpi_operating_margin >= 15 %}High Efficiency Margin{% else %}Moderate Operational Margin{% endif %}
-        </p>
-    </div>
-</div>
-
-<!-- Interactive Chart & OPEX Allocation Breakdown -->
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-    <!-- P&L Multi-Dataset Chart -->
-    <div class="premium-card p-5 sm:p-6 lg:col-span-2 flex flex-col justify-between">
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
-            <div>
-                <h3 class="font-bold text-slate-800 dark:text-white text-base sm:text-lg flex items-center gap-2">
-                    <span>📊</span> Daily Revenue vs Total OPEX vs Net Margin
-                </h3>
-                <p class="text-xs text-slate-500 dark:text-slate-400">7-day cashflow progression based on live timestamps</p>
-            </div>
-            <div class="flex flex-wrap items-center gap-3 text-xs font-bold">
-                <span class="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400"><span class="w-3 h-3 rounded-full bg-emerald-500"></span> Revenue</span>
-                <span class="flex items-center gap-1.5 text-rose-500 dark:text-rose-400"><span class="w-3 h-3 rounded-full bg-rose-500"></span> OPEX</span>
-                <span class="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400"><span class="w-3 h-3 rounded-full bg-indigo-600"></span> Net Profit</span>
+            <div class="flex items-center justify-between text-xs mt-2">
+                <span class="text-slate-500 dark:text-slate-400">Total Material Qty:</span>
+                <span id="kpiMaterialQty" class="font-extrabold text-slate-800 dark:text-white">
+                    {{ materials_data.total_kg|floatformat:1 }} kg
+                </span>
             </div>
         </div>
-        <div class="relative h-64 sm:h-80 w-full flex-grow">
-            <canvas id="plInteractiveChart"></canvas>
-        </div>
-    </div>
-
-    <!-- OPEX Allocation Ledger Card -->
-    <div class="premium-card p-5 sm:p-6 flex flex-col justify-between">
-        <div>
-            <div class="flex items-center justify-between mb-1">
-                <h3 class="font-bold text-slate-800 dark:text-white text-base sm:text-lg flex items-center gap-2">
-                    <span>📑</span> OPEX Allocation
-                </h3>
-                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Breakdown</span>
-            </div>
-            <p class="text-xs text-slate-500 dark:text-slate-400 mb-5">Itemized operational expenditure categories</p>
-
-            <div class="space-y-4">
-                <!-- Raw Materials -->
-                <div>
-                    <div class="flex justify-between text-xs font-bold mb-1">
-                        <span class="text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                            <span class="w-2 h-2 rounded-full bg-blue-500"></span> Raw Materials (Inward)
-                        </span>
-                        <span class="text-slate-900 dark:text-white font-extrabold">₹{{ kpi_raw_material_cost|floatformat:0 }} ({{ cost_breakdown_pct.materials }}%)</span>
-                    </div>
-                    <div class="w-full bg-slate-100 dark:bg-slate-700 h-2.5 rounded-full overflow-hidden">
-                        <div class="bg-blue-500 h-2.5 rounded-full transition-all duration-500" style="width: {{ cost_breakdown_pct.materials }}%"></div>
-                    </div>
-                </div>
-
-                <!-- Maintenance Repairs -->
-                <div>
-                    <div class="flex justify-between text-xs font-bold mb-1">
-                        <span class="text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                            <span class="w-2 h-2 rounded-full bg-amber-500"></span> Maintenance & Overhaul
-                        </span>
-                        <span class="text-amber-600 dark:text-amber-400 font-extrabold">₹{{ kpi_maintenance_cost|floatformat:0 }} ({{ cost_breakdown_pct.maintenance }}%)</span>
-                    </div>
-                    <div class="w-full bg-slate-100 dark:bg-slate-700 h-2.5 rounded-full overflow-hidden">
-                        <div class="bg-amber-500 h-2.5 rounded-full transition-all duration-500" style="width: {{ cost_breakdown_pct.maintenance }}%"></div>
-                    </div>
-                </div>
-
-                <!-- Logistics & Transport -->
-                <div>
-                    <div class="flex justify-between text-xs font-bold mb-1">
-                        <span class="text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                            <span class="w-2 h-2 rounded-full bg-purple-500"></span> Freight & Logistics
-                        </span>
-                        <span class="text-purple-600 dark:text-purple-400 font-extrabold">₹{{ kpi_logistics_cost|floatformat:0 }} ({{ cost_breakdown_pct.logistics }}%)</span>
-                    </div>
-                    <div class="w-full bg-slate-100 dark:bg-slate-700 h-2.5 rounded-full overflow-hidden">
-                        <div class="bg-purple-500 h-2.5 rounded-full transition-all duration-500" style="width: {{ cost_breakdown_pct.logistics }}%"></div>
-                    </div>
-                </div>
-
-                <!-- Workforce Payroll -->
-                <div>
-                    <div class="flex justify-between text-xs font-bold mb-1">
-                        <span class="text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                            <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Employee Payroll
-                        </span>
-                        <span class="text-emerald-600 dark:text-emerald-400 font-extrabold">₹{{ kpi_payroll_cost|floatformat:0 }} ({{ cost_breakdown_pct.payroll }}%)</span>
-                    </div>
-                    <div class="w-full bg-slate-100 dark:bg-slate-700 h-2.5 rounded-full overflow-hidden">
-                        <div class="bg-emerald-500 h-2.5 rounded-full transition-all duration-500" style="width: {{ cost_breakdown_pct.payroll }}%"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="mt-6 pt-4 border-t border-slate-100 dark:border-slate-700 flex justify-between items-center text-xs">
-            <span class="font-bold text-slate-500 dark:text-slate-400">Total Tracked OPEX:</span>
-            <span class="font-extrabold text-slate-800 dark:text-white text-base">₹{{ kpi_total_opex|floatformat:2 }}</span>
+        <div class="pt-3 mt-3 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-[11px] text-slate-400 font-semibold">
+            <span><i class="fa-solid fa-flask text-blue-500 mr-1"></i> Active Formulations</span>
+            <span id="kpiMaterialYield" class="px-2 py-0.5 rounded font-extrabold bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300">{{ materials_data.conversion_rate }}% Conversion</span>
         </div>
     </div>
 </div>
 
-<!-- Real-Time Financial Audit Ledger Table -->
-<div class="premium-card p-5 sm:p-6 mb-8">
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-5">
+<!-- Interactive Multi-Stream Financial Chart -->
+<div class="static-card p-5 sm:p-6 rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 shadow-sm mb-8">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
         <div>
-            <h3 class="font-bold text-slate-800 dark:text-white text-lg flex items-center gap-2">
-                <span>📋</span> Real-Time Financial Audit Ledger
+            <h3 class="font-bold text-slate-800 dark:text-white text-base sm:text-lg flex items-center gap-2">
+                <span>📊</span> Financial Cashflow Trajectory & Operational Margin
             </h3>
-            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Consolidated live journal of production revenues, raw material receipts, equipment repairs, dispatches, and wages.
+            <p id="chartTimeSubtitle" class="text-xs text-slate-500 dark:text-slate-400">Dynamic comparative streams across the active period</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-3 text-xs font-bold">
+            <span class="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400"><span class="w-3 h-3 rounded-full bg-emerald-500"></span> Gross Revenue</span>
+            <span class="flex items-center gap-1.5 text-blue-600 dark:text-blue-400"><span class="w-3 h-3 rounded-full bg-blue-500"></span> Raw Material</span>
+            <span class="flex items-center gap-1.5 text-cyan-600 dark:text-cyan-400"><span class="w-3 h-3 rounded-full bg-cyan-500"></span> Workforce Payroll</span>
+            <span class="flex items-center gap-1.5 text-rose-500 dark:text-rose-400"><span class="w-3 h-3 rounded-full bg-rose-500"></span> Operational Loss</span>
+            <span class="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400"><span class="w-3 h-3 rounded-full bg-indigo-600"></span> Net Profit</span>
+        </div>
+    </div>
+    <div class="relative h-64 sm:h-80 w-full flex-grow">
+        <canvas id="plInteractiveChart"></canvas>
+    </div>
+</div>
+
+<!-- DEDICATED FINANCIAL AUDIT LEDGER WITH HEADER-LEVEL TIME & CATEGORY FILTERS -->
+<div class="static-card p-5 sm:p-6 rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 shadow-sm mb-8">
+    <!-- HEADER SECTION: Table Title & Interactive Filter Buttons -->
+    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6 pb-5 border-b border-slate-100 dark:border-slate-700/60">
+        <div>
+            <div class="flex items-center gap-2">
+                <h3 id="tableCategoryTitle" class="font-bold text-slate-800 dark:text-white text-lg flex items-center gap-2">
+                    <span>📋</span> Real-Time Financial Ledger
+                </h3>
+                <span id="activeCategoryPill" class="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600">
+                    Consolidated View
+                </span>
+                <span id="activeTimePill" class="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                    {{ time_frame|title }} Data
+                </span>
+            </div>
+            <p id="tableCategorySubtitle" class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Viewing classified financial journal entries for <span id="tablePeriodLabel" class="font-bold">{{ label }}</span>.
             </p>
         </div>
-        <div class="flex items-center gap-2 text-xs font-bold">
-            <span class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                {{ transaction_count }} Transactions Logged
+
+        <!-- HEADER-LEVEL FILTER BUTTON SUITE (Time Classification & Category Filters) -->
+        <div class="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-3 w-full lg:w-auto">
+            <!-- 1. TIME-BASED CLASSIFICATION BUTTONS (Daily / Weekly / Monthly) -->
+            <div class="flex items-center p-1 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-inner">
+                <button type="button" id="btnTimeDaily" onclick="setTimeFrame('daily')" class="time-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white {% if time_frame == 'daily' %}filter-btn-active{% endif %}">
+                    <i class="fa-solid fa-calendar-day mr-1"></i> Daily Data
+                </button>
+                <button type="button" id="btnTimeWeekly" onclick="setTimeFrame('weekly')" class="time-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white {% if time_frame == 'weekly' %}filter-btn-active{% endif %}">
+                    <i class="fa-solid fa-calendar-week mr-1"></i> Weekly Data
+                </button>
+                <button type="button" id="btnTimeMonthly" onclick="setTimeFrame('monthly')" class="time-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white {% if time_frame == 'monthly' %}filter-btn-active{% endif %}">
+                    <i class="fa-solid fa-calendar-days mr-1"></i> Monthly Data
+                </button>
+            </div>
+
+            <!-- 2. CATEGORY CLASSIFICATION BUTTONS (All / Profit / Loss / Payroll / Materials) -->
+            <div class="flex flex-wrap items-center p-1 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-inner">
+                <button type="button" id="btnCatAll" onclick="setCategory('all')" class="cat-filter-btn px-2.5 py-1.5 rounded-lg text-xs font-bold transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white {% if category == 'all' %}cat-btn-active-all{% endif %}">
+                    All
+                </button>
+                <button type="button" id="btnCatProfit" onclick="setCategory('profit')" class="cat-filter-btn px-2.5 py-1.5 rounded-lg text-xs font-bold transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white {% if category == 'profit' %}cat-btn-active-profit{% endif %}">
+                    💼 Profit
+                </button>
+                <button type="button" id="btnCatLoss" onclick="setCategory('loss')" class="cat-filter-btn px-2.5 py-1.5 rounded-lg text-xs font-bold transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white {% if category == 'loss' %}cat-btn-active-loss{% endif %}">
+                    📉 Loss
+                </button>
+                <button type="button" id="btnCatPayroll" onclick="setCategory('payroll')" class="cat-filter-btn px-2.5 py-1.5 rounded-lg text-xs font-bold transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white {% if category == 'payroll' %}cat-btn-active-payroll{% endif %}">
+                    👥 Payroll
+                </button>
+                <button type="button" id="btnCatMaterials" onclick="setCategory('materials')" class="cat-filter-btn px-2.5 py-1.5 rounded-lg text-xs font-bold transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white {% if category == 'materials' %}cat-btn-active-materials{% endif %}">
+                    📦 Materials
+                </button>
+            </div>
+
+            <!-- Transaction Counter Badge -->
+            <span id="recordCountBadge" class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-xs font-bold">
+                {{ transaction_count }} Records
             </span>
         </div>
     </div>
 
-    <!-- Ledger Table -->
+    <!-- Quick Search Filter -->
+    <div class="mb-4 flex justify-between items-center">
+        <div class="relative w-full max-w-sm">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400 text-xs">
+                <i class="fa-solid fa-magnifying-glass"></i>
+            </span>
+            <input type="text" id="ledgerSearchInput" onkeyup="filterLedgerTable()" placeholder="Search reference, employee, line, material..." class="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div class="text-[11px] text-slate-400 font-semibold hidden sm:block">
+            Auto-synced with Supabase PostgreSQL
+        </div>
+    </div>
+
+    <!-- DYNAMIC CATEGORIZED TABLE CONTAINER -->
     <div class="overflow-x-auto">
-        <table class="w-full text-left text-xs sm:text-sm">
-            <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 font-bold uppercase text-[11px] border-y border-slate-200 dark:border-slate-700">
-                <tr>
-                    <th class="py-3 px-4">Date</th>
-                    <th class="py-3 px-4">Ref Code</th>
-                    <th class="py-3 px-4">Category</th>
-                    <th class="py-3 px-4">Description / Particulars</th>
-                    <th class="py-3 px-4 text-center">Status</th>
-                    <th class="py-3 px-4 text-right">Amount (₹)</th>
-                </tr>
+        <table class="w-full text-left text-xs sm:text-sm" id="mainLedgerTable">
+            <thead id="ledgerTableHead" class="bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 font-bold uppercase text-[11px] border-y border-slate-200 dark:border-slate-700">
+                <!-- Head rows are populated dynamically by renderTableHead() -->
             </thead>
-            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-                {% for tx in transactions %}
-                <tr class="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
-                    <td class="py-3.5 px-4 font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
-                        {{ tx.date_str }}
-                    </td>
-                    <td class="py-3.5 px-4 font-mono font-bold text-slate-800 dark:text-slate-200 whitespace-nowrap">
-                        {{ tx.reference }}
-                    </td>
-                    <td class="py-3.5 px-4 whitespace-nowrap">
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-extrabold border {{ tx.badge_class }}">
-                            {{ tx.category }}
-                        </span>
-                    </td>
-                    <td class="py-3.5 px-4 text-slate-700 dark:text-slate-300 max-w-md">
-                        {{ tx.description }}
-                    </td>
-                    <td class="py-3.5 px-4 text-center whitespace-nowrap">
-                        <span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
-                            {{ tx.status }}
-                        </span>
-                    </td>
-                    <td class="py-3.5 px-4 text-right font-extrabold whitespace-nowrap">
-                        {% if tx.type == 'INCOME' %}
-                        <span class="text-emerald-600 dark:text-emerald-400">+₹{{ tx.amount|floatformat:2 }}</span>
-                        {% else %}
-                        <span class="text-rose-600 dark:text-rose-400">-₹{{ tx.amount|floatformat:2 }}</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="6" class="py-12 text-center text-slate-400">
-                        <div class="flex flex-col items-center justify-center">
-                            <span class="text-3xl mb-2">📭</span>
-                            <p class="font-bold text-sm text-slate-600 dark:text-slate-400">No transactions recorded for this period.</p>
-                            <p class="text-xs text-slate-400 mt-1">Live database query returned zero records between {{ start_of_week|date:"M d" }} and {{ end_of_week|date:"M d" }}.</p>
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
+            <tbody id="ledgerTableBody" class="divide-y divide-slate-100 dark:divide-slate-800">
+                <!-- Body rows are populated dynamically by renderTableBody() -->
             </tbody>
         </table>
     </div>
+
+    <!-- Empty State -->
+    <div id="tableEmptyState" class="hidden py-12 text-center text-slate-400">
+        <div class="flex flex-col items-center justify-center">
+            <span class="text-3xl mb-2">📭</span>
+            <p class="font-bold text-sm text-slate-600 dark:text-slate-400">No records found for this category and timeframe.</p>
+            <p class="text-xs text-slate-400 mt-1">Try switching to Daily, Weekly, or Monthly Data above, or select "All".</p>
+        </div>
+    </div>
 </div>
+
+<!-- EMBEDDED PRECOMPUTED JSON DATASETS -->
+<script id="dailyPkgData" type="application/json">{{ daily_pkg_json|safe }}</script>
+<script id="weeklyPkgData" type="application/json">{{ weekly_pkg_json|safe }}</script>
+<script id="monthlyPkgData" type="application/json">{{ monthly_pkg_json|safe }}</script>
+<script id="activePkgData" type="application/json">{{ active_pkg_json|safe }}</script>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    // Financial Data passed from Django View
-    const chartDates = JSON.parse('{{ chart_dates_json|safe }}');
-    const dailyRevenues = JSON.parse('{{ daily_revenues_json|safe }}');
-    const dailyOpex = JSON.parse('{{ daily_opex_json|safe }}');
-    const dailyNetProfits = JSON.parse('{{ daily_net_profits_json|safe }}');
+    // -------------------------------------------------------------
+    // 1. DATA STATE & PRECOMPUTED PACKAGES
+    // -------------------------------------------------------------
+    const pkgs = {
+        daily: JSON.parse(document.getElementById('dailyPkgData').textContent),
+        weekly: JSON.parse(document.getElementById('weeklyPkgData').textContent),
+        monthly: JSON.parse(document.getElementById('monthlyPkgData').textContent)
+    };
 
-    // Chart.js Configuration
+    let currentTimeFrame = '{{ time_frame }}' || 'weekly';
+    let currentCategory = '{{ category }}' || 'all';
+
+    // Chart.js Setup
     Chart.defaults.font.family = "'Inter', sans-serif";
     Chart.defaults.color = '#64748b';
     Chart.defaults.scale.grid.color = 'rgba(241, 245, 249, 0.6)';
 
-    const ctx = document.getElementById('plInteractiveChart').getContext('2d');
-    new Chart(ctx, {
-        data: {
-            labels: chartDates,
-            datasets: [
-                {
-                    type: 'bar',
-                    label: 'Gross Revenue (₹)',
-                    data: dailyRevenues,
-                    backgroundColor: 'rgba(16, 185, 129, 0.8)',
-                    hoverBackgroundColor: '#10b981',
-                    borderRadius: 6,
-                    barPercentage: 0.55,
-                    categoryPercentage: 0.7,
-                    order: 2
-                },
-                {
-                    type: 'bar',
-                    label: 'Total OPEX (₹)',
-                    data: dailyOpex,
-                    backgroundColor: 'rgba(239, 68, 68, 0.75)',
-                    hoverBackgroundColor: '#ef4444',
-                    borderRadius: 6,
-                    barPercentage: 0.55,
-                    categoryPercentage: 0.7,
-                    order: 3
-                },
-                {
-                    type: 'line',
-                    label: 'Net Margin (₹)',
-                    data: dailyNetProfits,
-                    borderColor: '#6366f1',
-                    backgroundColor: 'rgba(99, 102, 241, 0.08)',
-                    borderWidth: 3,
-                    tension: 0.35,
-                    pointBackgroundColor: '#ffffff',
-                    pointBorderColor: '#6366f1',
-                    pointBorderWidth: 2,
-                    pointRadius: 5,
-                    pointHoverRadius: 7,
-                    fill: true,
-                    order: 1
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: {
-                mode: 'index',
-                intersect: false
-            },
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    backgroundColor: '#0f172a',
-                    padding: 12,
-                    cornerRadius: 8,
-                    titleFont: { size: 13, weight: 'bold' },
-                    bodyFont: { size: 13 },
-                    callbacks: {
-                        label: function(context) {
-                            const val = context.parsed.y || 0;
-                            return context.dataset.label + ': ₹' + Number(val).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                        }
+    let plChart = null;
+
+    function initChart() {
+        const ctx = document.getElementById('plInteractiveChart').getContext('2d');
+        const activePkg = pkgs[currentTimeFrame];
+
+        plChart = new Chart(ctx, {
+            data: {
+                labels: activePkg.chart.labels,
+                datasets: [
+                    {
+                        type: 'bar',
+                        label: 'Gross Revenue (₹)',
+                        data: activePkg.chart.revenues,
+                        backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                        hoverBackgroundColor: '#10b981',
+                        borderRadius: 6,
+                        barPercentage: 0.55,
+                        categoryPercentage: 0.7,
+                        order: 3
+                    },
+                    {
+                        type: 'bar',
+                        label: 'Material Usage (₹)',
+                        data: activePkg.chart.materials,
+                        backgroundColor: 'rgba(59, 130, 246, 0.75)',
+                        hoverBackgroundColor: '#3b82f6',
+                        borderRadius: 6,
+                        barPercentage: 0.55,
+                        categoryPercentage: 0.7,
+                        order: 4
+                    },
+                    {
+                        type: 'bar',
+                        label: 'Workforce Payroll (₹)',
+                        data: activePkg.chart.payroll,
+                        backgroundColor: 'rgba(6, 182, 212, 0.75)',
+                        hoverBackgroundColor: '#06b6d4',
+                        borderRadius: 6,
+                        barPercentage: 0.55,
+                        categoryPercentage: 0.7,
+                        order: 5
+                    },
+                    {
+                        type: 'bar',
+                        label: 'Operational Loss (₹)',
+                        data: activePkg.chart.loss,
+                        backgroundColor: 'rgba(244, 63, 94, 0.75)',
+                        hoverBackgroundColor: '#f43f5e',
+                        borderRadius: 6,
+                        barPercentage: 0.55,
+                        categoryPercentage: 0.7,
+                        order: 6
+                    },
+                    {
+                        type: 'line',
+                        label: 'Net Margin (₹)',
+                        data: activePkg.chart.net_profit,
+                        borderColor: '#6366f1',
+                        backgroundColor: 'rgba(99, 102, 241, 0.08)',
+                        borderWidth: 3,
+                        tension: 0.35,
+                        pointBackgroundColor: '#ffffff',
+                        pointBorderColor: '#6366f1',
+                        pointBorderWidth: 2,
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
+                        fill: true,
+                        order: 1
                     }
-                }
+                ]
             },
-            scales: {
-                y: {
-                    border: { display: false },
-                    grid: { color: 'rgba(226, 232, 240, 0.5)' },
-                    ticks: {
-                        callback: function(value) {
-                            if (Math.abs(value) >= 1000) {
-                                return '₹' + (value / 1000).toFixed(1) + 'k';
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#0f172a',
+                        padding: 12,
+                        cornerRadius: 8,
+                        titleFont: { size: 13, weight: 'bold' },
+                        bodyFont: { size: 13 },
+                        callbacks: {
+                            label: function(context) {
+                                const val = context.parsed.y || 0;
+                                return context.dataset.label + ': ₹' + Number(val).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                             }
-                            return '₹' + value;
                         }
                     }
                 },
-                x: {
-                    border: { display: false },
-                    grid: { display: false }
+                scales: {
+                    y: {
+                        border: { display: false },
+                        grid: { color: 'rgba(226, 232, 240, 0.5)' },
+                        ticks: {
+                            callback: function(value) {
+                                if (Math.abs(value) >= 1000) {
+                                    return '₹' + (value / 1000).toFixed(1) + 'k';
+                                }
+                                return '₹' + value;
+                            }
+                        }
+                    },
+                    x: {
+                        border: { display: false },
+                        grid: { display: false }
+                    }
                 }
             }
+        });
+    }
+
+    // -------------------------------------------------------------
+    // 2. HEADER-LEVEL FILTER ENGINE (TIME & CATEGORY TOGGLES)
+    // -------------------------------------------------------------
+    function setTimeFrame(tf) {
+        if (!pkgs[tf]) return;
+        currentTimeFrame = tf;
+
+        // 1. Update Time Filter Button Classes
+        ['daily', 'weekly', 'monthly'].forEach(t => {
+            const btn = document.getElementById('btnTime' + t.charAt(0).toUpperCase() + t.slice(1));
+            if (btn) {
+                if (t === tf) {
+                    btn.classList.add('filter-btn-active');
+                } else {
+                    btn.classList.remove('filter-btn-active');
+                }
+            }
+        });
+
+        // 2. Update Header Subtitles
+        const pkg = pkgs[tf];
+        document.getElementById('headerPeriodLabel').textContent = pkg.label;
+        document.getElementById('tablePeriodLabel').textContent = pkg.label;
+        document.getElementById('activeTimePill').textContent = tf.charAt(0).toUpperCase() + tf.slice(1) + ' Data';
+        document.getElementById('chartTimeSubtitle').textContent = `Showing ${tf} comparative streams for ${pkg.label}`;
+
+        // 3. Update Metric Cards
+        updateMetricCards(pkg);
+
+        // 4. Update Chart
+        if (plChart) {
+            plChart.data.labels = pkg.chart.labels;
+            plChart.data.datasets[0].data = pkg.chart.revenues;
+            plChart.data.datasets[1].data = pkg.chart.materials;
+            plChart.data.datasets[2].data = pkg.chart.payroll;
+            plChart.data.datasets[3].data = pkg.chart.loss;
+            plChart.data.datasets[4].data = pkg.chart.net_profit;
+            plChart.update();
         }
+
+        // 5. Update Table
+        renderTable();
+
+        // 6. Update URL query params without full reload
+        updateUrlParams();
+    }
+
+    function setCategory(cat) {
+        currentCategory = cat;
+
+        // 1. Update Category Button Classes
+        ['all', 'profit', 'loss', 'payroll', 'materials'].forEach(c => {
+            const btn = document.getElementById('btnCat' + c.charAt(0).toUpperCase() + c.slice(1));
+            if (btn) {
+                btn.className = btn.className.replace(/cat-btn-active-[a-z]+/g, '').trim();
+                if (c === cat) {
+                    btn.classList.add('cat-btn-active-' + c);
+                }
+            }
+        });
+
+        // 2. Update Table Titles & Badges
+        const titleMap = {
+            all: { title: '📋 Real-Time Financial Ledger', pill: 'Consolidated View' },
+            profit: { title: '💼 Production Profit & Revenue Ledger', pill: 'Profit Data' },
+            loss: { title: '📉 Operational Loss & Deficit Ledger', pill: 'Loss Data' },
+            payroll: { title: '👥 Workforce Payroll & Wage Ledger', pill: 'Payroll Data' },
+            materials: { title: '📦 Raw Material Usage & Procurement Ledger', pill: 'Material Usage' }
+        };
+        const meta = titleMap[cat] || titleMap.all;
+        document.getElementById('tableCategoryTitle').innerHTML = `<span>${meta.title.split(' ')[0]}</span> ${meta.title.substring(meta.title.indexOf(' ') + 1)}`;
+        document.getElementById('activeCategoryPill').textContent = meta.pill;
+
+        // 3. Render Table Head and Body
+        renderTable();
+
+        // 4. Update URL query params
+        updateUrlParams();
+    }
+
+    function updateMetricCards(pkg) {
+        // Profit
+        document.getElementById('kpiProfitRevenue').textContent = '₹' + Number(pkg.profit.revenue).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        document.getElementById('kpiProfitNet').textContent = (pkg.profit.net_profit >= 0 ? '+' : '') + '₹' + Number(pkg.profit.net_profit).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        document.getElementById('kpiProfitOutput').textContent = Number(pkg.profit.output_kg).toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1});
+        document.getElementById('kpiProfitMargin').textContent = pkg.profit.margin_pct + '% Margin';
+
+        // Loss
+        document.getElementById('kpiLossTotal').textContent = '₹' + Number(pkg.loss.total_loss).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        document.getElementById('kpiLossShrinkage').textContent = '₹' + Number(pkg.loss.shrinkage_loss).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        document.getElementById('kpiLossMaint').textContent = Number(pkg.loss.maint_loss).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
+        document.getElementById('kpiLossShrinkKg').textContent = Number(pkg.loss.shrinkage_kg).toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1});
+
+        // Payroll
+        document.getElementById('kpiPayrollTotal').textContent = '₹' + Number(pkg.payroll.total_disbursed).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        document.getElementById('kpiPayrollDeductions').textContent = '₹' + Number(pkg.payroll.deductions).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        document.getElementById('kpiPayrollStaff').textContent = pkg.payroll.active_employees;
+        document.getElementById('kpiPayrollAvg').textContent = Number(pkg.payroll.avg_salary).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
+
+        // Materials
+        document.getElementById('kpiMaterialTotal').textContent = '₹' + Number(pkg.materials.total_expenditure).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        document.getElementById('kpiMaterialQty').textContent = Number(pkg.materials.total_kg).toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1}) + ' kg';
+        document.getElementById('kpiMaterialYield').textContent = pkg.materials.conversion_rate + '% Conversion';
+    }
+
+    function updateUrlParams() {
+        const url = new URL(window.location);
+        url.searchParams.set('time_frame', currentTimeFrame);
+        url.searchParams.set('category', currentCategory);
+        window.history.replaceState({}, '', url);
+    }
+
+    // -------------------------------------------------------------
+    // 3. DYNAMIC CATEGORIZED TABLE RENDERING
+    // -------------------------------------------------------------
+    function renderTable() {
+        const pkg = pkgs[currentTimeFrame];
+        const thead = document.getElementById('ledgerTableHead');
+        const tbody = document.getElementById('ledgerTableBody');
+        const emptyState = document.getElementById('tableEmptyState');
+        const countBadge = document.getElementById('recordCountBadge');
+
+        let records = [];
+
+        if (currentCategory === 'profit') {
+            records = pkg.profit.transactions;
+            thead.innerHTML = `
+                <tr>
+                    <th class="py-3 px-4">Date</th>
+                    <th class="py-3 px-4">Batch / Ref</th>
+                    <th class="py-3 px-4">Production Line / Operator</th>
+                    <th class="py-3 px-4 text-center">Output Yield</th>
+                    <th class="py-3 px-4 text-center">Selling Rate</th>
+                    <th class="py-3 px-4 text-center">Status</th>
+                    <th class="py-3 px-4 text-right">Gross Profit (₹)</th>
+                </tr>
+            `;
+            tbody.innerHTML = records.map(r => `
+                <tr class="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
+                    <td class="py-3.5 px-4 font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">${r.date_str}</td>
+                    <td class="py-3.5 px-4 font-mono font-bold text-slate-800 dark:text-slate-200 whitespace-nowrap">${r.ref}</td>
+                    <td class="py-3.5 px-4 font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">${r.source || 'Facility Line'}</td>
+                    <td class="py-3.5 px-4 text-center font-bold text-slate-800 dark:text-slate-200 whitespace-nowrap">${Number(r.output_kg || 0).toFixed(1)} kg</td>
+                    <td class="py-3.5 px-4 text-center font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">₹${r.rate}/kg</td>
+                    <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                        <span class="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300">
+                            ${r.status}
+                        </span>
+                    </td>
+                    <td class="py-3.5 px-4 text-right font-extrabold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">+₹${Number(r.amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                </tr>
+            `).join('');
+        } else if (currentCategory === 'loss') {
+            records = pkg.loss.transactions;
+            thead.innerHTML = `
+                <tr>
+                    <th class="py-3 px-4">Date</th>
+                    <th class="py-3 px-4">Incident / Ref</th>
+                    <th class="py-3 px-4">Loss Category</th>
+                    <th class="py-3 px-4">Operational Deficit Description</th>
+                    <th class="py-3 px-4 text-center">Status</th>
+                    <th class="py-3 px-4 text-right">Deficit / Loss (₹)</th>
+                </tr>
+            `;
+            tbody.innerHTML = records.map(r => `
+                <tr class="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
+                    <td class="py-3.5 px-4 font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">${r.date_str}</td>
+                    <td class="py-3.5 px-4 font-mono font-bold text-slate-800 dark:text-slate-200 whitespace-nowrap">${r.ref}</td>
+                    <td class="py-3.5 px-4 whitespace-nowrap">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-extrabold border ${r.badge_class}">
+                            ${r.loss_type || 'Operational Loss'}
+                        </span>
+                    </td>
+                    <td class="py-3.5 px-4 text-slate-700 dark:text-slate-300 max-w-md">${r.description}</td>
+                    <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                        <span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                            ${r.status}
+                        </span>
+                    </td>
+                    <td class="py-3.5 px-4 text-right font-extrabold text-rose-600 dark:text-rose-400 whitespace-nowrap">-₹${Number(r.amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                </tr>
+            `).join('');
+        } else if (currentCategory === 'payroll') {
+            records = pkg.payroll.transactions;
+            thead.innerHTML = `
+                <tr>
+                    <th class="py-3 px-4">Payout Date</th>
+                    <th class="py-3 px-4">Payroll Ref</th>
+                    <th class="py-3 px-4">Employee / Beneficiary</th>
+                    <th class="py-3 px-4">Role / Station</th>
+                    <th class="py-3 px-4 text-center">Output (kg)</th>
+                    <th class="py-3 px-4 text-center">Statutory Deductions</th>
+                    <th class="py-3 px-4 text-center">Status</th>
+                    <th class="py-3 px-4 text-right">Disbursed (₹)</th>
+                </tr>
+            `;
+            tbody.innerHTML = records.map(r => `
+                <tr class="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
+                    <td class="py-3.5 px-4 font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">${r.date_str}</td>
+                    <td class="py-3.5 px-4 font-mono font-bold text-slate-800 dark:text-slate-200 whitespace-nowrap">${r.ref}</td>
+                    <td class="py-3.5 px-4 font-bold text-slate-800 dark:text-slate-100 whitespace-nowrap">${r.employee_name}</td>
+                    <td class="py-3.5 px-4 text-slate-600 dark:text-slate-400 whitespace-nowrap">${r.role}</td>
+                    <td class="py-3.5 px-4 text-center font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">${Number(r.output_kg || 0).toFixed(1)} kg</td>
+                    <td class="py-3.5 px-4 text-center font-semibold text-rose-500 whitespace-nowrap">-₹${Number(r.deductions || 0).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}</td>
+                    <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                        <span class="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-cyan-100 text-cyan-800 dark:bg-cyan-950 dark:text-cyan-300 border border-cyan-300">
+                            ${r.status}
+                        </span>
+                    </td>
+                    <td class="py-3.5 px-4 text-right font-extrabold text-cyan-600 dark:text-cyan-400 whitespace-nowrap">-₹${Number(r.amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                </tr>
+            `).join('');
+        } else if (currentCategory === 'materials') {
+            records = pkg.materials.transactions;
+            thead.innerHTML = `
+                <tr>
+                    <th class="py-3 px-4">Date</th>
+                    <th class="py-3 px-4">PO / Batch Ref</th>
+                    <th class="py-3 px-4">Raw Material Active Formulation</th>
+                    <th class="py-3 px-4">Supplier / Source</th>
+                    <th class="py-3 px-4 text-center">Volume (kg)</th>
+                    <th class="py-3 px-4 text-center">Unit Rate</th>
+                    <th class="py-3 px-4 text-center">Status</th>
+                    <th class="py-3 px-4 text-right">Total Cost (₹)</th>
+                </tr>
+            `;
+            tbody.innerHTML = records.map(r => `
+                <tr class="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
+                    <td class="py-3.5 px-4 font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">${r.date_str}</td>
+                    <td class="py-3.5 px-4 font-mono font-bold text-slate-800 dark:text-slate-200 whitespace-nowrap">${r.ref}</td>
+                    <td class="py-3.5 px-4 font-bold text-slate-800 dark:text-slate-100 whitespace-nowrap">${r.material_name}</td>
+                    <td class="py-3.5 px-4 text-slate-600 dark:text-slate-400 whitespace-nowrap">${r.supplier}</td>
+                    <td class="py-3.5 px-4 text-center font-bold text-slate-800 dark:text-slate-200 whitespace-nowrap">${Number(r.quantity_kg || 0).toFixed(1)} kg</td>
+                    <td class="py-3.5 px-4 text-center font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">₹${r.rate}/kg</td>
+                    <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                        <span class="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border border-blue-300">
+                            ${r.status}
+                        </span>
+                    </td>
+                    <td class="py-3.5 px-4 text-right font-extrabold text-blue-600 dark:text-blue-400 whitespace-nowrap">-₹${Number(r.amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                </tr>
+            `).join('');
+        } else {
+            // Consolidated 'all'
+            records = pkg.all_transactions;
+            thead.innerHTML = `
+                <tr>
+                    <th class="py-3 px-4">Date</th>
+                    <th class="py-3 px-4">Ref Code</th>
+                    <th class="py-3 px-4">Financial Stream</th>
+                    <th class="py-3 px-4">Description / Particulars</th>
+                    <th class="py-3 px-4 text-center">Status</th>
+                    <th class="py-3 px-4 text-right">Net Impact (₹)</th>
+                </tr>
+            `;
+            tbody.innerHTML = records.map(r => `
+                <tr class="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
+                    <td class="py-3.5 px-4 font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">${r.date_str}</td>
+                    <td class="py-3.5 px-4 font-mono font-bold text-slate-800 dark:text-slate-200 whitespace-nowrap">${r.ref}</td>
+                    <td class="py-3.5 px-4 whitespace-nowrap">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-extrabold border ${r.badge_class}">
+                            ${r.category}
+                        </span>
+                    </td>
+                    <td class="py-3.5 px-4 text-slate-700 dark:text-slate-300 max-w-md">${r.description}</td>
+                    <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                        <span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                            ${r.status}
+                        </span>
+                    </td>
+                    <td class="py-3.5 px-4 text-right font-extrabold whitespace-nowrap">
+                        ${r.type === 'INCOME' 
+                            ? `<span class="text-emerald-600 dark:text-emerald-400">+₹${Number(r.amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>`
+                            : `<span class="text-rose-600 dark:text-rose-400">-₹${Number(r.amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>`
+                        }
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        countBadge.textContent = `${records.length} Records`;
+
+        if (records.length === 0) {
+            emptyState.classList.remove('hidden');
+        } else {
+            emptyState.classList.add('hidden');
+        }
+    }
+
+    // -------------------------------------------------------------
+    // 4. CLIENT-SIDE SEARCH FILTER
+    // -------------------------------------------------------------
+    function filterLedgerTable() {
+        const query = document.getElementById('ledgerSearchInput').value.toLowerCase();
+        const rows = document.querySelectorAll('#ledgerTableBody tr');
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+            const text = row.innerText.toLowerCase();
+            if (text.includes(query)) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        document.getElementById('recordCountBadge').textContent = `${visibleCount} Records`;
+    }
+
+    // -------------------------------------------------------------
+    // 5. INITIALIZATION ON PAGE LOAD
+    // -------------------------------------------------------------
+    document.addEventListener('DOMContentLoaded', function() {
+        initChart();
+        // Initialize active timeframe and category
+        setTimeFrame(currentTimeFrame);
+        setCategory(currentCategory);
     });
 </script>
 {% endblock %}
