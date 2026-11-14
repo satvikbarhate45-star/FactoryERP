@@ -1,7 +1,7 @@
 # PharmaERP (FactoryERP) 🏭💊
 
 > **Enterprise Pharmaceutical ERP & Machine Learning Platform**  
-> An intelligent, autonomous factory management and operations platform featuring predictive maintenance, machine learning imputation, multilingual AI assistant, dual database synchronization, and role-based supervisory dashboards.
+> An intelligent, autonomous factory management and operations platform featuring predictive maintenance, machine learning imputation, multilingual AI assistant, dual database synchronization, and intelligent factory automation.
 
 ---
 
@@ -11,6 +11,24 @@
 [![Scikit-Learn](https://img.shields.io/badge/Scikit--Learn-ML%20Analytics-F7931E.svg?logo=scikit-learn&logoColor=white)](https://scikit-learn.org/)
 [![Google Gemini](https://img.shields.io/badge/AI-Google%20Gemini-4285F4.svg?logo=google&logoColor=white)](https://ai.google.dev/)
 [![APScheduler](https://img.shields.io/badge/Automation-APScheduler-green.svg)](https://apscheduler.readthedocs.io/)
+
+---
+
+## ⚡ Quick Start for Contributors
+
+If you are working from your fork, clone your repository instead of the original project repository:
+
+```bash
+git clone https://github.com/sham-chavan642/FactoryERP.git
+cd FactoryERP
+python -m venv venv
+source venv/bin/activate   # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py runserver
+```
+
+This keeps your local changes connected to your fork and makes it easier to open a clean pull request.
 
 ---
 
@@ -125,27 +143,28 @@ PharmaERP/
 │   ├── maintenance/           # Equipment telemetry, tickets, APScheduler
 │   └── production/            # Work orders, logs, ML scheduler, decision engine
 ├── daily_reports/             # Auto-generated daily factory summary text files
-├── pharma_erp/                # Django root settings, DB router, middleware, URLs
-├── static/                    # CSS, JavaScript, vendor assets
+├── pharma_erp/               # Django root settings, DB router, middleware, URLs
+├── static/                   # CSS, JavaScript, vendor assets
 │   └── css/
 │       ├── kyc.css
 │       └── style.css
-├── templates/                 # Production-grade responsive HTML5 UI templates
-│   ├── ai_chat.html           # Floating & standalone AI conversational UI
-│   ├── dashboard.html         # Executive overview & KPIs
-│   ├── equipment.html         # Machine telemetry & maintenance board
-│   ├── inventory.html         # Warehouse levels & stock replenishment
-│   ├── login.html             # Role-based login portal
-│   ├── production.html        # Daily production tracking & batch logs
-│   ├── supervisor.html        # Worker allocation & shift rosters
+├── templates/                # Production-grade responsive HTML5 UI templates
+│   ├── ai_chat.html          # Floating & standalone AI conversational UI
+│   ├── dashboard.html        # Executive overview & KPIs
+│   ├── equipment.html        # Machine telemetry & maintenance board
+│   ├── inventory.html        # Warehouse levels & stock replenishment
+│   ├── login.html            # Role-based login portal
+│   ├── production.html       # Daily production tracking & batch logs
+│   ├── supervisor.html       # Worker allocation & shift rosters
 │   └── ...
-├── .env.example               # Template environment configuration
-├── .gitignore                 # Excludes venv, pycache, sensitive keys
-├── db.sqlite3                 # Local fallback / development SQLite database
-├── manage.py                  # Django CLI entrypoint
-├── requirements.txt           # Python dependency specification
-├── seed_data.py               # Database seeder (users, machines, logs)
-└── daily_reporter.py          # Daily report generation background task
+├── .env.example              # Template environment configuration
+├── .gitignore                # Excludes venv, pycache, sensitive keys
+├── db.sqlite3                # Local fallback / development SQLite database
+├── manage.py                 # Django CLI entrypoint
+├── requirements.txt          # Python dependency specification
+├── seed_data.py              # Database seeder (users, machines, logs)
+├── daily_reporter.py        # Daily report generation background task
+└── README.md                # Project documentation
 ```
 
 ---
@@ -163,7 +182,7 @@ PharmaERP/
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/satvikbarhate45-star/FactoryERP.git
+git clone https://github.com/sham-chavan642/FactoryERP.git
 cd FactoryERP
 ```
 
@@ -220,7 +239,7 @@ GEMINI_API_KEY=your_gemini_api_key_here
 ## 🚀 Deployment on Render
 
 ### Render Web Service Configuration:
-1. **Repository**: Link `https://github.com/satvikbarhate45-star/FactoryERP.git`
+1. **Repository**: Link `https://github.com/sham-chavan642/FactoryERP.git`
 2. **Environment**: `Python`
 3. **Build Command**:
    ```bash
@@ -237,7 +256,6 @@ GEMINI_API_KEY=your_gemini_api_key_here
    - `SECRET_KEY`: `your-secure-django-secret-key`
    - `DEBUG`: `False`
    - `ALLOWED_HOSTS`: `.onrender.com`
-
 
 ---
 
@@ -310,3 +328,4 @@ When seeded with `seed_data.py`, the following demo accounts are available:
 
 Developed for modern continuous pharmaceutical manufacturing operations.  
 Licensed under the [MIT License](LICENSE).
+
