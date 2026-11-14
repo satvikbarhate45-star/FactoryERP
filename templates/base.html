@@ -571,51 +571,51 @@
                 <span class="sidebar-text font-medium text-sm">Dashboard</span>
             </a>
             
-            <!-- Production Overview (Admin) -->
+            <!-- Production status and output (Admin) -->
             {% if user.role == 'AD' %}
-            <a href="{% url 'production_dashboard' %}" class="sidebar-link {% if '/production/' in request.path and 'supervisor' not in request.path and 'manager' not in request.path %}active{% endif %}" title="Production Overview" data-title="Production Overview">
+            <a href="{% url 'production_dashboard' %}" class="sidebar-link {% if '/production/' in request.path and 'supervisor' not in request.path and 'manager' not in request.path %}active{% endif %}" title="Production Status & Output" data-title="Production Status & Output">
                 <i class="fa-solid fa-industry sidebar-icon"></i>
-                <span class="sidebar-text font-medium text-sm">Production Overview</span>
+                <span class="sidebar-text font-medium text-sm">Production Status & Output</span>
             </a>
             {% endif %}
             
             <!-- Production Dashboard (Manager) -->
             {% if user.role in 'PM,EM' %}
-            <a href="{% url 'production_manager_dashboard' %}" class="sidebar-link {% if 'manager' in request.path %}active{% endif %}" title="Production Dashboard" data-title="Production Dashboard">
+            <a href="{% url 'production_manager_dashboard' %}" class="sidebar-link {% if 'manager' in request.path %}active{% endif %}" title="Team Production Dashboard" data-title="Team Production Dashboard">
                 <i class="fa-solid fa-chart-line sidebar-icon"></i>
-                <span class="sidebar-text font-medium text-sm">Production Dashboard</span>
+                <span class="sidebar-text font-medium text-sm">Team Production Dashboard</span>
             </a>
             {% endif %}
             
-            <!-- Floor Approvals (Supervisor) -->
+            <!-- Production log approvals (Supervisor) -->
             {% if user.role in 'AD,SU,PM' %}
-            <a href="{% url 'supervisor_portal' %}" class="sidebar-link {% if 'supervisor_erp' in request.path %}active{% endif %}" title="Floor Approvals" data-title="Floor Approvals">
+            <a href="{% url 'supervisor_portal' %}" class="sidebar-link {% if 'supervisor_erp' in request.path %}active{% endif %}" title="Approve Production Logs" data-title="Approve Production Logs">
                 <i class="fa-solid fa-clipboard-check sidebar-icon"></i>
-                <span class="sidebar-text font-medium text-sm">Floor Approvals</span>
+                <span class="sidebar-text font-medium text-sm">Approve Production Logs</span>
             </a>
             {% endif %}
             
             <!-- Maintenance & Equipment -->
             {% if user.role in 'AD,MA,SU,EQ' or user.is_staff or user.is_superuser %}
-            <a href="/maintenance/equipment/" class="sidebar-link {% if 'equipment' in request.path %}active{% endif %}" title="Equipment" data-title="Equipment">
+            <a href="/maintenance/equipment/" class="sidebar-link {% if 'equipment' in request.path %}active{% endif %}" title="Machine & Equipment Status" data-title="Machine & Equipment Status">
                 <i class="fa-solid fa-gears sidebar-icon"></i>
-                <span class="sidebar-text font-medium text-sm">Equipment</span>
+                <span class="sidebar-text font-medium text-sm">Machine & Equipment Status</span>
             </a>
-            <a href="/maintenance/work-orders/" class="sidebar-link {% if 'work-orders' in request.path %}active{% endif %}" title="Work Orders" data-title="Work Orders">
+            <a href="/maintenance/work-orders/" class="sidebar-link {% if 'work-orders' in request.path %}active{% endif %}" title="Maintenance Work Orders" data-title="Maintenance Work Orders">
                 <i class="fa-solid fa-wrench sidebar-icon"></i>
-                <span class="sidebar-text font-medium text-sm">Work Orders</span>
+                <span class="sidebar-text font-medium text-sm">Maintenance Work Orders</span>
             </a>
             {% endif %}
             
             <!-- Logistics / Inventory & Financial P&L -->
             {% if user.role in 'AD,LO,PM' %}
-            <a href="/inventory/" class="sidebar-link {% if '/inventory/' in request.path %}active{% endif %}" title="Logistics & Stock" data-title="Logistics">
+            <a href="/inventory/" class="sidebar-link {% if '/inventory/' in request.path %}active{% endif %}" title="Inventory & Shipments" data-title="Inventory & Shipments">
                 <i class="fa-solid fa-boxes-stacked sidebar-icon"></i>
-                <span class="sidebar-text font-medium text-sm">Logistics</span>
+                <span class="sidebar-text font-medium text-sm">Inventory & Shipments</span>
             </a>
-            <a href="{% url 'pl_dashboard' %}" class="sidebar-link {% if '/pl/' in request.path %}active{% endif %}" title="Financial P&L" data-title="Financial P&L">
+            <a href="{% url 'pl_dashboard' %}" class="sidebar-link {% if '/pl/' in request.path %}active{% endif %}" title="Revenue & Expenses" data-title="Revenue & Expenses">
                 <i class="fa-solid fa-file-invoice-dollar sidebar-icon"></i>
-                <span class="sidebar-text font-medium text-sm">Financial P&L</span>
+                <span class="sidebar-text font-medium text-sm">Revenue & Expenses</span>
             </a>
             {% endif %}
             
@@ -632,13 +632,13 @@
             
             <!-- Users, KYC & Work Management -->
             {% if user.role == 'AD' %}
-            <a href="/workmanagement/" class="sidebar-link {% if '/users/' in request.path or '/workmanagement/' in request.path %}active{% endif %}" title="Personnel & KYC Management" data-title="Work Management">
+            <a href="/workmanagement/" class="sidebar-link {% if '/users/' in request.path or '/workmanagement/' in request.path %}active{% endif %}" title="Employee & Work Management" data-title="Employee & Work Management">
                 <i class="fa-solid fa-users-gear sidebar-icon"></i>
-                <span class="sidebar-text font-medium text-sm">Work Management</span>
+                <span class="sidebar-text font-medium text-sm">Employee & Work Management</span>
             </a>
-            <a href="/reports/" class="sidebar-link {% if '/reports/' in request.path %}active{% endif %}" title="ML Reports" data-title="ML Reports">
+            <a href="/reports/" class="sidebar-link {% if '/reports/' in request.path %}active{% endif %}" title="Production Analytics Reports" data-title="Production Analytics Reports">
                 <i class="fa-solid fa-file-waveform sidebar-icon"></i>
-                <span class="sidebar-text font-medium text-sm">ML Reports</span>
+                <span class="sidebar-text font-medium text-sm">Production Analytics Reports</span>
             </a>
             {% endif %}
         </nav>
@@ -667,7 +667,11 @@
                 </button>
                 <div class="min-w-0">
                     <h2 class="text-sm sm:text-base md:text-xl font-bold text-slate-800 dark:text-white truncate">
+                        {% if user.role == 'AD' %}
+                        Welcome to Admin
+                        {% else %}
                         <span class="hidden sm:inline">Welcome back, </span>{{ user.first_name|default:user.username }}
+                        {% endif %}
                     </h2>
                     <p class="text-[11px] text-slate-400 font-medium hidden md:block">FactoryTrack Core Manufacturing Platform</p>
                 </div>
@@ -739,43 +743,43 @@
                 {% if user.role == 'AD' %}
                 <a href="{% url 'production_dashboard' %}" onclick="toggleNavOverlay(false)" class="drawer-link {% if '/production/' in request.path and 'supervisor' not in request.path and 'manager' not in request.path %}active{% endif %}">
                     <i class="fa-solid fa-industry mr-3 text-lg text-emerald-400"></i>
-                    <span class="font-medium text-sm">Production Overview</span>
+                    <span class="font-medium text-sm">Production Status & Output</span>
                 </a>
                 {% endif %}
 
                 {% if user.role in 'PM,EM' %}
                 <a href="{% url 'production_manager_dashboard' %}" onclick="toggleNavOverlay(false)" class="drawer-link {% if 'manager' in request.path %}active{% endif %}">
                     <i class="fa-solid fa-chart-line mr-3 text-lg text-emerald-400"></i>
-                    <span class="font-medium text-sm">Production Dashboard</span>
+                    <span class="font-medium text-sm">Team Production Dashboard</span>
                 </a>
                 {% endif %}
 
                 {% if user.role in 'AD,SU,PM' %}
                 <a href="{% url 'supervisor_portal' %}" onclick="toggleNavOverlay(false)" class="drawer-link {% if 'supervisor_erp' in request.path %}active{% endif %}">
                     <i class="fa-solid fa-clipboard-check mr-3 text-lg text-amber-400"></i>
-                    <span class="font-medium text-sm">Floor Approvals</span>
+                    <span class="font-medium text-sm">Approve Production Logs</span>
                 </a>
                 {% endif %}
 
                 {% if user.role in 'AD,MA,SU,EQ' or user.is_staff or user.is_superuser %}
                 <a href="/maintenance/equipment/" onclick="toggleNavOverlay(false)" class="drawer-link {% if 'equipment' in request.path %}active{% endif %}">
                     <i class="fa-solid fa-gears mr-3 text-lg text-sky-400"></i>
-                    <span class="font-medium text-sm">Equipment</span>
+                    <span class="font-medium text-sm">Machine & Equipment Status</span>
                 </a>
                 <a href="/maintenance/work-orders/" onclick="toggleNavOverlay(false)" class="drawer-link {% if 'work-orders' in request.path %}active{% endif %}">
                     <i class="fa-solid fa-wrench mr-3 text-lg text-amber-400"></i>
-                    <span class="font-medium text-sm">Work Orders</span>
+                    <span class="font-medium text-sm">Maintenance Work Orders</span>
                 </a>
                 {% endif %}
 
                 {% if user.role in 'AD,LO,PM' %}
                 <a href="/inventory/" onclick="toggleNavOverlay(false)" class="drawer-link {% if '/inventory/' in request.path %}active{% endif %}">
                     <i class="fa-solid fa-boxes-stacked mr-3 text-lg text-purple-400"></i>
-                    <span class="font-medium text-sm">Logistics & Stock</span>
+                    <span class="font-medium text-sm">Inventory & Shipments</span>
                 </a>
                 <a href="{% url 'pl_dashboard' %}" onclick="toggleNavOverlay(false)" class="drawer-link {% if '/pl/' in request.path %}active{% endif %}">
                     <i class="fa-solid fa-file-invoice-dollar mr-3 text-lg text-emerald-400"></i>
-                    <span class="font-medium text-sm">Financial P&L</span>
+                    <span class="font-medium text-sm">Revenue & Expenses</span>
                 </a>
                 {% endif %}
 
@@ -791,11 +795,11 @@
                 {% if user.role == 'AD' %}
                 <a href="/users/" onclick="toggleNavOverlay(false)" class="drawer-link {% if '/users/' in request.path %}active{% endif %}">
                     <i class="fa-solid fa-users-gear mr-3 text-lg text-slate-400"></i>
-                    <span class="font-medium text-sm">Manage Users</span>
+                    <span class="font-medium text-sm">Employee Accounts</span>
                 </a>
                 <a href="/reports/" onclick="toggleNavOverlay(false)" class="drawer-link {% if '/reports/' in request.path %}active{% endif %}">
                     <i class="fa-solid fa-file-waveform mr-3 text-lg text-slate-400"></i>
-                    <span class="font-medium text-sm">ML Reports</span>
+                    <span class="font-medium text-sm">Production Analytics Reports</span>
                 </a>
                 {% endif %}
             </nav>
